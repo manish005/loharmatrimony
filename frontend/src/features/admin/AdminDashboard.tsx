@@ -384,20 +384,7 @@ export const AdminDashboard: React.FC = () => {
         {/* Main Content Area */}
         <main className="lg:col-span-9 space-y-6">
           
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200/30 pb-4">
-            <div>
-              <h1 className="font-serif text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                Admin Control Board
-              </h1>
-              <p className="text-[11px] text-slate-550 dark:text-slate-400 font-semibold mt-0.5 font-sans">
-                {activeTab === "dashboard" && "Overview of system status and online directory"}
-                {activeTab === "kyc" && "Audit verification documents and profiles"}
-                {activeTab === "subscriptions" && "Add, modify, and search premium tier packages"}
-                {activeTab === "help" && "Respond to support tickets raised by users"}
-              </p>
-            </div>
-          </div>
-          
+
           <div className="bg-white dark:bg-dark-900 border border-slate-200/50 dark:border-dark-850 rounded-3xl p-6 shadow-sm min-h-[400px]">
             
             {/* TAB: Dashboard */}
