@@ -7,6 +7,8 @@ interface InterestsSentPanelProps {
   profiles: any[];
   onViewProfile: (id: string) => void;
   onMessage: (profile: any) => void;
+  onOpenMarriageModal?: (profile: any) => void;
+  marriageRequests?: any[];
 }
 
 const InterestsSentPanel: React.FC<InterestsSentPanelProps> = ({
@@ -15,6 +17,8 @@ const InterestsSentPanel: React.FC<InterestsSentPanelProps> = ({
   profiles,
   onViewProfile,
   onMessage,
+  onOpenMarriageModal,
+  marriageRequests = [],
 }) => {
   if (loading) {
     return (
@@ -105,12 +109,22 @@ const InterestsSentPanel: React.FC<InterestsSentPanelProps> = ({
 
               <div className="p-4 bg-white dark:bg-dark-900 flex justify-center">
                 {interest.status === 'approved' ? (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onMessage(profile); }}
-                    className="w-full py-2 px-3 bg-maroon-700 hover:bg-maroon-800 text-white text-xs font-bold rounded-xl shadow-md shadow-maroon-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <MessageSquare className="h-4 w-4" /> Message
-                  </button>
+                  <div className="w-full space-y-2">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onMessage(profile); }}
+                      className="w-full py-2 px-3 bg-maroon-700 hover:bg-maroon-800 text-white text-xs font-bold rounded-xl shadow-md shadow-maroon-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <MessageSquare className="h-4 w-4" /> Message
+                    </button>
+                    {!marriageRequests.some((r: any) => (r.receiverId === profile.id || r.senderId === profile.id) && r.status !== 'rejected') && onOpenMarriageModal && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onOpenMarriageModal(profile); }}
+                        className="w-full py-2 px-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white text-xs font-bold rounded-xl shadow-md shadow-red-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Heart className="h-4 w-4 fill-white" /> Let's Get Married!
+                      </button>
+                    )}
+                  </div>
                 ) : interest.status === 'pending' ? (
                   <div className="w-full py-2 px-3 bg-slate-100 dark:bg-dark-800 text-slate-500 dark:text-slate-400 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5">
                     Waiting for response...

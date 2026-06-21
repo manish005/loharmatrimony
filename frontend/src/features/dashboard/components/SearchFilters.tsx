@@ -15,6 +15,7 @@ interface SearchFiltersProps {
   searchAgeMax: string;
   searchVerifiedOnly: boolean;
   searchOnlineOnly: boolean;
+  searchMaritalStatus: string;
   advancedFilterOpen: boolean;
   advFilterRef: React.RefObject<HTMLDivElement | null>;
   onSearchQueryChange: (val: string) => void;
@@ -27,6 +28,7 @@ interface SearchFiltersProps {
   onSearchAgeMaxChange: (val: string) => void;
   onSearchVerifiedOnlyChange: (val: boolean) => void;
   onSearchOnlineOnlyChange: (val: boolean) => void;
+  onSearchMaritalStatusChange: (val: string) => void;
   onToggleAdvancedFilter: () => void;
   onResetFilters: () => void;
 }
@@ -42,6 +44,7 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
   searchAgeMax,
   searchVerifiedOnly,
   searchOnlineOnly,
+  searchMaritalStatus,
   advancedFilterOpen,
   advFilterRef,
   onSearchQueryChange,
@@ -54,6 +57,7 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
   onSearchAgeMaxChange,
   onSearchVerifiedOnlyChange,
   onSearchOnlineOnlyChange,
+  onSearchMaritalStatusChange,
   onToggleAdvancedFilter,
   onResetFilters,
 }) => {
@@ -101,25 +105,43 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
               <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">{t("filter.subcaste")}</label>
               <div className="relative">
                 <select
-                  value={searchSubCaste}
-                  onChange={(e) => onSearchSubCasteChange(e.target.value)}
-                  className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-dark-950 border border-slate-200 dark:border-dark-800 rounded-lg text-slate-900 dark:text-white focus:outline-none cursor-pointer appearance-none"
+                value={searchSubCaste}
+                onChange={(e) => onSearchSubCasteChange(e.target.value)}
+                className="w-full text-xs px-3 py-2 border border-slate-200 dark:border-dark-800 rounded-xl bg-slate-50 dark:bg-dark-950 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-maroon-500 appearance-none cursor-pointer"
+              >
+                <option value="">{t("filter.all")}</option>
+                <option value="Panchal">Panchal</option>
+                <option value="Gadi Lohar">Gadi Lohar</option>
+                <option value="Sangar">Sangar</option>
+                <option value="Jhangra">Jhangra</option>
+                <option value="Dhiman">Dhiman</option>
+                <option value="Tarkhan">Tarkhan</option>
+                <option value="Vishwakarma">Vishwakarma</option>
+                <option value="Mathura Lohar">Mathura Lohar</option>
+                <option value="Rajput Lohar">Rajput Lohar</option>
+                <option value="Luhar">Luhar</option>
+                <option value="Other">Other</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+            </div>
+
+            <div className="space-y-1 mt-3 pt-3 border-t border-slate-100 dark:border-dark-850">
+              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Marital Status</label>
+              <div className="relative">
+                <select
+                  value={searchMaritalStatus || "Any"}
+                  onChange={(e) => onSearchMaritalStatusChange(e.target.value)}
+                  className="w-full text-xs px-3 py-2 border border-slate-200 dark:border-dark-800 rounded-xl bg-slate-50 dark:bg-dark-950 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-maroon-500 appearance-none cursor-pointer"
                 >
-                  <option value="">{t("filter.all")} {t("filter.subcaste")}</option>
-                  <option value="Panchal">Panchal</option>
-                  <option value="Gadi Lohar">Gadi Lohar</option>
-                  <option value="Sangar">Sangar</option>
-                  <option value="Jhangra">Jhangra</option>
-                  <option value="Dhiman">Dhiman</option>
-                  <option value="Tarkhan">Tarkhan</option>
-                  <option value="Vishwakarma">Vishwakarma</option>
-                  <option value="Mathura Lohar">Mathura Lohar</option>
-                  <option value="Rajput Lohar">Rajput Lohar</option>
-                  <option value="Luhar">Luhar</option>
-                  <option value="Other">Other</option>
+                  <option value="Any">Any Status</option>
+                  <option value="Never Married">Never Married</option>
+                  <option value="Divorced">Divorced</option>
+                  <option value="Awaiting Divorce">Awaiting Divorce</option>
+                  <option value="Widowed">Widowed</option>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
               </div>
+            </div>
             </div>
 
             {/* Location Filters */}

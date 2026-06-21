@@ -1,16 +1,23 @@
 import React, { useState } from "react";
 import InterestsSentPanel from "./InterestsSentPanel";
 import InterestsReceivedPanel from "./InterestsReceivedPanel";
+import MarriageRequestsPanel from "./MarriageRequestsPanel";
+import { Heart } from "lucide-react";
 
 interface InterestsPanelProps {
   loading: boolean;
   sentInterests: any[];
   pendingInterestsReceived: any[];
   profiles: any[];
+  currentUserId: string;
+  marriageRequests: any[];
   onViewProfile: (id: string) => void;
   onMessage: (profile: any) => void;
   onApprove: (senderId: string, senderName: string, senderPhoto: string) => void;
   onReject: (senderId: string) => void;
+  onAcceptMarriageRequest: (requestId: string, senderProfile: any) => void;
+  onRejectMarriageRequest: (requestId: string) => void;
+  onOpenMarriageModal: (profile: any) => void;
 }
 
 const InterestsPanel: React.FC<InterestsPanelProps> = ({
@@ -18,16 +25,25 @@ const InterestsPanel: React.FC<InterestsPanelProps> = ({
   sentInterests,
   pendingInterestsReceived,
   profiles,
+  currentUserId,
+  marriageRequests,
   onViewProfile,
   onMessage,
   onApprove,
-  onReject
+  onReject,
+  onAcceptMarriageRequest,
+  onRejectMarriageRequest,
+  onOpenMarriageModal
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<"received" | "sent">("received");
+  const [activeSubTab, setActiveSubTab] = useState<"received" | "sent" | "marriage">("received");
 
   const receivedProfiles = pendingInterestsReceived
     .map(int => profiles.find(p => p.id === int.senderId))
     .filter(Boolean);
+
+  const hasAcceptedInterests = sentInterests.some(int => int.status === "approved");
+  const hasMarriageRequests = marriageRequests.length > 0;
+  const showMarriageTab = hasAcceptedInterests || hasMarriageRequests;
 
   return (
     <div className="space-y-6">
@@ -62,6 +78,18 @@ const InterestsPanel: React.FC<InterestsPanelProps> = ({
         >
           Sent Requests {sentInterests.length > 0 && `(${sentInterests.length})`}
         </button>
+        {showMarriageTab && (
+          <button
+            onClick={() => setActiveSubTab("marriage")}
+            className={`flex-1 py-3 text-xs font-bold transition-colors border-b-2 flex justify-center items-center gap-1.5 ${
+              activeSubTab === "marriage"
+                ? "border-red-600 text-red-600 dark:text-red-400 dark:border-red-400"
+                : "border-transparent text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400"
+            }`}
+          >
+            <Heart className="h-3.5 w-3.5" /> Marriage Requests {marriageRequests.length > 0 && `(${marriageRequests.length})`}
+          </button>
+        )}
       </div>
 
       <div className="mt-4">
@@ -73,13 +101,25 @@ const InterestsPanel: React.FC<InterestsPanelProps> = ({
             onReject={onReject}
             onViewProfile={onViewProfile}
           />
-        ) : (
+        ) : activeSubTab === "sent" ? (
           <InterestsSentPanel
             loading={loading}
             sentInterests={sentInterests}
             profiles={profiles}
             onViewProfile={onViewProfile}
             onMessage={onMessage}
+            onOpenMarriageModal={onOpenMarriageModal}
+            marriageRequests={marriageRequests}
+          />
+        ) : (
+          <MarriageRequestsPanel
+            loading={loading}
+            marriageRequests={marriageRequests}
+            profiles={profiles}
+            currentUserId={currentUserId}
+            onAcceptRequest={onAcceptMarriageRequest}
+            onRejectRequest={onRejectMarriageRequest}
+            onViewProfile={onViewProfile}
           />
         )}
       </div>

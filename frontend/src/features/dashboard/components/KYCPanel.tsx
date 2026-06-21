@@ -78,30 +78,36 @@ const KYCPanel: React.FC<KYCPanelProps> = ({ kycDocs, kycStatus, kycUploading, o
         <h4 className="text-xs font-bold text-slate-900 dark:text-white">{t("Uploaded Documents")}</h4>
         <div className="space-y-2.5">
           {kycDocs.map((doc: any, idx) => (
-            <div key={idx} className="p-3 border border-slate-100 dark:border-dark-800 rounded-xl flex items-center justify-between bg-white/40">
-              <div className="flex items-center gap-2">
-                {doc.url ? (
-                   <img src={doc.url} alt={doc.name} className="h-8 w-12 object-cover rounded shadow-sm border border-slate-200" />
-                ) : (
+            <div key={idx} className="p-3 border border-slate-100 dark:border-dark-800 rounded-xl grid grid-cols-4 items-center justify-items-center gap-2 bg-white/40">
+              
+              {/* Column 1: Image */}
+              {doc.url ? (
+                 <img src={doc.url} alt={doc.name} className="h-10 w-14 object-cover rounded shadow-sm border border-slate-200" />
+              ) : (
+                <div className="h-10 w-14 rounded bg-slate-100 dark:bg-dark-900 flex items-center justify-center">
                   <Upload className="h-4 w-4 text-slate-400" />
-                )}
-                <div>
-                  <p className="text-xs font-bold text-slate-700 dark:text-slate-350">{doc.name}</p>
-                  <span className="text-[9px] text-slate-400 font-semibold">{doc.size}</span>
                 </div>
+              )}
+              
+              {/* Column 2: Details */}
+              <div className="text-center w-full overflow-hidden">
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-350 truncate">{doc.name}</p>
+                <span className="text-[9px] text-slate-400 font-semibold">{doc.size}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full mr-2 ${kycStatus === "approved" || doc.status === "Verified" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                  {kycStatus === "approved" ? "Verified" : doc.status}
-                </span>
-                <button 
-                  onClick={() => onKycDelete(idx)}
-                  className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer"
-                  title={t("Delete Document")}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
+              
+              {/* Column 3: Status */}
+              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${kycStatus === "approved" || doc.status === "Verified" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                {kycStatus === "approved" ? "Verified" : doc.status}
+              </span>
+
+              {/* Column 4: Delete Button */}
+              <button 
+                onClick={() => onKycDelete(idx)}
+                className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer"
+                title={t("Delete Document")}
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
           ))}
         </div>

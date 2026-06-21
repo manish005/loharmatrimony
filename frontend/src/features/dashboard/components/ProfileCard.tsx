@@ -179,7 +179,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
           </div>
 
           <p className="text-[9px] sm:text-[10px] md:text-xs font-semibold text-slate-655 dark:text-slate-400 truncate">
-            {[`${profile.age || 25} yrs`, profile.height, profile.subCaste].filter(Boolean).join(" • ") || "\u00A0"}
+            {[`${profile.age || 25} yrs`, profile.height, profile.subCaste, profile.maritalStatus].filter(Boolean).join(" • ") || "\u00A0"}
           </p>
           <p className="text-[8px] sm:text-[9px] md:text-[10px] text-slate-505 dark:text-slate-400 uppercase tracking-wide font-medium truncate">
             {[profile.education, profile.income].filter(Boolean).join(" • ") || "\u00A0"}

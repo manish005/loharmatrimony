@@ -40,6 +40,7 @@ import Onboarding from "../auth/Onboarding";
 import { useChat } from "../chat/ChatContext";
 import ChatList from "../chat/components/ChatList";
 import ChatThread from "../chat/components/ChatThread";
+import MarriageProposalModal from "./components/MarriageProposalModal";
 
 export const Dashboard: React.FC = () => {
   const { language, setLanguage, t } = useLanguage();
@@ -62,6 +63,10 @@ export const Dashboard: React.FC = () => {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [pendingInterestsReceived, setPendingInterestsReceived] = useState<any[]>([]);
   const [sentInterests, setSentInterests] = useState<any[]>([]);
+  const [marriageRequests, setMarriageRequests] = useState<any[]>([]);
+  const [isMarriageModalOpen, setIsMarriageModalOpen] = useState(false);
+  const [selectedMarriageProfile, setSelectedMarriageProfile] = useState<any | null>(null);
+  const [isSubmittingProposal, setIsSubmittingProposal] = useState(false);
   const [interestsLoading, setInterestsLoading] = useState(true);
   const initialInterestLoadDone = useRef(false);
 
@@ -82,6 +87,7 @@ export const Dashboard: React.FC = () => {
   const [searchVerifiedOnly, setSearchVerifiedOnly] = useState(false);
   const [searchOnlineOnly, setSearchOnlineOnly] = useState(false);
   const [searchMatchingOnly, setSearchMatchingOnly] = useState(false);
+  const [searchMaritalStatus, setSearchMaritalStatus] = useState("");
   const [selectedInvitationProfile, setSelectedInvitationProfile] = useState<any | null>(null);
   const [selectedStory, setSelectedStory] = useState<any | null>(null);
 
@@ -407,9 +413,30 @@ export const Dashboard: React.FC = () => {
       setInterestsLoading(false);
     });
 
+
+    // Listen for Marriage Requests
+    const unsubMarriageRequests = onSnapshot(collection(db, "marriageRequests"), (snapshot) => {
+      const requests = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      const myRequests = requests.filter((r: any) => r.senderId === myProfile.id || r.receiverId === myProfile.id);
+      
+      if (initialInterestLoadDone.current) {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === "added") {
+            const data = change.doc.data();
+            if (data.receiverId === myProfile.id && data.status === "pending") {
+              showToast(`You received a marriage proposal!`, "info");
+            }
+          }
+        });
+      }
+
+      setMarriageRequests(myRequests);
+    });
+
     return () => {
       unsubSent();
       unsubReceived();
+      unsubMarriageRequests();
     };
   }, [myProfile?.id, profiles]);
 
@@ -511,6 +538,91 @@ export const Dashboard: React.FC = () => {
     } catch (err) {
       console.error("Error rejecting interest:", err);
       showToast("Failed to reject interest.", "error");
+    }
+  };
+
+  const handleSendMarriageProposal = async (proposalData: { date: string; time: string; venue: string }) => {
+    if (!selectedMarriageProfile) return;
+    setIsSubmittingProposal(true);
+    try {
+      await addDoc(collection(db, "marriageRequests"), {
+        senderId: myProfile.id,
+        receiverId: selectedMarriageProfile.id,
+        weddingDate: proposalData.date,
+        weddingTime: proposalData.time,
+        venue: proposalData.venue,
+        status: "pending",
+        timestamp: serverTimestamp()
+      });
+
+      const senderName = myProfile.firstName || myProfile.name || "Someone";
+      await addDoc(collection(db, "notifications"), {
+        receiverId: selectedMarriageProfile.id,
+        senderId: myProfile.id,
+        text: `${senderName} proposed a marriage setup!`,
+        type: "marriage_proposal",
+        read: false,
+        createdAt: serverTimestamp()
+      });
+
+      showToast("Marriage Request sent successfully!");
+      setIsMarriageModalOpen(false);
+      setSelectedMarriageProfile(null);
+    } catch (err) {
+      console.error("Error sending marriage request", err);
+      showToast("Failed to send marriage request", "error");
+    } finally {
+      setIsSubmittingProposal(false);
+    }
+  };
+
+  const handleAcceptMarriageRequest = async (requestId: string, senderProfile: any) => {
+    try {
+      const requestRef = doc(db, "marriageRequests", requestId);
+      const requestDoc = await getDoc(requestRef);
+      if (!requestDoc.exists()) return;
+
+      const reqData = requestDoc.data();
+
+      // 1. Update request status
+      await updateDoc(requestRef, { status: "accepted" });
+
+      // 2. Set both profiles to isMarried = true
+      const myProfileRef = doc(db, "profiles", myProfile.id);
+      const senderProfileRef = doc(db, "profiles", senderProfile.id);
+      
+      await updateDoc(myProfileRef, { isMarried: true });
+      await updateDoc(senderProfileRef, { isMarried: true });
+
+      // 3. Create Success Story
+      await addDoc(collection(db, "successStories"), {
+        coupleId: `${senderProfile.id}_${myProfile.id}`,
+        partner1Id: senderProfile.id,
+        partner2Id: myProfile.id,
+        partner1Name: senderProfile.name,
+        partner2Name: myProfile.name,
+        weddingDate: reqData.weddingDate,
+        venue: reqData.venue,
+        photo: senderProfile.photos?.[0] || myProfile.photos?.[0] || "",
+        timestamp: serverTimestamp()
+      });
+
+      showToast(`Congratulations! You are engaged to ${senderProfile.name}!`);
+      setMyProfile((prev: any) => ({ ...prev, isMarried: true }));
+    } catch (err) {
+      console.error("Error accepting marriage request", err);
+      showToast("Failed to accept marriage request", "error");
+    }
+  };
+
+  const handleRejectMarriageRequest = async (requestId: string) => {
+    try {
+      const requestRef = doc(db, "marriageRequests", requestId);
+      await updateDoc(requestRef, { status: "rejected" });
+      showToast("Marriage Request declined.");
+    } catch (err) {
+      console.error("Error rejecting marriage request", err);
+      showToast("Failed to decline marriage request", "error");
     }
   };
 
@@ -685,8 +797,48 @@ export const Dashboard: React.FC = () => {
           name: parts.join(" ").trim() || profileFormState.name,
         };
         const { id, photo, isVerified, isPremium, isOnline, registeredAt, compatibility, onboardingCompleted, ...saveData } = savePayload;
+        
+        // Divorce Logic: If user is changing to Divorced/Awaiting Divorce/Widowed
+        const newStatus = saveData.maritalStatus;
+        if ((newStatus === "Divorced" || newStatus === "Awaiting Divorce" || newStatus === "Widowed") && myProfile.isMarried) {
+          saveData.isMarried = false;
+          
+          // Find the success story where this user is a partner
+          const ssQuery = query(collection(db, "successStories"));
+          const ssSnap = await getDocs(ssQuery);
+          
+          let partnerId = null;
+          let storyDocId = null;
+          
+          ssSnap.forEach(doc => {
+            const data = doc.data();
+            if (data.partner1Id === myProfile.id) {
+              partnerId = data.partner2Id;
+              storyDocId = doc.id;
+            } else if (data.partner2Id === myProfile.id) {
+              partnerId = data.partner1Id;
+              storyDocId = doc.id;
+            }
+          });
+
+          // Un-marry the partner and delete the success story
+          if (partnerId) {
+            const partnerRef = doc(db, "profiles", partnerId);
+            await updateDoc(partnerRef, { 
+              isMarried: false,
+              maritalStatus: "Divorced"
+            });
+          }
+          if (storyDocId) {
+            await deleteDoc(doc(db, "successStories", storyDocId));
+          }
+        }
+
         await updateDoc(docRef, saveData);
         updatedProfile.id = myProfile.id;
+        if ((newStatus === "Divorced" || newStatus === "Awaiting Divorce" || newStatus === "Widowed") && myProfile.isMarried) {
+          updatedProfile.isMarried = false;
+        }
       }
       setMyProfile(updatedProfile);
       setIsEditingProfile(false);
@@ -756,7 +908,7 @@ export const Dashboard: React.FC = () => {
     list = list.filter(p => p.gender === oppositeGender);
 
     if (activeTab === "matches" || activeTab === "search") {
-      list = list.filter(p => !isMarriageFixed(p.name));
+      list = list.filter(p => !isMarriageFixed(p.name) && !p.isMarried);
     }
 
     if (userGender === "Male") {
@@ -782,10 +934,13 @@ export const Dashboard: React.FC = () => {
         const matchesAgeMax = searchAgeMax ? p.age <= parseInt(searchAgeMax) : true;
         const matchesVerified = searchVerifiedOnly ? p.isVerified : true;
         const matchesOnline = searchOnlineOnly ? p.isOnline : true;
+        const matchesMaritalStatus = searchMaritalStatus && searchMaritalStatus !== "Any" 
+          ? p.maritalStatus === searchMaritalStatus 
+          : true;
         const matchesMatching = searchMatchingOnly
           ? (p.subCaste.toLowerCase() === (myProfile?.subCaste || "").toLowerCase() || p.compatibility >= 80)
           : true;
-        return matchesSubCaste && matchesState && matchesDistrict && matchesTaluka && matchesAgeMin && matchesAgeMax && matchesVerified && matchesOnline && matchesMatching;
+        return matchesSubCaste && matchesState && matchesDistrict && matchesTaluka && matchesAgeMin && matchesAgeMax && matchesVerified && matchesOnline && matchesMaritalStatus && matchesMatching;
       });
     }
 
@@ -805,8 +960,11 @@ export const Dashboard: React.FC = () => {
         const matchesOnline = searchOnlineOnly ? p.isOnline : true;
         const matchesAgeMin = searchAgeMin ? p.age >= parseInt(searchAgeMin) : true;
         const matchesAgeMax = searchAgeMax ? p.age <= parseInt(searchAgeMax) : true;
+        const matchesMaritalStatus = searchMaritalStatus && searchMaritalStatus !== "Any" 
+          ? p.maritalStatus === searchMaritalStatus 
+          : true;
 
-        return matchesQuery && matchesSubCaste && matchesState && matchesDistrict && matchesTaluka && matchesVerified && matchesOnline && matchesAgeMin && matchesAgeMax;
+        return matchesQuery && matchesSubCaste && matchesState && matchesDistrict && matchesTaluka && matchesVerified && matchesOnline && matchesAgeMin && matchesAgeMax && matchesMaritalStatus;
       });
     }
 
@@ -814,7 +972,7 @@ export const Dashboard: React.FC = () => {
   }, [
     profiles, myProfile, activeTab, shortlistedIds, interestSentIds,
     searchQuery, searchSubCaste, searchCountry, searchState, searchDistrict, searchTaluka, searchAgeMin, searchAgeMax,
-    searchVerifiedOnly, searchOnlineOnly, searchMatchingOnly
+    searchVerifiedOnly, searchOnlineOnly, searchMatchingOnly, searchMaritalStatus
   ]);
   const menuItems = [
     { id: "matches" as TabType, name: t("Recommended Profiles"), icon: Users, badge: profiles.length },
@@ -880,6 +1038,7 @@ export const Dashboard: React.FC = () => {
                           searchVerifiedOnly={searchVerifiedOnly}
                           searchOnlineOnly={searchOnlineOnly}
                           searchMatchingOnly={searchMatchingOnly}
+                          searchMaritalStatus={searchMaritalStatus}
                           filterDropdownOpen={filterDropdownOpen}
                           filterRef={filterRef}
                           onSearchQueryChange={setSearchQuery}
@@ -893,6 +1052,7 @@ export const Dashboard: React.FC = () => {
                           onSearchVerifiedOnlyChange={setSearchVerifiedOnly}
                           onSearchOnlineOnlyChange={setSearchOnlineOnly}
                           onSearchMatchingOnlyChange={setSearchMatchingOnly}
+                          onSearchMaritalStatusChange={setSearchMaritalStatus}
                           onToggleFilterDropdown={() => setFilterDropdownOpen(!filterDropdownOpen)}
                           onResetFilters={() => {
                             setSearchQuery("");
@@ -906,6 +1066,7 @@ export const Dashboard: React.FC = () => {
                             setSearchVerifiedOnly(false);
                             setSearchOnlineOnly(false);
                             setSearchMatchingOnly(false);
+                            setSearchMaritalStatus("Any");
                           }}
                         />
                       )}
@@ -950,6 +1111,7 @@ export const Dashboard: React.FC = () => {
                   searchAgeMax={searchAgeMax}
                   searchVerifiedOnly={searchVerifiedOnly}
                   searchOnlineOnly={searchOnlineOnly}
+                  searchMaritalStatus={searchMaritalStatus}
                   advancedFilterOpen={advancedFilterOpen}
                   advFilterRef={advFilterRef}
                   onSearchQueryChange={setSearchQuery}
@@ -962,6 +1124,7 @@ export const Dashboard: React.FC = () => {
                   onSearchAgeMaxChange={setSearchAgeMax}
                   onSearchVerifiedOnlyChange={setSearchVerifiedOnly}
                   onSearchOnlineOnlyChange={setSearchOnlineOnly}
+                  onSearchMaritalStatusChange={setSearchMaritalStatus}
                   onToggleAdvancedFilter={() => setAdvancedFilterOpen(!advancedFilterOpen)}
                   onResetFilters={() => {
                     setSearchQuery("");
@@ -972,6 +1135,7 @@ export const Dashboard: React.FC = () => {
                     setSearchTaluka("");
                     setSearchVerifiedOnly(false);
                     setSearchOnlineOnly(false);
+                    setSearchMaritalStatus("Any");
                     setSearchAgeMin("18");
                     setSearchAgeMax("70");
                   }}
@@ -1029,10 +1193,18 @@ export const Dashboard: React.FC = () => {
               sentInterests={sentInterests}
               pendingInterestsReceived={pendingInterestsReceived}
               profiles={profiles}
+              currentUserId={myProfile?.id || ""}
+              marriageRequests={marriageRequests}
               onViewProfile={(id: string) => setActiveTab("view-profile", id)}
               onMessage={(profile: any) => startChat(profile)}
               onApprove={handleApproveInterest}
               onReject={handleRejectInterest}
+              onAcceptMarriageRequest={handleAcceptMarriageRequest}
+              onRejectMarriageRequest={handleRejectMarriageRequest}
+              onOpenMarriageModal={(profile: any) => {
+                setSelectedMarriageProfile(profile);
+                setIsMarriageModalOpen(true);
+              }}
             />
           )}
 
@@ -1149,6 +1321,18 @@ export const Dashboard: React.FC = () => {
         onClose={() => setSelectedInvitationProfile(null)}
       />
 
+      {/* Marriage Proposal Modal */}
+      <MarriageProposalModal
+        selectedProfile={selectedMarriageProfile}
+        isSubmitting={isSubmittingProposal}
+        onSendProposal={handleSendMarriageProposal}
+        onClose={() => {
+          setIsMarriageModalOpen(false);
+          setSelectedMarriageProfile(null);
+        }}
+      />
     </div>
   );
 };
+
+export default Dashboard;

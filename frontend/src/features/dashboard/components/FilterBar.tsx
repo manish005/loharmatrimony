@@ -16,6 +16,7 @@ interface FilterBarProps {
   searchVerifiedOnly: boolean;
   searchOnlineOnly: boolean;
   searchMatchingOnly: boolean;
+  searchMaritalStatus: string;
   filterDropdownOpen: boolean;
   filterRef: React.RefObject<HTMLDivElement | null>;
   onSearchQueryChange: (val: string) => void;
@@ -29,6 +30,7 @@ interface FilterBarProps {
   onSearchVerifiedOnlyChange: (val: boolean) => void;
   onSearchOnlineOnlyChange: (val: boolean) => void;
   onSearchMatchingOnlyChange: (val: boolean) => void;
+  onSearchMaritalStatusChange: (val: string) => void;
   onToggleFilterDropdown: () => void;
   onResetFilters: () => void;
 }
@@ -45,6 +47,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
   searchVerifiedOnly,
   searchOnlineOnly,
   searchMatchingOnly,
+  searchMaritalStatus,
   filterDropdownOpen,
   filterRef,
   onSearchQueryChange,
@@ -58,11 +61,12 @@ const FilterBar: React.FC<FilterBarProps> = ({
   onSearchVerifiedOnlyChange,
   onSearchOnlineOnlyChange,
   onSearchMatchingOnlyChange,
+  onSearchMaritalStatusChange,
   onToggleFilterDropdown,
   onResetFilters,
 }) => {
   const { t } = useLanguage();
-  const hasActiveFilters = searchQuery || searchSubCaste || searchCountry || searchState || searchDistrict || searchTaluka || searchAgeMin !== "18" || searchAgeMax !== "70" || searchVerifiedOnly || searchOnlineOnly || searchMatchingOnly;
+  const hasActiveFilters = searchQuery || searchSubCaste || searchCountry || searchState || searchDistrict || searchTaluka || searchAgeMin !== "18" || searchAgeMax !== "70" || searchVerifiedOnly || searchOnlineOnly || searchMatchingOnly || (searchMaritalStatus && searchMaritalStatus !== "Any");
 
   return (
     <div className="relative min-w-[120px]" ref={filterRef}>
@@ -116,6 +120,24 @@ const FilterBar: React.FC<FilterBarProps> = ({
                 <option value="Rajput Lohar">Rajput Lohar</option>
                 <option value="Luhar">Luhar</option>
                 <option value="Other">Other</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
+
+          <div className="space-y-2 border-t border-slate-100 dark:border-dark-850 pt-3 mt-3">
+            <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Marital Status</label>
+            <div className="relative">
+              <select
+                value={searchMaritalStatus || "Any"}
+                onChange={(e) => onSearchMaritalStatusChange(e.target.value)}
+                className="w-full text-xs px-3 py-2 border border-slate-200 dark:border-dark-800 rounded-xl bg-slate-50 dark:bg-dark-950 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-maroon-500 appearance-none cursor-pointer"
+              >
+                <option value="Any">Any Status</option>
+                <option value="Never Married">Never Married</option>
+                <option value="Divorced">Divorced</option>
+                <option value="Awaiting Divorce">Awaiting Divorce</option>
+                <option value="Widowed">Widowed</option>
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
             </div>
