@@ -506,7 +506,7 @@ export const AdminDashboard: React.FC = () => {
                                     {p.isVerified ? (
                                       <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">Approved</span>
                                     ) : hasDocs ? (
-                                      <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">Approval Pending</span>
+                                      <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">Pending KYC</span>
                                     ) : (
                                       <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">Unverified</span>
                                     )}
@@ -761,13 +761,20 @@ export const AdminDashboard: React.FC = () => {
                           </div>
                           <div className="bg-slate-50 dark:bg-dark-950 p-4 rounded-xl border border-slate-200 dark:border-dark-800">
                             <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">Submitted Documents</p>
-                            {selectedKyc.kycDocs && selectedKyc.kycDocs.length > 0 ? (
+                            {(selectedKyc.kycDocuments?.front || selectedKyc.kycDocuments?.back) ? (
                               <div className="flex gap-4 overflow-x-auto pb-2">
-                                {selectedKyc.kycDocs.map((doc: any, i: number) => (
-                                  <div key={i} className="flex-shrink-0 cursor-pointer" onClick={() => setActiveZoomImage(doc.url)}>
-                                    <img src={doc.url} alt={`KYC Doc ${i}`} className="h-32 w-48 object-cover rounded-lg border border-slate-200 dark:border-dark-700 hover:opacity-80 transition-opacity shadow-sm" />
+                                {selectedKyc.kycDocuments.front && (
+                                  <div className="flex-shrink-0 cursor-pointer" onClick={() => setActiveZoomImage(selectedKyc.kycDocuments.front)}>
+                                    <p className="text-[10px] text-slate-500 mb-1">Front Side</p>
+                                    <img src={selectedKyc.kycDocuments.front} alt="KYC Front" className="h-32 w-48 object-cover rounded-lg border border-slate-200 dark:border-dark-700 hover:opacity-80 transition-opacity shadow-sm" />
                                   </div>
-                                ))}
+                                )}
+                                {selectedKyc.kycDocuments.back && (
+                                  <div className="flex-shrink-0 cursor-pointer" onClick={() => setActiveZoomImage(selectedKyc.kycDocuments.back)}>
+                                    <p className="text-[10px] text-slate-500 mb-1">Back Side</p>
+                                    <img src={selectedKyc.kycDocuments.back} alt="KYC Back" className="h-32 w-48 object-cover rounded-lg border border-slate-200 dark:border-dark-700 hover:opacity-80 transition-opacity shadow-sm" />
+                                  </div>
+                                )}
                               </div>
                             ) : (
                               <div className="h-40 w-full bg-slate-200 dark:bg-dark-800 rounded-lg flex items-center justify-center">
