@@ -20,9 +20,11 @@ service cloud.firestore {
       allow create: if request.auth != null
         && request.auth.token.email == request.resource.data.email;
 
-      // User can update their own profile
-      allow update: if request.auth != null
-        && resource.data.email == request.auth.token.email;
+      // User can update their own profile, or just isMarried/maritalStatus if they are interacting with another user
+      allow update: if request.auth != null && (
+        resource.data.email == request.auth.token.email ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isMarried', 'maritalStatus'])
+      );
 
       // No deletion allowed (profiles are permanent)
       allow delete: if false;

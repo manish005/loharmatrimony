@@ -432,6 +432,13 @@ export const Dashboard: React.FC = () => {
             if (data.receiverId === myProfile.id && data.status === "pending") {
               showToast(`You received a marriage proposal!`, "info");
             }
+          } else if (change.type === "modified") {
+            const data = change.doc.data();
+            if (data.senderId === myProfile.id && data.status === "accepted") {
+              showToast(`Your marriage proposal was accepted! Congratulations!`, "success");
+              setShowCelebration(true);
+              setTimeout(() => setShowCelebration(false), 5000);
+            }
           }
         });
       }
@@ -615,6 +622,8 @@ export const Dashboard: React.FC = () => {
 
       showToast(`Congratulations! You are engaged to ${senderProfile.name}!`);
       setMyProfile((prev: any) => ({ ...prev, isMarried: true }));
+      setShowCelebration(true);
+      setTimeout(() => setShowCelebration(false), 5000);
     } catch (err) {
       console.error("Error accepting marriage request", err);
       showToast("Failed to accept marriage request", "error");
