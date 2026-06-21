@@ -1,0 +1,87 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ========================
+    // PROFILES COLLECTION
+    // ========================
+    // Each document = one user's matrimony profile
+    // Fields: name, firstName, middleName, lastName, email, gender, age, dob,
+    //         mobile, height, weight, religion, caste, subCaste, motherTongue,
+    //         maritalStatus, education, occupation, income, city, state, district,
+    //         address, familyDetails, fatherOccupation, motherOccupation, siblings,
+    //         lifestyle, foodPreference, smoking, drinking, hobbies, photos[],
+    //         isOnline, isVerified, isPremium, bio, compatibility, registeredAt
+    match /profiles/{profileId} {
+      // Anyone can read profiles (directory listing)
+      allow read: if request.auth != null;
+
+      // User can create their own profile (email must match)
+      allow create: if request.auth != null
+        && request.auth.token.email == request.resource.data.email;
+
+      // User can update their own profile
+      allow update: if request.auth != null
+        && resource.data.email == request.auth.token.email;
+
+      // No deletion allowed (profiles are permanent)
+      allow delete: if false;
+    }
+
+    // ========================
+    // CONVERSATIONS COLLECTION
+    // ========================
+    // Each document = a chat conversation between two users
+    // Fields: participants[], participantData{}, lastMessage{}, createdAt, updatedAt
+    // Note: participants[] stores Firestore profile doc IDs, not auth UIDs.
+    // Auth is enforced at the application level (buttons, navigation).
+    match /conversations/{conversationId} {
+      allow read, create, update: if request.auth != null;
+      allow delete: if false;
+
+      // ========================
+      // MESSAGES SUBCOLLECTION
+      // ========================
+      // Each document = one chat message
+      // Fields: senderId, text, timestamp, status, deleted
+      // senderId is a Firestore profile doc ID (not auth UID)
+      match /messages/{messageId} {
+        allow read, create, update: if request.auth != null;
+        allow delete: if false;
+      }
+    }
+
+    // ========================
+    // INTERESTS COLLECTION
+    // ========================
+    // Each document = an interest sent from one user to another
+    match /interests/{interestId} {
+      allow read, create, update, delete: if request.auth != null;
+    }
+
+    // ========================
+    // SUPPORT TICKETS
+    // ========================
+    match /supportTickets/{ticketId} {
+      allow read, create, update: if request.auth != null;
+    }
+
+    // ========================
+    // NOTIFICATIONS COLLECTION
+    // ========================
+    match /notifications/{notiId} {
+      // Anyone can create a notification (e.g., sending an interest)
+      allow create: if request.auth != null;
+      // Users can only read/update/delete notifications meant for them
+      allow read, update, delete: if request.auth != null 
+        && resource.data.receiverId == request.auth.uid;
+    }
+
+    // ========================
+    // SUBSCRIPTIONS
+    // ========================
+    match /subscriptions/{subId} {
+      allow read, create, update: if request.auth != null;
+    }
+  }
+}
