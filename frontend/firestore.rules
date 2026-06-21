@@ -60,6 +60,20 @@ service cloud.firestore {
     }
 
     // ========================
+    // MARRIAGE REQUESTS COLLECTION
+    // ========================
+    match /marriageRequests/{requestId} {
+      allow read, create, update, delete: if request.auth != null;
+    }
+
+    // ========================
+    // SUCCESS STORIES COLLECTION
+    // ========================
+    match /successStories/{storyId} {
+      allow read, create, update, delete: if request.auth != null;
+    }
+
+    // ========================
     // SUPPORT TICKETS
     // ========================
     match /supportTickets/{ticketId} {

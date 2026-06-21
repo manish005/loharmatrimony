@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { signOut } from "firebase/auth";
+import { signOut, onAuthStateChanged } from "firebase/auth";
 import { db, auth, storage } from "../../config/firebase";
 import { collection, getDocs, doc, updateDoc, addDoc, where, query, getDoc, onSnapshot, serverTimestamp, deleteDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -202,7 +202,7 @@ export const Dashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    const fetchProfiles = async () => {
+    const fetchProfiles = async (currentUser: any) => {
       try {
         const querySnapshot = await getDocs(collection(db, "profiles"));
         const dbProfiles = querySnapshot.docs.map(doc => {
@@ -265,8 +265,8 @@ export const Dashboard: React.FC = () => {
 
         setProfiles(dbProfiles);
 
-        if (auth.currentUser?.email) {
-          const userEmail = auth.currentUser.email.toLowerCase();
+        if (currentUser?.email) {
+          const userEmail = currentUser.email.toLowerCase();
           const userProfile = dbProfiles.find(p => p.email?.toLowerCase() === userEmail);
           if (userProfile) {
             const updatedProfiles = dbProfiles.map(p => ({
@@ -279,20 +279,20 @@ export const Dashboard: React.FC = () => {
             setPhotos(userProfile.photos || []);
             if (!userProfile.uid) {
               const profileRef = doc(db, "profiles", userProfile.id);
-              updateDoc(profileRef, { uid: auth.currentUser!.uid }).catch(() => { });
-              userProfile.uid = auth.currentUser!.uid;
+              updateDoc(profileRef, { uid: currentUser.uid }).catch(() => { });
+              userProfile.uid = currentUser.uid;
             }
           } else {
             const names = userEmail.split("@")[0];
             const isFemale = names.includes("manish") || names.includes("kumar");
             const guessedName = names
               .replace(/[0-9]/g, "")
-              .replace(/(^\w|\_\w)/g, (m) => m.toUpperCase().replace("_", " "))
+              .replace(/(^\w|\_\w)/g, (m: string) => m.toUpperCase().replace("_", " "))
               || "User";
             const guessedGender = isFemale ? "Female" : "Male";
             try {
               const docRef = await addDoc(collection(db, "profiles"), {
-                uid: auth.currentUser!.uid,
+                uid: currentUser.uid,
                 name: guessedName,
                 firstName: guessedName,
                 middleName: "",
@@ -350,17 +350,23 @@ export const Dashboard: React.FC = () => {
               console.error("Failed to create default profile:", err);
             }
           }
+        } else {
+          setProfileLoading(false);
         }
       } catch (err) {
-        console.error("Error loading db matches:", err);
-        showToast("Failed to load profiles", "error");
+        console.error("Failed to fetch profiles:", err);
       } finally {
-        setLoading(false);
         setProfileLoading(false);
+        setLoading(false);
       }
     };
-    fetchProfiles();
-  }, []);
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      fetchProfiles(user);
+    });
+
+    return () => unsubscribe();
+  }, [auth]);
 
   useEffect(() => {
     if (!myProfile?.id || profiles.length === 0) return;
