@@ -14,10 +14,8 @@ import {
   getDoc,
   writeBatch,
   limit,
-  deleteDoc,
   arrayUnion,
   arrayRemove,
-  increment
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import type { User } from "firebase/auth";
@@ -138,10 +136,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const list: Conversation[] = snapshot.docs.map((d) => {
         const data = d.data();
         const lastMsg = data.lastMessage ?? null;
-        const unreadCount = data.unreadCounts?.[myProfileIdState] || 0;
-        
-        // Fallback for older conversations without unreadCounts map
-        const fallbackUnreadCount = lastMsg && lastMsg.senderId !== myProfileIdState && lastMsg.status !== "read" ? 1 : 0;
+        const hasUnread = lastMsg && lastMsg.senderId !== myProfileIdState && lastMsg.status !== "read";
         
         return {
           id: d.id,
@@ -153,7 +148,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           blockedBy: data.blockedBy ?? [],
           clearedAt: data.clearedAt ?? {},
           unmatchedBy: data.unmatchedBy ?? [],
-          unreadCount: data.unreadCounts ? unreadCount : fallbackUnreadCount,
+          unreadCount: hasUnread ? 1 : 0,
         };
       });
 
@@ -332,10 +327,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (convData.lastMessage && convData.lastMessage.senderId !== uid && convData.lastMessage.status !== "read") {
            updates["lastMessage.status"] = "read";
         }
-        
-        if (convData.unreadCounts?.[uid] > 0 || typeof convData.unreadCounts?.[uid] === "undefined") {
-           updates[`unreadCounts.${uid}`] = 0;
-        }
 
         if (Object.keys(updates).length > 0) {
            batch.update(convRef, updates);
@@ -376,7 +367,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const conv = conversations.find(c => c.id === activeConversationId);
       const receiverId = conv?.participants.find(p => p !== uid);
 
-      const updates: any = {
+      await updateDoc(doc(db, "conversations", activeConversationId), {
         lastMessage: {
           text: text.trim(),
           senderId: uid,
@@ -384,13 +375,20 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           status: "sent",
         },
         updatedAt: serverTimestamp(),
-      };
+      });
 
+      // Create a notification document so the recipient gets a toast
       if (receiverId) {
-        updates[`unreadCounts.${receiverId}`] = increment(1);
+        const senderData = conv?.participantData?.[uid] || liveProfiles?.[uid];
+        const senderName = senderData?.name || "Someone";
+        addDoc(collection(db, "notifications"), {
+          receiverId,
+          text: `${senderName}: ${text.trim().substring(0, 80)}`,
+          type: "chat_message",
+          read: false,
+          createdAt: serverTimestamp(),
+        }).catch(() => {});
       }
-
-      await updateDoc(doc(db, "conversations", activeConversationId), updates);
     } catch (err) {
       console.error("sendMessage error:", err);
     } finally {
@@ -488,10 +486,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         participants: [uid, userId],
         participantData,
         lastMessage: null,
-        unreadCounts: {
-          [uid]: 0,
-          [userId]: 0
-        },
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -532,9 +526,18 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           timestamp: serverTimestamp(),
           status: "sent",
         },
-        [`unreadCounts.${userId}`]: increment(1),
         updatedAt: serverTimestamp(),
       });
+
+      // Notify recipient
+      const u = auth.currentUser!;
+      addDoc(collection(db, "notifications"), {
+        receiverId: userId,
+        text: `${u.displayName || "You"}: ${initialMessage.substring(0, 80)}`,
+        type: "chat_message",
+        read: false,
+        createdAt: serverTimestamp(),
+      }).catch(() => {});
     }
     return convId;
   }, [startConversation]);

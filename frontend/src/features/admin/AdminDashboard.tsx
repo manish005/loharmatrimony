@@ -18,10 +18,11 @@ import {
   ChevronLeft,
   TrendingUp,
   LayoutDashboard,
-  Settings
+  Settings,
+  Trash2,
 } from "lucide-react";
 import { db, auth } from "../../config/firebase";
-import { collection, getDocs, updateDoc, doc, setDoc, onSnapshot, query, where, getDoc, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, getDocs, updateDoc, doc, setDoc, onSnapshot, query, where, getDoc, addDoc, serverTimestamp, deleteDoc, writeBatch } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
@@ -180,12 +181,22 @@ export const AdminDashboard: React.FC = () => {
   const [activeZoomImage, setActiveZoomImage] = useState<string | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
 
+  // Member selection & delete
+  const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
+  const [selectAll, setSelectAll] = useState(false);
+  const [searchMembers, setSearchMembers] = useState("");
+  const [confirmDeleteMember, setConfirmDeleteMember] = useState<any | null>(null);
+  const [deletingMembers, setDeletingMembers] = useState(false);
+
   // Pagination states
   const [unverifiedPage, setUnverifiedPage] = useState(1);
   const [unverifiedRowsPerPage, setUnverifiedRowsPerPage] = useState(10);
   
   const [onlinePage, setOnlinePage] = useState(1);
   const [onlineRowsPerPage, setOnlineRowsPerPage] = useState(10);
+
+  const [membersPage, setMembersPage] = useState(1);
+  const [membersRowsPerPage, setMembersRowsPerPage] = useState(10);
 
   useEffect(() => {
     const handler = () => setSidebarOpen(prev => !prev);
@@ -328,6 +339,187 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const deleteUserCascade = async (profile: any) => {
+    setDeletingMembers(true);
+    try {
+      const profileId = profile.id;
+      const uid = profile.uid;
+
+      // Delete profile document
+      await deleteDoc(doc(db, "profiles", profileId)).catch(() => {});
+
+      // Delete conversations and their messages
+      const convQuery = query(collection(db, "conversations"), where("participants", "array-contains", profileId));
+      const convSnap = await getDocs(convQuery);
+      const batch = writeBatch(db);
+      for (const convDoc of convSnap.docs) {
+        const msgSnap = await getDocs(collection(db, "conversations", convDoc.id, "messages"));
+        msgSnap.docs.forEach(m => batch.delete(m.ref));
+        batch.delete(convDoc.ref);
+      }
+      await batch.commit();
+
+      // Delete interests (sent/received)
+      const interestQuery = query(
+        collection(db, "interests"),
+        where("senderId", "==", profileId)
+      );
+      const interestSnap = await getDocs(interestQuery);
+      const interestBatch = writeBatch(db);
+      interestSnap.docs.forEach(d => interestBatch.delete(d.ref));
+      const interestReceivedQuery = query(
+        collection(db, "interests"),
+        where("receiverId", "==", profileId)
+      );
+      const interestReceivedSnap = await getDocs(interestReceivedQuery);
+      interestReceivedSnap.docs.forEach(d => interestBatch.delete(d.ref));
+      await interestBatch.commit();
+
+      // Delete marriage requests
+      const mrQuery = query(
+        collection(db, "marriageRequests"),
+        where("senderId", "==", profileId)
+      );
+      const mrSnap = await getDocs(mrQuery);
+      const mrBatch = writeBatch(db);
+      mrSnap.docs.forEach(d => mrBatch.delete(d.ref));
+      const mrReceivedQuery = query(
+        collection(db, "marriageRequests"),
+        where("receiverId", "==", profileId)
+      );
+      const mrReceivedSnap = await getDocs(mrReceivedQuery);
+      mrReceivedSnap.docs.forEach(d => mrBatch.delete(d.ref));
+      await mrBatch.commit();
+
+      // Delete notifications
+      const notifQuery = query(collection(db, "notifications"), where("receiverId", "==", profileId));
+      const notifSnap = await getDocs(notifQuery);
+      const notifBatch = writeBatch(db);
+      notifSnap.docs.forEach(d => notifBatch.delete(d.ref));
+      await notifBatch.commit();
+
+      // Delete support tickets
+      const ticketQuery = query(collection(db, "supportTickets"), where("uid", "==", uid));
+      const ticketSnap = await getDocs(ticketQuery);
+      const ticketBatch = writeBatch(db);
+      ticketSnap.docs.forEach(d => ticketBatch.delete(d.ref));
+      await ticketBatch.commit();
+
+      // Delete subscription records
+      const subQuery = query(collection(db, "subscriptions"), where("uid", "==", uid));
+      const subSnap = await getDocs(subQuery);
+      const subBatch = writeBatch(db);
+      subSnap.docs.forEach(d => subBatch.delete(d.ref));
+      await subBatch.commit();
+
+      // Delete success stories
+      const storyQuery = query(collection(db, "successStories"), where("uid", "==", uid));
+      const storySnap = await getDocs(storyQuery);
+      const storyBatch = writeBatch(db);
+      storySnap.docs.forEach(d => storyBatch.delete(d.ref));
+      await storyBatch.commit();
+
+      // Try to delete Firebase Auth user (requires callable cloud function)
+      try {
+        const functions = await import("firebase/functions");
+        const { getFunctions, httpsCallable } = functions;
+        const deleteAuthUser = httpsCallable(getFunctions(), "deleteAuthUser");
+        await deleteAuthUser({ uid });
+      } catch (authErr) {
+        // Cloud function not deployed; auth record remains
+      }
+
+      toast.success(`User "${profile.name || profileId}" deleted successfully. Auth record deletion requires deploying the deleteAuthUser cloud function.`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete user.");
+    } finally {
+      setDeletingMembers(false);
+      setConfirmDeleteMember(null);
+      setSelectedMemberIds(new Set());
+      setSelectAll(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedMemberIds.size === 0) return;
+    setDeletingMembers(true);
+    const profilesToDelete = onlineMembers.filter((m: any) => selectedMemberIds.has(m.id));
+    let successCount = 0;
+    let failCount = 0;
+    for (const profile of profilesToDelete) {
+      try {
+        await deleteDoc(doc(db, "profiles", profile.id)).catch(() => {});
+
+        const uid = profile.uid;
+        const convQuery = query(collection(db, "conversations"), where("participants", "array-contains", profile.id));
+        const convSnap = await getDocs(convQuery);
+        const batch = writeBatch(db);
+        for (const convDoc of convSnap.docs) {
+          const msgSnap = await getDocs(collection(db, "conversations", convDoc.id, "messages"));
+          msgSnap.docs.forEach(m => batch.delete(m.ref));
+          batch.delete(convDoc.ref);
+        }
+        await batch.commit();
+
+        const interestQ1 = query(collection(db, "interests"), where("senderId", "==", profile.id));
+        const interestQ2 = query(collection(db, "interests"), where("receiverId", "==", profile.id));
+        const [i1, i2] = await Promise.all([getDocs(interestQ1), getDocs(interestQ2)]);
+        const ib = writeBatch(db);
+        i1.docs.forEach(d => ib.delete(d.ref));
+        i2.docs.forEach(d => ib.delete(d.ref));
+        await ib.commit();
+
+        const mrQ1 = query(collection(db, "marriageRequests"), where("senderId", "==", profile.id));
+        const mrQ2 = query(collection(db, "marriageRequests"), where("receiverId", "==", profile.id));
+        const [m1, m2] = await Promise.all([getDocs(mrQ1), getDocs(mrQ2)]);
+        const mb = writeBatch(db);
+        m1.docs.forEach(d => mb.delete(d.ref));
+        m2.docs.forEach(d => mb.delete(d.ref));
+        await mb.commit();
+
+        const nq = query(collection(db, "notifications"), where("receiverId", "==", profile.id));
+        const ns = await getDocs(nq);
+        const nb = writeBatch(db);
+        ns.docs.forEach(d => nb.delete(d.ref));
+        await nb.commit();
+
+        if (uid) {
+          const tq = query(collection(db, "supportTickets"), where("uid", "==", uid));
+          const ts = await getDocs(tq);
+          const tb = writeBatch(db);
+          ts.docs.forEach(d => tb.delete(d.ref));
+          await tb.commit();
+
+          const sq = query(collection(db, "subscriptions"), where("uid", "==", uid));
+          const ss = await getDocs(sq);
+          const sb = writeBatch(db);
+          ss.docs.forEach(d => sb.delete(d.ref));
+          await sb.commit();
+
+          const stq = query(collection(db, "successStories"), where("uid", "==", uid));
+          const sts = await getDocs(stq);
+          const stb = writeBatch(db);
+          sts.docs.forEach(d => stb.delete(d.ref));
+          await stb.commit();
+
+          try {
+            const functions = await import("firebase/functions");
+            const { getFunctions, httpsCallable } = functions;
+            const deleteAuthUser = httpsCallable(getFunctions(), "deleteAuthUser");
+            await deleteAuthUser({ uid: profile.uid });
+          } catch {}
+        }
+        successCount++;
+      } catch {
+        failCount++;
+      }
+    }
+    toast.success(`${successCount} user(s) deleted.${failCount > 0 ? ` ${failCount} failed.` : ""} Auth deletion requires deploying deleteAuthUser cloud function.`);
+    setDeletingMembers(false);
+    setSelectedMemberIds(new Set());
+    setSelectAll(false);
+  };
+
   // Filtered lists
   const filteredKyc = kycProfiles.filter(p => 
     (p.name || "").toLowerCase().includes(searchKyc.toLowerCase()) || 
@@ -353,6 +545,7 @@ export const AdminDashboard: React.FC = () => {
 
   const menuItems = [
     { id: "dashboard", name: "Dashboard", icon: LayoutDashboard },
+    { id: "members", name: "Members", icon: Users, badge: onlineMembers.length },
     { id: "kyc", name: "KYC Verification", icon: FileCheck2, badge: kycProfiles.length },
     ...(adminRole === "super_admin" ? [{ id: "subscriptions", name: "Manage Subscriptions", icon: CreditCard }] : []),
     { id: "help", name: "Support", icon: HelpCircle, badge: tickets.filter(t => t.status === "Open").length },
@@ -388,6 +581,22 @@ export const AdminDashboard: React.FC = () => {
   const paginatedOnline = filteredOnline.slice((onlinePage - 1) * onlineRowsPerPage, onlinePage * onlineRowsPerPage);
 
   const verifiedCount = onlineMembers.filter(m => m.isVerified).length;
+
+  // Member list filtering
+  const filteredMembers = onlineMembers.filter(p =>
+    (p.name || "").toLowerCase().includes(searchMembers.toLowerCase()) ||
+    (p.email || "").toLowerCase().includes(searchMembers.toLowerCase()) ||
+    (p.city || "").toLowerCase().includes(searchMembers.toLowerCase())
+  );
+  const membersTotalPages = Math.ceil(filteredMembers.length / membersRowsPerPage) || 1;
+  const paginatedMembers = filteredMembers.slice((membersPage - 1) * membersRowsPerPage, membersPage * membersRowsPerPage);
+
+  // Reset selection when search/filter changes
+  useEffect(() => {
+    setSelectedMemberIds(new Set());
+    setSelectAll(false);
+    setMembersPage(1);
+  }, [searchMembers]);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-dark-950 transition-colors">
@@ -1171,6 +1380,248 @@ export const AdminDashboard: React.FC = () => {
                   )}
                 </AnimatePresence>
 
+              </div>
+            )}
+
+            {/* TAB: Members */}
+            {activeTab === "members" && (
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+                  <div>
+                    <h2 className="font-serif text-lg font-bold text-slate-900 dark:text-white">All Members</h2>
+                    <p className="text-[10px] text-slate-500 font-semibold mt-0.5">{onlineMembers.length} total members</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="relative max-w-xs w-full">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                      <input 
+                        type="text" 
+                        placeholder="Search name, email or city..."
+                        value={searchMembers}
+                        onChange={(e) => setSearchMembers(e.target.value)}
+                        className="w-full text-xs pl-9 pr-4 py-2 border border-slate-200 dark:border-dark-800 rounded-xl bg-white dark:bg-dark-950 text-slate-900 dark:text-white focus:outline-none"
+                      />
+                    </div>
+                    {selectedMemberIds.size > 0 && (
+                      <button
+                        onClick={() => setConfirmDeleteMember({ bulk: true, count: selectedMemberIds.size })}
+                        disabled={deletingMembers}
+                        className="flex items-center gap-1.5 px-3 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Delete ({selectedMemberIds.size})
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="border border-slate-200 dark:border-dark-800 rounded-2xl overflow-hidden bg-slate-50 dark:bg-dark-950 flex flex-col">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs font-semibold">
+                      <thead className="bg-slate-100/90 dark:bg-dark-900/90 backdrop-blur-sm border-b border-slate-200 dark:border-dark-800">
+                        <tr className="text-[9px] text-slate-400 uppercase tracking-wider">
+                          <th className="py-3 px-4 w-10">
+                            <input
+                              type="checkbox"
+                              checked={selectAll}
+                              onChange={() => {
+                                if (selectAll) {
+                                  setSelectedMemberIds(new Set());
+                                  setSelectAll(false);
+                                } else {
+                                  const ids = new Set(filteredMembers.map((m: any) => m.id));
+                                  setSelectedMemberIds(ids);
+                                  setSelectAll(true);
+                                }
+                              }}
+                              className="h-4 w-4 rounded border-slate-300 text-maroon-700 focus:ring-maroon-700 cursor-pointer"
+                            />
+                          </th>
+                          <th className="py-3 px-4">Member</th>
+                          <th className="py-3 px-4">Email</th>
+                          <th className="py-3 px-4 text-center">Profile Status</th>
+                          <th className="py-3 px-4 text-center">Verification</th>
+                          {adminRole === "super_admin" && <th className="py-3 px-4 text-center">Role</th>}
+                          <th className="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 dark:divide-dark-800">
+                        {paginatedMembers.length > 0 ? paginatedMembers.map((member: any) => (
+                          <tr key={member.id} className="hover:bg-slate-100 dark:hover:bg-dark-900 transition-colors">
+                            <td className="py-3 px-4">
+                              <input
+                                type="checkbox"
+                                checked={selectedMemberIds.has(member.id)}
+                                onChange={() => {
+                                  const next = new Set(selectedMemberIds);
+                                  if (next.has(member.id)) next.delete(member.id);
+                                  else next.add(member.id);
+                                  setSelectedMemberIds(next);
+                                  setSelectAll(next.size === filteredMembers.length);
+                                }}
+                                className="h-4 w-4 rounded border-slate-300 text-maroon-700 focus:ring-maroon-700 cursor-pointer"
+                              />
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-3">
+                                <img
+                                  src={member.photos?.[0] || "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop"}
+                                  alt={member.name}
+                                  className="h-8 w-8 rounded-lg object-cover border border-slate-200 dark:border-dark-700"
+                                />
+                                <div>
+                                  <span className="font-bold text-slate-900 dark:text-white block text-[11px]">{member.name || "Unknown"}</span>
+                                  <span className="text-[9px] text-slate-450 font-normal">{member.city || ""}{member.city && member.subCaste ? " • " : ""}{member.subCaste || ""}</span>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 text-slate-600 dark:text-slate-350 text-[10px]">{member.email || "—"}</td>
+                            <td className="py-3 px-4 text-center">
+                              <span className={`inline-flex items-center gap-1 text-[8px] font-bold px-1.5 py-0.5 rounded-full ${
+                                member.isOnline
+                                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-450"
+                                  : "bg-slate-200 text-slate-500 dark:bg-dark-800 dark:text-slate-400"
+                              }`}>
+                                <span className={`h-1 w-1 rounded-full ${
+                                  member.isOnline ? "bg-emerald-500" : "bg-slate-400"
+                                }`} />
+                                {member.isOnline ? "Active" : "Offline"}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              {member.isVerified ? (
+                                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">Verified</span>
+                              ) : (
+                                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">Unverified</span>
+                              )}
+                            </td>
+                            {adminRole === "super_admin" && (
+                              <td className="py-3 px-4 text-center">
+                                <select 
+                                  value={member.role || "user"} 
+                                  onChange={(e) => handleUpdateRole(member.id, e.target.value)}
+                                  className="text-[9px] font-bold px-2 py-1 rounded bg-slate-200 dark:bg-dark-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-dark-700 cursor-pointer focus:outline-none"
+                                >
+                                  <option value="user">User</option>
+                                  <option value="admin">Admin</option>
+                                  <option value="super_admin">Super Admin</option>
+                                </select>
+                              </td>
+                            )}
+                            <td className="py-3 px-4 text-right">
+                              <button
+                                onClick={() => setConfirmDeleteMember(member)}
+                                disabled={deletingMembers}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-red-200 dark:border-red-900/30 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors cursor-pointer disabled:opacity-50 text-[10px] font-bold"
+                              >
+                                <Trash2 className="h-3 w-3" /> Delete
+                              </button>
+                            </td>
+                          </tr>
+                        )) : (
+                          <tr>
+                            <td colSpan={adminRole === "super_admin" ? 7 : 6} className="py-10 text-center text-[10px] text-slate-500 italic">No members found.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination */}
+                  <div className="flex items-center justify-between p-3 border-t border-slate-200 dark:border-dark-800 bg-white dark:bg-dark-950">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-slate-500">Rows per page:</span>
+                      <select 
+                        value={membersRowsPerPage} 
+                        onChange={(e) => { setMembersRowsPerPage(Number(e.target.value)); setMembersPage(1); }}
+                        className="text-[10px] border border-slate-200 dark:border-dark-800 rounded px-1 py-0.5 bg-white dark:bg-dark-900 focus:outline-none cursor-pointer"
+                      >
+                        <option value={10}>10</option>
+                        <option value={20}>20</option>
+                        <option value={50}>50</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[10px] text-slate-500">{membersPage} of {membersTotalPages}</span>
+                      <div className="flex gap-1">
+                        <button 
+                          disabled={membersPage === 1} 
+                          onClick={() => setMembersPage(p => p - 1)}
+                          className="p-1 border border-slate-200 dark:border-dark-800 rounded hover:bg-slate-100 dark:hover:bg-dark-900 disabled:opacity-50 cursor-pointer"
+                        >
+                          <ChevronLeft className="h-3 w-3" />
+                        </button>
+                        <button 
+                          disabled={membersPage === membersTotalPages} 
+                          onClick={() => setMembersPage(p => p + 1)}
+                          className="p-1 border border-slate-200 dark:border-dark-800 rounded hover:bg-slate-100 dark:hover:bg-dark-900 disabled:opacity-50 cursor-pointer"
+                        >
+                          <ChevronRight className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Delete Confirmation Modal */}
+                <AnimatePresence>
+                  {confirmDeleteMember && (
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-55 flex items-center justify-center p-4">
+                      <motion.div 
+                        initial={{ scale: 0.95, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0.95, opacity: 0 }}
+                        className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-5"
+                      >
+                        <div className="flex justify-between items-center border-b pb-3">
+                          <h3 className="font-serif text-base font-bold text-slate-900 dark:text-white">
+                            {confirmDeleteMember.bulk ? "Delete Members" : "Delete Member"}
+                          </h3>
+                          <button onClick={() => setConfirmDeleteMember(null)} className="p-1 rounded hover:bg-slate-100 dark:hover:bg-dark-800 cursor-pointer">
+                            <X className="h-5 w-5" />
+                          </button>
+                        </div>
+                        <div className="space-y-3">
+                          <p className="text-xs text-slate-600 dark:text-slate-300">
+                            {confirmDeleteMember.bulk
+                              ? `Are you sure you want to delete ${confirmDeleteMember.count} member(s)?`
+                              : `Are you sure you want to delete "${confirmDeleteMember.name || confirmDeleteMember.id}"?`
+                            }
+                          </p>
+                          <p className="text-[10px] text-red-500 font-semibold bg-red-50 dark:bg-red-950/20 p-3 rounded-xl border border-red-100 dark:border-red-900/30">
+                            This will permanently delete the profile, all conversations, messages, interests, marriage requests, notifications, and associated data. Auth account deletion requires the deleteAuthUser cloud function to be deployed.
+                          </p>
+                        </div>
+                        <div className="flex gap-3 pt-3 border-t">
+                          <button
+                            onClick={() => {
+                              if (confirmDeleteMember.bulk) {
+                                handleBulkDelete();
+                              } else {
+                                deleteUserCascade(confirmDeleteMember);
+                              }
+                            }}
+                            disabled={deletingMembers}
+                            className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold text-xs shadow transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                          >
+                            {deletingMembers ? (
+                              <>Deleting...</>
+                            ) : (
+                              <><Trash2 className="h-3.5 w-3.5" /> Delete</>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteMember(null)}
+                            disabled={deletingMembers}
+                            className="px-4 py-2.5 rounded-xl border text-slate-600 font-bold hover:bg-slate-50 dark:hover:bg-dark-850 transition-colors text-xs cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </motion.div>
+                    </div>
+                  )}
+                </AnimatePresence>
               </div>
             )}
 
