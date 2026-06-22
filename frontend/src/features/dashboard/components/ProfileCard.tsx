@@ -106,13 +106,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
           )}
         </div>
 
-        <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5">
-          {profile.isPremium && (
-            <span className="drop-shadow-md" title="Premium Member">
-              <Sparkles className="h-5 w-5 md:h-6 md:w-6 text-amber-400 fill-amber-400" />
-            </span>
-          )}
-        </div>
+
 
         {profile.isOnline && !marriageFixed && (
           <div className="absolute top-3 right-3 flex items-center justify-center">
