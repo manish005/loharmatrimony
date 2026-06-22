@@ -417,11 +417,11 @@ export const LandingPage: React.FC = () => {
 
           {/* Hero Right Image Frame (Glassmorphic Mockup) */}
           <div className="lg:col-span-5 relative flex items-center justify-center">
-            <div className="relative w-full max-w-[400px] aspect-[4/5] rounded-[32px] overflow-hidden shadow-2xl border border-white/50 dark:border-white/5 bg-slate-100 dark:bg-dark-900">
+            <div className="relative w-full max-w-[400px] aspect-[4/5] rounded-[32px] overflow-hidden shadow-2xl border border-white/50 dark:border-white/5 bg-gradient-to-br from-rose-100 via-amber-50 to-maroon-100 dark:from-dark-900 dark:via-dark-850 dark:to-maroon-950/30">
               <img 
-                src="" 
+                src={heroBg} 
                 alt="Indian Bride and Groom"
-                className="absolute inset-0 w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-cover opacity-80 dark:opacity-40"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
               
