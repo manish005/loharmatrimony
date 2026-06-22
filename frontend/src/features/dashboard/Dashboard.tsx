@@ -63,6 +63,7 @@ export const Dashboard: React.FC = () => {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [pendingInterestsReceived, setPendingInterestsReceived] = useState<any[]>([]);
   const [sentInterests, setSentInterests] = useState<any[]>([]);
+  const [approvedReceivedIds, setApprovedReceivedIds] = useState<string[]>([]);
   const [marriageRequests, setMarriageRequests] = useState<any[]>([]);
   const [isMarriageModalOpen, setIsMarriageModalOpen] = useState(false);
   const [selectedMarriageProfile, setSelectedMarriageProfile] = useState<any | null>(null);
@@ -419,6 +420,15 @@ export const Dashboard: React.FC = () => {
       setInterestsLoading(false);
     });
 
+    const qApprovedReceived = query(
+      collection(db, "interests"),
+      where("receiverId", "==", myProfile.id),
+      where("status", "==", "approved")
+    );
+    const unsubApprovedReceived = onSnapshot(qApprovedReceived, (snapshot) => {
+      const approvedData = snapshot.docs.map(d => d.data());
+      setApprovedReceivedIds(approvedData.map(d => d.senderId));
+    });
 
     // Listen for Marriage Requests
     const unsubMarriageRequests = onSnapshot(collection(db, "marriageRequests"), (snapshot) => {
@@ -1357,6 +1367,8 @@ export const Dashboard: React.FC = () => {
               showContactPremium={showContactPremium}
               userSubscription={userSubscription}
               interestSentIds={interestSentIds}
+              approvedConnectionIds={[...sentInterests.filter(i => i.status === "approved").map(i => i.receiverId), ...approvedReceivedIds]}
+              marriageRequests={marriageRequests}
               activeDetailPhoto={activeDetailPhoto}
               onBack={() => setActiveTab("matches")}
               onToggleInterest={toggleInterest}
@@ -1364,6 +1376,7 @@ export const Dashboard: React.FC = () => {
               onSetActiveTab={setActiveTab}
               onSetShowContactPremium={setShowContactPremium}
               onSetActiveDetailPhoto={setActiveDetailPhoto}
+              onOpenMarriageModal={setSelectedMarriageProfile}
               showToast={showToast as (msg: string, type?: string) => void}
             />
           )}

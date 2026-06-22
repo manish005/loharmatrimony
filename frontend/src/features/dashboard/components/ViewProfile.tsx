@@ -29,13 +29,16 @@ interface ViewProfileProps {
   showContactPremium: boolean;
   userSubscription: string;
   interestSentIds: string[];
+  approvedConnectionIds: string[];
+  marriageRequests: any[];
   activeDetailPhoto: number;
   onBack: () => void;
   onToggleInterest: (id: string, e?: React.MouseEvent) => void;
-  onStartChat: (profile: Profile, e?: React.MouseEvent) => void;
+  onStartChat: (profile: any, e?: React.MouseEvent) => void;
   onSetActiveTab: (tab: TabType, id?: string) => void;
   onSetShowContactPremium: (val: boolean) => void;
   onSetActiveDetailPhoto: (val: number) => void;
+  onOpenMarriageModal: (profile: any) => void;
   showToast: (msg: string, type?: string) => void;
 }
 
@@ -45,6 +48,8 @@ const ViewProfile: React.FC<ViewProfileProps> = ({
   showContactPremium,
   userSubscription,
   interestSentIds,
+  approvedConnectionIds,
+  marriageRequests,
   activeDetailPhoto,
   onBack,
   onToggleInterest,
@@ -52,6 +57,7 @@ const ViewProfile: React.FC<ViewProfileProps> = ({
   onSetActiveTab,
   onSetShowContactPremium,
   onSetActiveDetailPhoto,
+  onOpenMarriageModal,
   showToast,
 }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
@@ -134,8 +140,6 @@ const ViewProfile: React.FC<ViewProfileProps> = ({
               </div>
             </div>
 
-
-
             <div className="flex gap-3 pt-3 border-t border-slate-50 dark:border-dark-850">
               <button
                 onClick={(e) => onToggleInterest(profile.id, e)}
@@ -155,6 +159,15 @@ const ViewProfile: React.FC<ViewProfileProps> = ({
                 <MessageSquare className="h-4.5 w-4.5" /> Chat
               </button>
             </div>
+
+            {approvedConnectionIds.includes(profile.id) && !myProfile?.isMarried && !marriageRequests.some((r: any) => (r.receiverId === profile.id || r.senderId === profile.id) && r.status !== 'rejected') && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onOpenMarriageModal(profile); }}
+                className="w-full mt-3 py-3 px-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white text-xs font-bold rounded-xl shadow-md shadow-red-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Heart className="h-4.5 w-4.5 fill-white" /> Let's Get Married!
+              </button>
+            )}
           </div>
 
           <div className="bg-white dark:bg-dark-900 border border-slate-100 dark:border-dark-800 rounded-3xl p-6 shadow-sm">
