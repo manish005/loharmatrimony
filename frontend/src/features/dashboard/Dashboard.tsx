@@ -13,7 +13,7 @@ import {
   Activity, Sparkles, BookOpen, Star, Compass, User, Award, CheckCircle, 
   Smartphone, Users, Settings, Info
 } from "lucide-react";
-import { calculateAge, calculateCompatibility } from "./dashboardHelpers";
+import { calculateAge, calculateCompatibility, encodeId, decodeId } from "./dashboardHelpers";
 import type { TabType } from "./dashboardHelpers";
 import DashboardSidebar from "./components/DashboardSidebar";
 import MobileBottomNav from "./components/MobileBottomNav";
@@ -51,7 +51,7 @@ export const Dashboard: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const activeTab = (searchParams.get("tab") as TabType) || "matches";
-  const selectedProfileId = searchParams.get("id") || "";
+  const selectedProfileId = searchParams.get("id") ? decodeId(searchParams.get("id")!) : "";
   const { globalUnreadCount, activeConversationId, setActiveConversation, startConversation, startAndMessageConversation } = useChat();
   const [profiles, setProfiles] = useState<any[]>([]);
   const activeProfile = profiles.find(p => p.id === selectedProfileId);
@@ -1255,7 +1255,7 @@ export const Dashboard: React.FC = () => {
     }
     const params: Record<string, string> = { tab };
     if (id) {
-      params.id = id;
+      params.id = encodeId(id);
     }
     setSearchParams(params);
     window.scrollTo({ top: 0, behavior: "smooth" });

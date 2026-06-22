@@ -1,3 +1,16 @@
+export const encodeId = (id: string): string =>
+  btoa(id).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+export const decodeId = (encoded: string): string => {
+  try {
+    const base64 = encoded.replace(/-/g, "+").replace(/_/g, "/");
+    const decoded = atob(base64);
+    return decoded;
+  } catch {
+    return encoded;
+  }
+};
+
 export const calculateAge = (dobString: string) => {
   if (!dobString) return null;
   const birthDate = new Date(dobString);
