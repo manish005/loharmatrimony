@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../../config/firebase";
-import { collection, query, where, getDocs, getCountFromServer } from "firebase/firestore";
+import { collection, query, where, getDocs, getCountFromServer, doc, getDoc } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Check, 
@@ -234,6 +234,33 @@ export const LandingPage: React.FC = () => {
   const [newMembersList, setNewMembersList] = useState<any[]>([]);
   const [successStoriesList, setSuccessStoriesList] = useState<any[]>([]);
 
+  const [uiConfig, setUiConfig] = useState<any>(null);
+
+  const sectionVisible = (key: string): boolean => {
+    return uiConfig?.sections?.[key]?.visible !== false;
+  };
+  const sectionTitle = (key: string, fallback: string): string => {
+    return uiConfig?.sections?.[key]?.title || fallback;
+  };
+  const sectionSubtitle = (key: string, fallback: string): string => {
+    return uiConfig?.sections?.[key]?.subtitle || fallback;
+  };
+
+  useEffect(() => {
+    const fetchUiConfig = async () => {
+      try {
+        const docRef = doc(db, "siteConfig", "landingPage");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setUiConfig(docSnap.data());
+        }
+      } catch (err) {
+        console.error("Failed to load UI config:", err);
+      }
+    };
+    fetchUiConfig();
+  }, []);
+
   useEffect(() => {
     const fetchRealData = async () => {
       try {
@@ -349,7 +376,7 @@ export const LandingPage: React.FC = () => {
   return (
     <div className="overflow-x-hidden pb-16 md:pb-0">
       {/* 1. HERO SECTION WITH GLASSMORPHISM AND PARTICLE ANIMATIONS */}
-      <section className="relative min-h-[90vh] flex items-center justify-center pt-8 md:pt-0 overflow-hidden">
+      {sectionVisible("hero") && <section className="relative min-h-[90vh] flex items-center justify-center pt-8 md:pt-0 overflow-hidden">
         
         {/* Background Image with overlay */}
         <div className="absolute inset-0">
@@ -463,10 +490,9 @@ export const LandingPage: React.FC = () => {
             </div>
           </div>
         </div>
-      </section>
+      </section>}
 
-      {/* 2. COMMUNITY STATISTICS COUTERS */}
-      <section className="py-12 bg-white dark:bg-dark-900 border-y border-slate-100 dark:border-dark-800 transition-colors">
+      {sectionVisible("statistics") && <section className="py-12 bg-white dark:bg-dark-900 border-y border-slate-100 dark:border-dark-800 transition-colors">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             
@@ -512,16 +538,15 @@ export const LandingPage: React.FC = () => {
 
           </div>
         </div>
-      </section>
+      </section>}
 
-      {/* 3. NEWLY JOINED MEMBERS (HORIZONTAL SWIPE LIST) */}
-      <section className="py-20 bg-slate-50 dark:bg-dark-950 transition-colors">
+      {sectionVisible("members") && <section className="py-20 bg-slate-50 dark:bg-dark-950 transition-colors">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12">
             <div>
-              <span className="text-xs font-bold text-maroon-700 dark:text-gold-400 uppercase tracking-widest">Fresh Profiles</span>
+              <span className="text-xs font-bold text-maroon-700 dark:text-gold-400 uppercase tracking-widest">{sectionSubtitle("members", "Fresh Profiles")}</span>
               <h2 className="font-serif text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mt-1">
-                Newly Joined Members
+                {sectionTitle("members", "Newly Joined Members")}
               </h2>
             </div>
             <Link 
@@ -611,15 +636,14 @@ export const LandingPage: React.FC = () => {
             ))}
           </div>
         </div>
-      </section>
+      </section>}
 
-      {/* 4. HOW IT WORKS */}
-      <section className="py-24 bg-white dark:bg-dark-900 border-t border-slate-100 dark:border-dark-800 transition-colors">
+      {sectionVisible("howItWorks") && <section className="py-24 bg-white dark:bg-dark-900 border-t border-slate-100 dark:border-dark-800 transition-colors">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-16">
-            <span className="text-xs font-bold text-maroon-700 dark:text-gold-400 uppercase tracking-widest">Our Process</span>
+            <span className="text-xs font-bold text-maroon-700 dark:text-gold-400 uppercase tracking-widest">{sectionSubtitle("howItWorks", "Our Process")}</span>
             <h2 className="font-serif text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mt-1">
-              How Lohar Matrimony Works
+              {sectionTitle("howItWorks", "How Lohar Matrimony Works")}
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
               Six simple steps to find your life partner and start a beautiful journey
@@ -649,15 +673,14 @@ export const LandingPage: React.FC = () => {
 
           </div>
         </div>
-      </section>
+      </section>}
 
-      {/* 5. MEMBERSHIP PLANS WITH CTAS */}
-      <section id="subscriptions" className="py-24 bg-slate-50 dark:bg-dark-950 transition-colors">
+      {sectionVisible("pricing") && <section id="subscriptions" className="py-24 bg-slate-50 dark:bg-dark-950 transition-colors">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-16">
-            <span className="text-xs font-bold text-maroon-700 dark:text-gold-400 uppercase tracking-widest">Premium Packages</span>
+            <span className="text-xs font-bold text-maroon-700 dark:text-gold-400 uppercase tracking-widest">{sectionSubtitle("pricing", "Premium Packages")}</span>
             <h2 className="font-serif text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mt-1">
-              Select Your Subscription Plan
+              {sectionTitle("pricing", "Select Your Subscription Plan")}
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
               Upgrade your profile to contact matches directly and stand out from the crowd
@@ -738,15 +761,14 @@ export const LandingPage: React.FC = () => {
             ))}
           </div>
         </div>
-      </section>
+      </section>}
 
-      {/* 6. SUCCESS STORIES */}
-      <section id="testimonials" className="py-24 bg-white dark:bg-dark-900 transition-colors">
+      {sectionVisible("successStories") && <section id="testimonials" className="py-24 bg-white dark:bg-dark-900 transition-colors">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-16">
-            <span className="text-xs font-bold text-maroon-700 dark:text-gold-400 uppercase tracking-widest">Happy Couples</span>
+            <span className="text-xs font-bold text-maroon-700 dark:text-gold-400 uppercase tracking-widest">{sectionSubtitle("successStories", "Happy Couples")}</span>
             <h2 className="font-serif text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mt-1">
-              Lohar Matrimony Success Stories
+              {sectionTitle("successStories", "Lohar Matrimony Success Stories")}
             </h2>
           </div>
 
@@ -788,15 +810,14 @@ export const LandingPage: React.FC = () => {
             ))}
           </div>
         </div>
-      </section>
+      </section>}
 
-      {/* 7. FAQ ACCORDION SECTION */}
-      <section className="py-24 bg-slate-50 dark:bg-dark-950 border-t border-slate-100 dark:border-dark-800 transition-colors">
+      {sectionVisible("faq") && <section className="py-24 bg-slate-50 dark:bg-dark-950 border-t border-slate-100 dark:border-dark-800 transition-colors">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <span className="text-xs font-bold text-maroon-700 dark:text-gold-400 uppercase tracking-widest">Frequently Asked Questions</span>
+            <span className="text-xs font-bold text-maroon-700 dark:text-gold-400 uppercase tracking-widest">{sectionSubtitle("faq", "Frequently Asked Questions")}</span>
             <h2 className="font-serif text-3xl font-bold text-slate-900 dark:text-white mt-1">
-              Have Questions? Look Here
+              {sectionTitle("faq", "Have Questions? Look Here")}
             </h2>
           </div>
 
@@ -834,7 +855,7 @@ export const LandingPage: React.FC = () => {
             ))}
           </div>
         </div>
-      </section>
+      </section>}
     </div>
   );
 };

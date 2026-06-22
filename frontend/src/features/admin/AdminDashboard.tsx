@@ -20,6 +20,7 @@ import {
   LayoutDashboard,
   Settings,
   Trash2,
+  Layout,
 } from "lucide-react";
 import { db, auth } from "../../config/firebase";
 import { collection, getDocs, updateDoc, doc, setDoc, onSnapshot, query, where, getDoc, addDoc, serverTimestamp, deleteDoc, writeBatch } from "firebase/firestore";
@@ -27,6 +28,7 @@ import { signOut } from "firebase/auth";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import SettingsPanel from "../dashboard/components/SettingsPanel";
+import ManageUISettings from "./components/ManageUISettings";
 import { useLanguage } from "../../context/LanguageContext";
 
 export const AdminDashboard: React.FC = () => {
@@ -702,6 +704,7 @@ export const AdminDashboard: React.FC = () => {
     { id: "members", name: "Members", icon: Users, badge: onlineMembers.length },
     { id: "kyc", name: "KYC Verification", icon: FileCheck2, badge: kycProfiles.length },
     ...(adminRole === "super_admin" ? [{ id: "subscriptions", name: "Manage Subscriptions", icon: CreditCard }] : []),
+    { id: "manage-ui", name: "Manage UI", icon: Layout },
     { id: "help", name: "Support", icon: HelpCircle, badge: tickets.filter(t => t.status === "Open").length },
     { id: "settings", name: "Settings", icon: Settings }
   ];
@@ -1833,6 +1836,8 @@ export const AdminDashboard: React.FC = () => {
             )}
 
             {/* TAB: Settings */}
+            {activeTab === "manage-ui" && <ManageUISettings />}
+
             {activeTab === "settings" && (
               <SettingsPanel
                 privacySettings={privacySettings}
