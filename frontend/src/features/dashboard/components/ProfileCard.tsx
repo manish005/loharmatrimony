@@ -218,11 +218,17 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
         {profile.partnerId ? (
           <div className="mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-slate-100 dark:border-dark-800 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <img 
-                src={profile.partnerPhoto || ""} 
-                alt={profile.partnerName || "Partner"} 
-                className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-dark-700" 
-              />
+              {profile.partnerPhoto ? (
+                <img 
+                  src={profile.partnerPhoto} 
+                  alt={profile.partnerName || "Partner"} 
+                  className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-dark-700" 
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-amber-200 dark:bg-amber-800 flex items-center justify-center text-amber-700 dark:text-amber-300 font-bold text-xs border border-slate-200 dark:border-dark-700">
+                  {(profile.partnerName || "P").charAt(0)}
+                </div>
+              )}
               <span className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-slate-300">
                 {profile.partnerName}
               </span>

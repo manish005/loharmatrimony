@@ -31,7 +31,7 @@ const NEW_MEMBERS = [
     isOnline: true,
     isVerified: true,
     isPremium: true,
-    photo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop",
+    photo: "",
     bio: "Looking for a partner who is progressive yet values our cultural tradition."
   },
   {
@@ -45,7 +45,7 @@ const NEW_MEMBERS = [
     isOnline: true,
     isVerified: true,
     isPremium: true,
-    photo: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop",
+    photo: "",
     bio: "Passionate about travel, fitness, and reading. Family-oriented mindset."
   },
   {
@@ -59,7 +59,7 @@ const NEW_MEMBERS = [
     isOnline: false,
     isVerified: true,
     isPremium: false,
-    photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
+    photo: "",
     bio: "Friendly, simple, and love cooking. Looking for an educated partner."
   },
   {
@@ -73,7 +73,7 @@ const NEW_MEMBERS = [
     isOnline: true,
     isVerified: false,
     isPremium: false,
-    photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
+    photo: "",
     bio: "Creative by heart, love traveling. Looking for a soulmate."
   },
   {
@@ -87,7 +87,7 @@ const NEW_MEMBERS = [
     isOnline: true,
     isVerified: true,
     isPremium: true,
-    photo: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=400&fit=crop",
+    photo: "",
     bio: "Goal-oriented, family-loving girl who enjoys classical music."
   }
 ];
@@ -98,14 +98,14 @@ const SUCCESS_STORIES = [
     id: 1,
     couple: "Amit & Smita",
     weddingDate: "12th Nov 2025",
-    photo: "https://images.unsplash.com/photo-1621616875450-79f22448040e?w=600&h=400&fit=crop",
+    photo: "",
     story: "We found each other through Lohar Matrimony. The caste filtering and verified profile filters saved us months of searching. Truly grateful!"
   },
   {
     id: 2,
     couple: "Rahul & Sneha",
     weddingDate: "4th Jan 2026",
-    photo: "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=600&h=400&fit=crop",
+    photo: "",
     story: "It was love at first interest request! Highly recommend subscribing to the Gold tier, which gave us direct chat features instantly."
   }
 ];
@@ -314,7 +314,7 @@ export const LandingPage: React.FC = () => {
           <div className="lg:col-span-5 relative flex items-center justify-center">
             <div className="relative w-full max-w-[400px] aspect-[4/5] rounded-[32px] overflow-hidden shadow-2xl border border-white/50 dark:border-white/5 bg-slate-100 dark:bg-dark-900">
               <img 
-                src="https://images.unsplash.com/photo-1621616875450-79f22448040e?w=800&fit=crop" 
+                src="" 
                 alt="Indian Bride and Groom"
                 className="absolute inset-0 w-full h-full object-cover"
               />

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Heart, Calendar, ShieldCheck, X } from "lucide-react";
 
 interface Story {
-  id: number;
+  id: string;
   couple: string;
   date: string;
   malePhoto: string;

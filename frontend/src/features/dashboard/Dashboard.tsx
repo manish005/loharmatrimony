@@ -658,7 +658,16 @@ export const Dashboard: React.FC = () => {
         timestamp: serverTimestamp()
       });
 
-      showToast(`Congratulations! You are engaged to ${senderProfile.name}!`);
+      // Update local profiles state so profile cards and ViewProfile reflect the change immediately
+      setProfiles(prev => prev.map(p => {
+        if (p.id === myProfile.id) {
+          return { ...p, isMarried: true, maritalStatus: "Getting Married", partnerId: senderProfile.id, partnerName: senderProfile.name, partnerPhoto: senderProfile.photos?.[0] || senderProfile.photo || "", weddingDate: reqData.weddingDate || "" };
+        }
+        if (p.id === senderProfile.id) {
+          return { ...p, isMarried: true, maritalStatus: "Getting Married", partnerId: myProfile.id, partnerName: myProfile.name, partnerPhoto: myProfile.photos?.[0] || myProfile.photo || "", weddingDate: reqData.weddingDate || "" };
+        }
+        return p;
+      }));
       setMyProfile((prev: any) => ({ 
         ...prev, 
         isMarried: true, 
@@ -668,6 +677,7 @@ export const Dashboard: React.FC = () => {
         partnerPhoto: senderProfile.photos?.[0] || senderProfile.photo || "",
         weddingDate: reqData.weddingDate || ""
       }));
+      showToast(`Congratulations! You are engaged to ${senderProfile.name}!`);
       setShowCelebration(true);
       setTimeout(() => setShowCelebration(false), 5000);
       setActiveTab("stories");
@@ -1351,7 +1361,7 @@ export const Dashboard: React.FC = () => {
 
           {/* TAB 9: Success Stories */}
           {activeTab === "stories" && (
-            <SuccessStories onSelectStory={setSelectedStory} />
+            <SuccessStories onSelectStory={setSelectedStory} myProfile={myProfile} showToast={showToast} />
           )}
 
           {/* TAB 10: Premium Subscriptions */}

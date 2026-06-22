@@ -66,7 +66,7 @@ const InterestsSentPanel: React.FC<InterestsSentPanelProps> = ({
                 onClick={() => onViewProfile(profile.id)}
               >
                 <img 
-                  src={profile.photo || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop"} 
+                  src={profile.photo || ""} 
                   alt={profile.name} 
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />

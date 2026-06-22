@@ -168,14 +168,8 @@ export const AdminDashboard: React.FC = () => {
         isVerified: true,
         isPremium: true,
         compatibility: 90,
-        photos: [
-          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
-          "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop",
-          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop",
-          "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=400&fit=crop",
-          "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop"
-        ],
-        photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
+        photos: ["", "", "", "", ""],
+        photo: "",
         bio: "I am a simple and caring person looking for a life partner who understands and supports mutual growth. I believe in family values and modern thinking.",
         onboardingCompleted: true,
         registeredAt: new Date().toISOString(),
@@ -219,14 +213,8 @@ export const AdminDashboard: React.FC = () => {
         isVerified: true,
         isPremium: false,
         compatibility: 88,
-        photos: [
-          "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
-          "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop",
-          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop",
-          "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&h=400&fit=crop",
-          "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=400&fit=crop"
-        ],
-        photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
+        photos: ["", "", "", "", ""],
+        photo: "",
         bio: "I am an ambitious and kind-hearted woman who values honesty and respect. Looking for a partner who shares similar values and enjoys life's simple pleasures.",
         onboardingCompleted: true,
         registeredAt: new Date().toISOString(),
@@ -270,14 +258,8 @@ export const AdminDashboard: React.FC = () => {
         isVerified: true,
         isPremium: true,
         compatibility: 92,
-        photos: [
-          "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=400&h=400&fit=crop",
-          "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop",
-          "https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=400&h=400&fit=crop",
-          "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=400&fit=crop",
-          "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&h=400&fit=crop"
-        ],
-        photo: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=400&h=400&fit=crop",
+        photos: ["", "", "", "", ""],
+        photo: "",
         bio: "I am a cheerful and family-oriented person who loves traveling and exploring new places. Looking for a caring and understanding life partner.",
         onboardingCompleted: true,
         registeredAt: new Date().toISOString(),
@@ -995,7 +977,7 @@ export const AdminDashboard: React.FC = () => {
                                   className="hover:bg-slate-100 dark:hover:bg-dark-900 transition-colors cursor-pointer"
                                 >
                                   <td className="py-2 px-3 flex items-center gap-2">
-                                    <img src={p.photos?.[0] || "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop"} alt={p.name} className="h-6 w-6 rounded-md object-cover border" />
+                                    <img src={p.photos?.[0] || ""} alt={p.name} className="h-6 w-6 rounded-md object-cover border" />
                                     <div>
                                       <span className="font-bold text-slate-900 dark:text-white block text-[10px]">{p.name || "Unknown"}</span>
                                       <span className="text-[8px] text-slate-450 font-normal">{p.registeredAt || "Recent"}</span>
@@ -1153,7 +1135,7 @@ export const AdminDashboard: React.FC = () => {
                                   />
                                 </td>
                                 <td className="py-2 px-3 flex items-center gap-2">
-                                  <img src={member.photos?.[0] || "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop"} alt={member.name} className="h-6 w-6 rounded-md object-cover border" />
+                                  <img src={member.photos?.[0] || ""} alt={member.name} className="h-6 w-6 rounded-md object-cover border" />
                                   <div>
                                     <span className="font-bold text-slate-900 dark:text-white block text-[10px]">{member.name}</span>
                                     <span className="text-[8px] text-slate-450 font-normal">{member.subCaste}</span>
@@ -1273,7 +1255,7 @@ export const AdminDashboard: React.FC = () => {
                         className="border border-slate-100 dark:border-dark-800 rounded-2xl p-4 hover:bg-slate-50/50 dark:hover:bg-dark-950/20 transition-all flex items-center gap-5 justify-between cursor-pointer"
                       >
                         <div className="flex items-center gap-4">
-                          <img src={p.photos?.[0] || "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop"} alt={p.name} className="h-14 w-14 rounded-xl object-cover border border-slate-100" />
+                          <img src={p.photos?.[0] || ""} alt={p.name} className="h-14 w-14 rounded-xl object-cover border border-slate-100" />
                           <div>
                             <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                               {p.name} <span className="text-[10px] font-normal text-slate-400">{p.gender} • {p.dob}</span>
@@ -1311,7 +1293,7 @@ export const AdminDashboard: React.FC = () => {
                         </div>
                         <div className="space-y-4">
                           <div className="flex items-center gap-4">
-                            <img src={selectedKyc.photos?.[0] || "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop"} alt={selectedKyc.name} className="h-16 w-16 rounded-xl object-cover" />
+                            <img src={selectedKyc.photos?.[0] || ""} alt={selectedKyc.name} className="h-16 w-16 rounded-xl object-cover" />
                             <div>
                               <p className="text-sm font-bold text-slate-900 dark:text-white">{selectedKyc.name}</p>
                               <p className="text-xs text-slate-500">Aadhaar: <span className="font-mono">{selectedKyc.aadhaarNumber}</span></p>
@@ -1746,7 +1728,7 @@ export const AdminDashboard: React.FC = () => {
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-3">
                                 <img
-                                  src={member.photos?.[0] || "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop"}
+                                  src={member.photos?.[0] || ""}
                                   alt={member.name}
                                   className="h-8 w-8 rounded-lg object-cover border border-slate-200 dark:border-dark-700"
                                 />

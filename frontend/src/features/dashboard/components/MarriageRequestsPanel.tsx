@@ -76,7 +76,7 @@ const MarriageRequestsPanel: React.FC<MarriageRequestsPanelProps> = ({
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
               <div className="flex items-center gap-4 cursor-pointer group" onClick={() => onViewProfile(sender.id)}>
                 <img 
-                  src={sender.photos?.[0] || "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop"} 
+                  src={sender.photos?.[0] || ""} 
                   alt={sender.name}
                   className="h-16 w-16 rounded-full object-cover border-2 border-white shadow-md group-hover:scale-105 transition-transform"
                 />

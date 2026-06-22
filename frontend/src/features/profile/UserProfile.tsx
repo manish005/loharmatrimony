@@ -66,11 +66,7 @@ export const UserProfile: React.FC = () => {
       caste: "Lohar (Panchal preferred)",
       location: "Maharashtra (Mumbai/Pune preferred)"
     },
-    photos: [
-      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=600&h=600&fit=crop",
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&h=600&fit=crop",
-      "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&h=600&fit=crop"
-    ]
+    photos: ["", "", ""]
   };
 
   const [activePhoto, setActivePhoto] = useState(0);

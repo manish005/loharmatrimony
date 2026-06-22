@@ -89,7 +89,7 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
                 onClick={() => fileInputRef.current?.click()}
                 className="h-20 w-20 rounded-2xl overflow-hidden border-2 border-maroon-700/30 dark:border-gold-500/30 bg-slate-100 dark:bg-dark-800 cursor-pointer group relative"
               >
-                <img src={myProfile.photo || "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&h=200&fit=crop"} alt={myProfile.name} className="h-full w-full object-cover" />
+                <img src={myProfile.photo || ""} alt={myProfile.name} className="h-full w-full object-cover" onError={(e) => e.currentTarget.src = ""} />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
                   <Camera className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
@@ -138,11 +138,17 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
               {myProfile.partnerId && !isEditingProfile && (
                 <div className="mt-4 pt-3 border-t border-slate-100 dark:border-dark-800 flex items-center justify-between sm:justify-start sm:gap-6">
                   <div className="flex items-center gap-2">
-                    <img 
-                      src={myProfile.partnerPhoto || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop"} 
-                      alt={myProfile.partnerName || "Partner"} 
-                      className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover border border-slate-200 dark:border-dark-700 shadow-sm" 
-                    />
+                    {myProfile.partnerPhoto ? (
+                      <img 
+                        src={myProfile.partnerPhoto} 
+                        alt={myProfile.partnerName || "Partner"} 
+                        className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover border border-slate-200 dark:border-dark-700 shadow-sm" 
+                      />
+                    ) : (
+                      <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-amber-200 dark:bg-amber-800 flex items-center justify-center text-amber-700 dark:text-amber-300 font-bold text-xs md:text-sm border border-slate-200 dark:border-dark-700">
+                        {(myProfile.partnerName || "P").charAt(0)}
+                      </div>
+                    )}
                     <span className="text-xs md:text-sm font-bold text-slate-700 dark:text-slate-300">
                       {myProfile.partnerName}
                     </span>
@@ -152,7 +158,7 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
                     className="py-1.5 px-3 md:px-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 font-bold text-[10px] md:text-xs flex items-center gap-1.5 border border-amber-200/60 dark:border-amber-800/30 shadow-sm"
                   >
                     <Heart className="h-3 w-3 md:h-4 md:w-4 fill-amber-500 text-amber-500" />
-                    {myProfile.weddingDate && new Date(myProfile.weddingDate) > new Date() ? "Marriage Fixed" : "Married"}
+                    {myProfile.weddingDate && new Date(myProfile.weddingDate) < new Date() ? "Married" : "Getting Married"}
                   </button>
                 </div>
               )}
@@ -313,13 +319,15 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Marital Status</label>
-                <select name="maritalStatus" value={profileFormState.maritalStatus || ""} onChange={onFormChange}
-                  className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-xl px-3 py-2.5 bg-white dark:bg-dark-950 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-maroon-700/20">
-                  <option value="Never Married">Never Married</option>
-                  <option value="Divorced">Divorced</option>
-                  <option value="Widowed">Widowed</option>
-                  <option value="Awaiting Divorced">Awaiting Divorced</option>
-                </select>
+                  <select name="maritalStatus" value={profileFormState.maritalStatus || ""} onChange={onFormChange}
+                    className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-xl px-3 py-2.5 bg-white dark:bg-dark-950 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-maroon-700/20">
+                    <option value="Never Married">Never Married</option>
+                    <option value="Getting Married">Getting Married</option>
+                    <option value="Married">Married</option>
+                    <option value="Divorced">Divorced</option>
+                    <option value="Widowed">Widowed</option>
+                    <option value="Awaiting Divorced">Awaiting Divorced</option>
+                  </select>
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Mother Tongue</label>
@@ -785,7 +793,7 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
               </div>
               <div className="flex justify-between items-center py-1.5">
                 <span className="text-slate-500">Sub Caste</span>
-                <strong className="text-slate-900 dark:text-white font-semibold">{myProfile.subCaste || "Panchal"}</strong>
+                <strong className="text-slate-900 dark:text-white font-semibold">{myProfile.subCaste || "Not specified"}</strong>
               </div>
             </div>
           </div>
