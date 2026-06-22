@@ -86,11 +86,7 @@ service cloud.firestore {
     // NOTIFICATIONS COLLECTION
     // ========================
     match /notifications/{notiId} {
-      // Anyone can create a notification (e.g., sending an interest)
-      allow create: if request.auth != null;
-      // Users can only read/update/delete notifications meant for them
-      allow read, update, delete: if request.auth != null 
-        && resource.data.receiverId == request.auth.uid;
+      allow read, create, update, delete: if request.auth != null;
     }
 
     // ========================

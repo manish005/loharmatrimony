@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { collection, query, where, orderBy, onSnapshot, updateDoc, deleteDoc, doc, writeBatch } from "firebase/firestore";
+import { collection, query, where, orderBy, onSnapshot, updateDoc, deleteDoc, doc, writeBatch, getDocs } from "firebase/firestore";
 import { auth, db } from "../../config/firebase";
 import { Sun, Moon, Menu, Bell, Check, X, LogOut, User, Settings, Globe } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
@@ -28,26 +28,57 @@ export const Header: React.FC = () => {
 
   useEffect(() => {
     let unsubNotis: () => void;
+    let unsubProfile: () => void;
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
       if (user) {
-        const q = query(
-          collection(db, "notifications"),
-          where("receiverId", "==", user.uid),
-          orderBy("createdAt", "desc")
-        );
-        unsubNotis = onSnapshot(q, (snapshot) => {
-          const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-          setNotifications(list);
-        });
+        try {
+          const qProfile = query(
+            collection(db, "profiles"),
+            where("email", "==", user.email?.toLowerCase() || "")
+          );
+          unsubProfile = onSnapshot(qProfile, (profileSnap) => {
+            let profileId = "";
+            if (!profileSnap.empty) {
+              profileId = profileSnap.docs[0].id;
+            }
+
+            const targetReceiverId = profileId || user.uid;
+            if (unsubNotis) unsubNotis();
+
+            const q = query(
+              collection(db, "notifications"),
+              where("receiverId", "==", targetReceiverId)
+            );
+            unsubNotis = onSnapshot(q, (snapshot) => {
+              const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+              list.sort((a: any, b: any) => {
+                const dateA = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate() : new Date(a.createdAt)) : new Date();
+                const dateB = b.createdAt ? (b.createdAt.toDate ? b.createdAt.toDate() : new Date(b.createdAt)) : new Date();
+                return dateB.getTime() - dateA.getTime();
+              });
+              setNotifications(list);
+            }, (err) => {
+              console.error("Error in notifications snapshot listener:", err);
+            });
+          }, (err) => {
+            console.error("Error in profile snapshot listener:", err);
+          });
+        } catch (err) {
+          console.error("Error setting up notifications listener in Header:", err);
+        }
       } else {
         setNotifications([]);
         if (unsubNotis) unsubNotis();
+        if (unsubProfile) unsubProfile();
       }
     });
+
     return () => {
       unsubscribe();
       if (unsubNotis) unsubNotis();
+      if (unsubProfile) unsubProfile();
     };
   }, []);
 

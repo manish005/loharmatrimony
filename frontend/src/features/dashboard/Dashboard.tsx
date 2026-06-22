@@ -514,7 +514,7 @@ export const Dashboard: React.FC = () => {
         });
 
         // Add Notification
-        const senderName = myProfile.firstName || myProfile.name || "Someone";
+        const senderName = myProfile.name || myProfile.firstName || "Someone";
         await addDoc(collection(db, "notifications"), {
           receiverId: id,
           senderId: myProfile.id,
@@ -546,7 +546,7 @@ export const Dashboard: React.FC = () => {
         showToast(`You approved ${senderName}'s interest!`);
 
         // Add Notification
-        const myName = myProfile.firstName || myProfile.name || "Someone";
+        const myName = myProfile.name || myProfile.firstName || "Someone";
         await addDoc(collection(db, "notifications"), {
           receiverId: senderId,
           senderId: myProfile.id,
@@ -581,7 +581,7 @@ export const Dashboard: React.FC = () => {
         showToast("Interest declined.");
 
         // Add Notification
-        const myName = myProfile.firstName || myProfile.name || "Someone";
+        const myName = myProfile.name || myProfile.firstName || "Someone";
         await addDoc(collection(db, "notifications"), {
           receiverId: senderId,
           senderId: myProfile.id,
@@ -611,7 +611,7 @@ export const Dashboard: React.FC = () => {
         timestamp: serverTimestamp()
       });
 
-      const senderName = myProfile.firstName || myProfile.name || "Someone";
+      const senderName = myProfile.name || myProfile.firstName || "Someone";
       await addDoc(collection(db, "notifications"), {
         receiverId: selectedMarriageProfile.id,
         senderId: myProfile.id,
@@ -668,7 +668,7 @@ export const Dashboard: React.FC = () => {
       });
 
       // Add Notification
-      const myName = myProfile.firstName || myProfile.name || "Someone";
+      const myName = myProfile.name || myProfile.firstName || "Someone";
       await addDoc(collection(db, "notifications"), {
         receiverId: senderProfile.id,
         senderId: myProfile.id,
@@ -737,7 +737,7 @@ export const Dashboard: React.FC = () => {
         snap2.forEach(d => deleteDoc(d.ref));
 
         // 3. Send Notification to the other user
-        const myName = myProfile.firstName || myProfile.name || "Someone";
+        const myName = myProfile.name || myProfile.firstName || "Someone";
         await addDoc(collection(db, "notifications"), {
           receiverId: otherUserId,
           senderId: myProfile.id,
@@ -1040,10 +1040,6 @@ export const Dashboard: React.FC = () => {
       list = list.filter(p => !isMarriageFixed(p.name) && !p.isMarried);
     }
 
-    if (userGender === "Male") {
-      list = list.slice(0, 50);
-    }
-
     if (activeTab === "shortlisted") {
       list = list.filter(p => shortlistedIds.includes(p.id));
     } else if (activeTab === "interests") {
@@ -1095,6 +1091,10 @@ export const Dashboard: React.FC = () => {
 
         return matchesQuery && matchesSubCaste && matchesState && matchesDistrict && matchesTaluka && matchesVerified && matchesOnline && matchesAgeMin && matchesAgeMax && matchesMaritalStatus;
       });
+    }
+
+    if (userGender === "Male") {
+      list = list.slice(0, 50);
     }
 
     return list;

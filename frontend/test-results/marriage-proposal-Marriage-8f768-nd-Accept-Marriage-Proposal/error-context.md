@@ -14,14 +14,14 @@
 ```
 Error: expect(locator).toBeVisible() failed
 
-Locator: locator('img[alt="Priya Patil5778029d"]')
+Locator: locator('text=Priya Patilb510b241 proposed a marriage setup!')
 Expected: visible
 Timeout: 5000ms
 Error: element(s) not found
 
 Call log:
   - Expect "toBeVisible" with timeout 5000ms
-  - waiting for locator('img[alt="Priya Patil5778029d"]')
+  - waiting for locator('text=Priya Patilb510b241 proposed a marriage setup!')
 
 ```
 
@@ -31,11 +31,12 @@ Call log:
     - /url: /
   - button "Toggle Theme"
   - button "Notifications"
+  - text: Notifications No notifications yet.
 - main:
   - complementary:
     - heading "Dashboard Menu" [level=3]
     - navigation:
-      - button "Recommended Profiles 69"
+      - button "Recommended Profiles 104"
       - button "Advanced Search"
       - button "Shortlisted Profiles 0"
       - button "Interests 0"
@@ -46,218 +47,477 @@ Call log:
       - button "Subscriptions"
       - button "Settings"
   - main:
-    - heading "Interests" [level=2]
-    - paragraph: Manage your sent and received connection requests
-    - button "Received Requests"
-    - button "Sent Requests"
-    - button "Marriage Requests"
-    - paragraph: No interests sent yet
-    - paragraph: When you send an interest to someone, it will appear here so you can track its status.
+    - heading "Recommended Profiles" [level=2]
+    - paragraph: Personalized recommendations based on your preferences
+    - button "More Filters"
+    - img "Priya Patil"
+    - img "Priya Patil"
+    - img "Priya Patil"
+    - img "Priya Patil"
+    - img "Priya Patil"
+    - button "Shortlist Profile"
+    - text: 85% Match
+    - heading "Priya Patil" [level=4]
+    - text: Verified 25 yrs 5'4" Deshmukh Never Married MBA in Finance ₹10 Lakh - ₹12 Lakh
+    - paragraph: Mumbai, Maharashtra
+    - button "Interest"
+    - button "Chat"
+    - img "Riya Singh"
+    - button "Shortlist Profile"
+    - text: 90% Match
+    - heading "Riya Singh" [level=4]
+    - text: 27 yrs 5'5" Rajput Never Married M.Sc
+    - paragraph: Pune, Maharashtra
+    - button "Interest"
+    - button "Chat"
+    - img "Priya Patel"
+    - button "Shortlist Profile"
+    - text: 85% Match
+    - heading "Priya Patel" [level=4]
+    - text: Verified 24 yrs 5'2" Leuva Never Married B.Tech 12 LPA
+    - paragraph: Ahmedabad, Gujarat
+    - button "Interest"
+    - button "Chat"
+    - img "Priya Patilc9b8e060"
+    - img "Priya Patilc9b8e060"
+    - img "Priya Patilc9b8e060"
+    - img "Priya Patilc9b8e060"
+    - img "Priya Patilc9b8e060"
+    - button "Shortlist Profile"
+    - text: 85% Match
+    - heading "Priya Patilc9b8e060" [level=4]
+    - text: Verified 25 yrs 5'4" Deshmukh Never Married MBA in Finance ₹10 Lakh - ₹12 Lakh
+    - paragraph: Mumbai, Maharashtra
+    - button "Interest"
+    - button "Chat"
+    - img "Priya Patilf69018a2"
+    - img "Priya Patilf69018a2"
+    - img "Priya Patilf69018a2"
+    - img "Priya Patilf69018a2"
+    - img "Priya Patilf69018a2"
+    - button "Shortlist Profile"
+    - text: 85% Match
+    - heading "Priya Patilf69018a2" [level=4]
+    - text: Verified 25 yrs 5'4" Deshmukh Never Married MBA in Finance ₹10 Lakh - ₹12 Lakh
+    - paragraph: Mumbai, Maharashtra
+    - button "Interest"
+    - button "Chat"
+    - img "Priya Patil"
+    - img "Priya Patil"
+    - img "Priya Patil"
+    - img "Priya Patil"
+    - img "Priya Patil"
+    - button "Shortlist Profile"
+    - text: 85% Match
+    - heading "Priya Patil" [level=4]
+    - text: Verified 25 yrs 5'4" Deshmukh Never Married MBA in Finance ₹10 Lakh - ₹12 Lakh
+    - paragraph: Mumbai, Maharashtra
+    - button "Interest"
+    - button "Chat"
+    - img "Priya Patilee57f8c5"
+    - img "Priya Patilee57f8c5"
+    - img "Priya Patilee57f8c5"
+    - img "Priya Patilee57f8c5"
+    - img "Priya Patilee57f8c5"
+    - button "Shortlist Profile"
+    - text: 85% Match
+    - heading "Priya Patilee57f8c5" [level=4]
+    - text: Verified 25 yrs 5'4" Deshmukh Never Married MBA in Finance ₹10 Lakh - ₹12 Lakh
+    - paragraph: Mumbai, Maharashtra
+    - button "Interest"
+    - button "Chat"
+    - img "Priya Patil"
+    - img "Priya Patil"
+    - img "Priya Patil"
+    - img "Priya Patil"
+    - img "Priya Patil"
+    - button "Shortlist Profile"
+    - text: 85% Match
+    - heading "Priya Patil" [level=4]
+    - text: Verified 25 yrs 5'4" Deshmukh Never Married MBA in Finance ₹10 Lakh - ₹12 Lakh
+    - paragraph: Mumbai, Maharashtra
+    - button "Interest"
+    - button "Chat"
+    - img "Priya Patilaec2cb86"
+    - img "Priya Patilaec2cb86"
+    - img "Priya Patilaec2cb86"
+    - img "Priya Patilaec2cb86"
+    - img "Priya Patilaec2cb86"
+    - button "Shortlist Profile"
+    - text: 85% Match
+    - heading "Priya Patilaec2cb86" [level=4]
+    - text: Verified 25 yrs 5'4" Deshmukh Never Married MBA in Finance ₹10 Lakh - ₹12 Lakh
+    - paragraph: Mumbai, Maharashtra
+    - button "Interest"
+    - button "Chat"
+    - img "Kavya Reddy"
+    - button "Shortlist Profile"
+    - text: 85% Match
+    - heading "Kavya Reddy" [level=4]
+    - text: Verified 28 yrs 5'6" Reddy Never Married MBBS
+    - paragraph: Hyderabad, Telangana
+    - button "Interest"
+    - button "Chat"
+    - img "Ananya Sharma"
+    - img "Ananya Sharma"
+    - button "Shortlist Profile"
+    - text: 80% Match
+    - heading "Ananya Sharma" [level=4]
+    - text: Verified 26 yrs 5'4" Saraswat Never Married MBA 15 LPA
+    - paragraph: Mumbai, Maharashtra
+    - button "Interest"
+    - button "Chat"
+    - img "Priya Patilc5276204"
+    - img "Priya Patilc5276204"
+    - img "Priya Patilc5276204"
+    - img "Priya Patilc5276204"
+    - img "Priya Patilc5276204"
+    - button "Shortlist Profile"
+    - text: 85% Match
+    - heading "Priya Patilc5276204" [level=4]
+    - text: Verified 25 yrs 5'4" Deshmukh Never Married MBA in Finance ₹10 Lakh - ₹12 Lakh
+    - paragraph: Mumbai, Maharashtra
+    - button "Interest"
+    - button "Chat"
+    - button "Shortlist Profile"
+    - text: 90% Match
+    - heading "Nisha Shahd66fc76e" [level=4]
+    - text: Verified 25 yrs Gadi Lohar Never Married
+    - paragraph: Mumbai, Maharashtra
+    - button "Interest"
+    - button "Chat"
+    - img "Priya Patil"
+    - img "Priya Patil"
+    - img "Priya Patil"
+    - img "Priya Patil"
+    - img "Priya Patil"
+    - button "Shortlist Profile"
+    - text: 85% Match
+    - heading "Priya Patil" [level=4]
+    - text: Verified 25 yrs 5'4" Deshmukh Never Married MBA in Finance ₹10 Lakh - ₹12 Lakh
+    - paragraph: Mumbai, Maharashtra
+    - button "Interest"
+    - button "Chat"
+    - img "Priya Patil4f65f6ab"
+    - img "Priya Patil4f65f6ab"
+    - img "Priya Patil4f65f6ab"
+    - img "Priya Patil4f65f6ab"
+    - img "Priya Patil4f65f6ab"
+    - button "Shortlist Profile"
+    - text: 85% Match
+    - heading "Priya Patil4f65f6ab" [level=4]
+    - text: Verified 25 yrs 5'4" Deshmukh Never Married MBA in Finance ₹10 Lakh - ₹12 Lakh
+    - paragraph: Mumbai, Maharashtra
+    - button "Interest"
+    - button "Chat"
+    - img "Priya Patil687d1dad"
+    - img "Priya Patil687d1dad"
+    - img "Priya Patil687d1dad"
+    - img "Priya Patil687d1dad"
+    - img "Priya Patil687d1dad"
+    - button "Shortlist Profile"
+    - text: 85% Match
+    - heading "Priya Patil687d1dad" [level=4]
+    - text: Verified 25 yrs 5'4" Deshmukh Never Married MBA in Finance ₹10 Lakh - ₹12 Lakh
+    - paragraph: Mumbai, Maharashtra
+    - button "Interest"
+    - button "Chat"
+    - img "Priya Patil2253f21c"
+    - img "Priya Patil2253f21c"
+    - img "Priya Patil2253f21c"
+    - img "Priya Patil2253f21c"
+    - img "Priya Patil2253f21c"
+    - button "Shortlist Profile"
+    - text: 85% Match
+    - heading "Priya Patil2253f21c" [level=4]
+    - text: Verified 25 yrs 5'4" Deshmukh Never Married MBA in Finance ₹10 Lakh - ₹12 Lakh
+    - paragraph: Mumbai, Maharashtra
+    - button "Interest"
+    - button "Chat"
+    - img "Priya Patila370dc4d"
+    - img "Priya Patila370dc4d"
+    - img "Priya Patila370dc4d"
+    - img "Priya Patila370dc4d"
+    - img "Priya Patila370dc4d"
+    - button "Shortlist Profile"
+    - text: 85% Match
+    - heading "Priya Patila370dc4d" [level=4]
+    - text: Verified 25 yrs 5'4" Deshmukh Never Married MBA in Finance ₹10 Lakh - ₹12 Lakh
+    - paragraph: Mumbai, Maharashtra
+    - button "Interest"
+    - button "Chat"
+    - img "Priya Patil e87bfe01"
+    - img "Priya Patil e87bfe01"
+    - img "Priya Patil e87bfe01"
+    - img "Priya Patil e87bfe01"
+    - img "Priya Patil e87bfe01"
+    - button "Shortlist Profile"
+    - text: 85% Match
+    - heading "Priya e87bfe01" [level=4]
+    - text: Verified 25 yrs 5'4" Deshmukh Never Married MBA in Finance ₹10 Lakh - ₹12 Lakh
+    - paragraph: Mumbai, Maharashtra
+    - button "Interest"
+    - button "Chat"
+    - img "Priya Patilb510b241"
+    - img "Priya Patilb510b241"
+    - img "Priya Patilb510b241"
+    - img "Priya Patilb510b241"
+    - img "Priya Patilb510b241"
+    - button "Shortlist Profile"
+    - text: 85% Match
+    - heading "Priya Patilb510b241" [level=4]
+    - text: Verified 25 yrs 5'4" Deshmukh Never Married MBA in Finance ₹10 Lakh - ₹12 Lakh
+    - paragraph: Mumbai, Maharashtra
+    - button "Interest"
+    - button "Chat"
+    - img "Priya Patil5778029d"
+    - img "Priya Patil5778029d"
+    - img "Priya Patil5778029d"
+    - img "Priya Patil5778029d"
+    - img "Priya Patil5778029d"
+    - button "Shortlist Profile"
+    - text: 85% Match
+    - heading "Priya Patil5778029d" [level=4]
+    - text: Verified 25 yrs 5'4" Deshmukh Never Married MBA in Finance ₹10 Lakh - ₹12 Lakh
+    - paragraph: Mumbai, Maharashtra
+    - button "Interest"
+    - button "Chat"
+    - button "Shortlist Profile"
+    - text: 90% Match
+    - heading "Nisha Shah938e9eab" [level=4]
+    - text: Verified 25 yrs Gadi Lohar Never Married
+    - paragraph: Mumbai, Maharashtra
+    - button "Interest"
+    - button "Chat"
+    - img "Priya Patil1bdb9b00"
+    - img "Priya Patil1bdb9b00"
+    - img "Priya Patil1bdb9b00"
+    - img "Priya Patil1bdb9b00"
+    - img "Priya Patil1bdb9b00"
+    - button "Shortlist Profile"
+    - text: 85% Match
+    - heading "Priya Patil1bdb9b00" [level=4]
+    - text: Verified 25 yrs 5'4" Deshmukh Never Married MBA in Finance ₹10 Lakh - ₹12 Lakh
+    - paragraph: Mumbai, Maharashtra
+    - button "Interest"
+    - button "Chat"
+    - img "Priya Patil4e5ea29f"
+    - img "Priya Patil4e5ea29f"
+    - img "Priya Patil4e5ea29f"
+    - img "Priya Patil4e5ea29f"
+    - img "Priya Patil4e5ea29f"
+    - button "Shortlist Profile"
+    - text: 85% Match
+    - heading "Priya Patil4e5ea29f" [level=4]
+    - text: Verified 25 yrs 5'4" Deshmukh Never Married MBA in Finance ₹10 Lakh - ₹12 Lakh
+    - paragraph: Mumbai, Maharashtra
+    - button "Interest"
+    - button "Chat"
 ```
 
 # Test source
 
 ```ts
-  225 |           district: "Mumbai Suburban",
-  226 |           address: "Bandra East",
-  227 |           familyDetails: "Joint family.",
-  228 |           fatherOccupation: "Government Employee",
-  229 |           motherOccupation: "Homemaker",
-  230 |           siblings: "1 Sister",
-  231 |           photos: [
-  232 |             "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
-  233 |             "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop",
-  234 |             "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop",
-  235 |             "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&h=400&fit=crop",
-  236 |             "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=400&fit=crop"
-  237 |           ],
-  238 |           photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
-  239 |           isVerified: true,
-  240 |           isPremium: true,
-  241 |           occupation: "Financial Analyst",
-  242 |           education: "MBA in Finance",
-  243 |           income: "₹10 Lakh - ₹12 Lakh",
-  244 |           height: "5'4\"",
-  245 |           weight: "58 kg",
-  246 |           lifestyle: "Modern",
-  247 |           foodPreference: "Vegetarian",
-  248 |           smoking: "No",
-  249 |           drinking: "Occasionally",
-  250 |           hobbies: "Dancing, Cooking",
-  251 |           subCaste: "Deshmukh" // Direct override to Deshmukh in seed data
-  252 |         }
-  253 |       });
-  254 |       await page.waitForTimeout(2000);
-  255 |     });
-  256 | 
-  257 |     // ── STEP 6: Send Interest from Priya (Female) to Raj (Male) ────────
-  258 |     await test.step("Send Interest to Raj Sharma", async () => {
-  259 |       // Go to Advanced Search Tab
-  260 |       await page.goto("/dashboard?tab=search");
-  261 |       await page.waitForTimeout(2050);
-  262 | 
-  263 |       // Search specifically for the unique male name
-  264 |       const searchInput = page.locator('input[type="text"]');
-  265 |       await searchInput.fill(maleName);
-  266 |       await page.waitForTimeout(2050);
-  267 | 
-  268 |       // Click "Interest" on Raj's card
-  269 |       const sendInterestBtn = page.locator('button').filter({ hasText: /^Interest$/ }).first();
-  270 |       await expect(sendInterestBtn).toBeVisible({ timeout: 10000 });
-  271 |       await sendInterestBtn.click();
-  272 |       
-  273 |       // Wait for button state to update to "Sent"
-  274 |       await expect(page.locator('button').filter({ hasText: /^Sent$/ }).first()).toBeVisible({ timeout: 10000 });
-  275 |       await page.waitForTimeout(1000);
-  276 |     });
-  277 | 
-  278 |     // ── STEP 7: Logout Female User ────────────────────────────────────
-  279 |     await test.step("Logout Female User", async () => {
-  280 |       await page.evaluate(() => {
-  281 |         (window as any).firebaseAuth.signOut();
-  282 |       }).catch(() => {});
-  283 |       await page.waitForTimeout(2000);
-  284 |       await page.goto("/login");
-  285 |       await page.waitForSelector('input[type="email"]', { timeout: 10000 });
-  286 |     });
+  247 |           subCaste: "Deshmukh"
+  248 |         }
+  249 |       });
+  250 |       await pagePriya.waitForTimeout(2000);
+  251 |     });
+  252 | 
+  253 |     // ── STEP 5: Send Interest from Priya (Female) to Raj (Male) ────────
+  254 |     await test.step("Send Interest to Raj Sharma", async () => {
+  255 |       // Go to Advanced Search Tab
+  256 |       await pagePriya.goto("/dashboard?tab=search");
+  257 |       await pagePriya.waitForTimeout(2050);
+  258 | 
+  259 |       // Search specifically for the unique male name
+  260 |       const searchInput = pagePriya.locator('input[type="text"]');
+  261 |       await searchInput.fill(maleName);
+  262 |       await pagePriya.waitForTimeout(2050);
+  263 | 
+  264 |       // Click "Interest" on Raj's card
+  265 |       const sendInterestBtn = pagePriya.locator('button').filter({ hasText: /^Interest$/ }).first();
+  266 |       await expect(sendInterestBtn).toBeVisible({ timeout: 10000 });
+  267 |       await sendInterestBtn.click();
+  268 |       
+  269 |       // Wait for button state to update to "Sent"
+  270 |       await expect(pagePriya.locator('button').filter({ hasText: /^Sent$/ }).first()).toBeVisible({ timeout: 10000 });
+  271 |       await pagePriya.waitForTimeout(1000);
+  272 |     });
+  273 | 
+  274 |     // ── STEP 6: Approve Interest as Raj ───────────────────────────────
+  275 |     await test.step("Approve Priya's Interest as Raj", async () => {
+  276 |       // Go to Raj's Interests tab directly to fetch newly registered Priya's profile
+  277 |       await pageRaj.goto("/dashboard?tab=interests");
+  278 |       await pageRaj.waitForTimeout(2000);
+  279 | 
+  280 |       // Assert: Marriage Requests sub-tab should not be visible before interest is approved
+  281 |       await expect(pageRaj.locator('button:has-text("Marriage Requests")')).not.toBeVisible();
+  282 | 
+  283 |       // Accept Priya Patil's interest request
+  284 |       const approveBtn = pageRaj.locator('button:has-text("Approve")').first();
+  285 |       await expect(approveBtn).toBeVisible({ timeout: 10000 });
+  286 |       await approveBtn.click();
   287 | 
-  288 |     // ── STEP 8: Login Male User (Raj) & Approve Interest ──────────────
-  289 |     await test.step("Login Raj and Approve Priya's Interest", async () => {
-  290 |       // Login
-  291 |       await page.fill('input[type="email"]', maleEmail);
-  292 |       await page.fill('input[type="password"]', password);
-  293 |       await page.click('button[type="submit"]');
-  294 |       await page.waitForURL("**/dashboard", { timeout: 20000 });
-  295 |       await page.waitForTimeout(2000);
-  296 | 
-  297 |       // Go to Interests Tab
-  298 |       await page.goto("/dashboard?tab=interests");
-  299 |       await page.waitForTimeout(2000);
-  300 | 
-  301 |       // Accept Priya Patil's interest request
-  302 |       const approveBtn = page.locator('button:has-text("Approve")').first();
-  303 |       await expect(approveBtn).toBeVisible({ timeout: 10000 });
-  304 |       await approveBtn.click();
-  305 | 
-  306 |       // Wait for the Approve button to disappear, meaning it was processed
-  307 |       await expect(approveBtn).not.toBeVisible({ timeout: 10000 });
-  308 |       await page.waitForTimeout(1000);
-  309 |     });
+  288 |       // Wait for the Approve button to disappear, meaning it was processed
+  289 |       await expect(approveBtn).not.toBeVisible({ timeout: 10000 });
+  290 |       await pageRaj.waitForTimeout(1000);
+  291 | 
+  292 |       // Assert: Marriage Requests tab is now visible after interest acceptance
+  293 |       await expect(pageRaj.locator('button:has-text("Marriage Requests")')).toBeVisible({ timeout: 5000 });
+  294 |     });
+  295 | 
+  296 |     // ── STEP 7: Send Marriage Proposal from Priya to Raj ────────────────
+  297 |     await test.step("Priya Sends Marriage Proposal to Raj", async () => {
+  298 |       // Go to Priya's Interests tab directly to fetch accepted connection state
+  299 |       await pagePriya.goto("/dashboard?tab=interests");
+  300 |       await pagePriya.waitForTimeout(2000);
+  301 | 
+  302 |       // Click on "Sent Requests" sub-tab
+  303 |       const sentRequestsTabBtn = pagePriya.locator('button:has-text("Sent Requests")');
+  304 |       await expect(sentRequestsTabBtn).toBeVisible({ timeout: 5000 });
+  305 |       await sentRequestsTabBtn.click();
+  306 |       await pagePriya.waitForTimeout(1000);
+  307 | 
+  308 |       // Assert: Marriage Requests tab is visible to Priya
+  309 |       await expect(pagePriya.locator('button:has-text("Marriage Requests")')).toBeVisible({ timeout: 5000 });
   310 | 
-  311 |     // ── STEP 9: View Priya's Profile & Send Marriage Proposal ─────────
-  312 |     await test.step("Send Marriage Proposal to Priya", async () => {
-  313 |       // Go to Interests tab
-  314 |       await page.goto("/dashboard?tab=interests");
-  315 |       await page.waitForTimeout(2000);
+  311 |       // Click on Raj's card image to redirect to his profile view
+  312 |       const rajCardImage = pagePriya.locator(`img[alt="${maleName}"]`);
+  313 |       await expect(rajCardImage).toBeVisible({ timeout: 5000 });
+  314 |       await rajCardImage.click({ force: true });
+  315 |       await pagePriya.waitForTimeout(2000);
   316 | 
-  317 |       // Click on "Sent Requests" sub-tab
-  318 |       const sentRequestsTabBtn = page.locator('button:has-text("Sent Requests")');
-  319 |       await expect(sentRequestsTabBtn).toBeVisible({ timeout: 5000 });
-  320 |       await sentRequestsTabBtn.click();
-  321 |       await page.waitForTimeout(1000);
-  322 | 
-  323 |       // Click on Priya's card image to redirect to her profile view
-  324 |       const priyaCardImage = page.locator(`img[alt="${femaleName}"]`);
-> 325 |       await expect(priyaCardImage).toBeVisible({ timeout: 5000 });
-      |                                    ^ Error: expect(locator).toBeVisible() failed
-  326 |       await priyaCardImage.click();
-  327 |       await page.waitForTimeout(2000);
-  328 | 
-  329 |       // Verify URL redirect to view-profile tab
-  330 |       await expect(page.url()).toContain("tab=view-profile");
-  331 | 
-  332 |       // Verify the "Let's Get Married!" button is visible and click it
-  333 |       const letsGetMarriedBtn = page.locator('button:has-text("Let\'s Get Married!")');
-  334 |       await expect(letsGetMarriedBtn).toBeVisible({ timeout: 10000 });
-  335 |       await letsGetMarriedBtn.click();
-  336 | 
-  337 |       // In Marriage Proposal Modal, fill out details:
-  338 |       await page.fill('input[type="date"]', "2027-12-25");
-  339 |       await page.fill('input[type="time"]', "18:00");
-  340 |       await page.fill('input[placeholder*="Grand Palace"]', "Grand Palace Resort, Mumbai");
-  341 | 
-  342 |       // Click "Send Marriage Request"
-  343 |       await page.click('button:has-text("Send Marriage Request")');
-  344 |       await page.waitForTimeout(2500);
-  345 |     });
-  346 | 
-  347 |     // ── STEP 10: Logout Male User ────────────────────────────────────
-  348 |     await test.step("Logout Male User", async () => {
-  349 |       await page.evaluate(() => {
-  350 |         (window as any).firebaseAuth.signOut();
-  351 |       }).catch(() => {});
-  352 |       await page.waitForTimeout(2000);
-  353 |       await page.goto("/login");
-  354 |       await page.waitForSelector('input[type="email"]', { timeout: 10000 });
-  355 |     });
+  317 |       // Verify URL redirect to view-profile tab
+  318 |       await expect(pagePriya.url()).toContain("tab=view-profile");
+  319 | 
+  320 |       // Verify the "Let's Get Married!" button is visible and click it
+  321 |       const letsGetMarriedBtn = pagePriya.locator('button:has-text("Let\'s Get Married!")');
+  322 |       await expect(letsGetMarriedBtn).toBeVisible({ timeout: 10000 });
+  323 |       await letsGetMarriedBtn.click();
+  324 | 
+  325 |       // In Marriage Proposal Modal, fill out details:
+  326 |       await pagePriya.fill('input[type="date"]', "2027-12-25");
+  327 |       await pagePriya.fill('input[type="time"]', "18:00");
+  328 |       await pagePriya.fill('input[placeholder*="Grand Palace"]', "Grand Palace Resort, Mumbai");
+  329 | 
+  330 |       // Click "Send Marriage Request"
+  331 |       await pagePriya.click('button:has-text("Send Marriage Request")');
+  332 |       await pagePriya.waitForTimeout(2500);
+  333 |     });
+  334 | 
+  335 |     // ── STEP 8: Accept Proposal as Raj ─────────────────────────────────
+  336 |     await test.step("Accept Proposal as Raj", async () => {
+  337 |       // Go to Raj's dashboard to fetch newly created marriage request
+  338 |       await pageRaj.goto("/dashboard");
+  339 | 
+  340 |       // Open Notification dropdown and click on the proposal notification
+  341 |       const notificationBell = pageRaj.locator('button[aria-label="Notifications"]');
+  342 |       await expect(notificationBell).toBeVisible({ timeout: 5000 });
+  343 |       await notificationBell.click();
+  344 |       await pageRaj.waitForTimeout(1000);
+  345 | 
+  346 |       const proposalNotification = pageRaj.locator(`text=${femaleName} proposed a marriage setup!`);
+> 347 |       await expect(proposalNotification).toBeVisible({ timeout: 5000 });
+      |                                          ^ Error: expect(locator).toBeVisible() failed
+  348 |       await proposalNotification.click();
+  349 |       await pageRaj.waitForTimeout(2000);
+  350 | 
+  351 |       // Verify we are on Interests tab -> Marriage Requests sub-tab
+  352 |       const marriageReqTabBtn = pageRaj.locator('button:has-text("Marriage Requests")');
+  353 |       await expect(marriageReqTabBtn).toBeVisible({ timeout: 5000 });
+  354 |       await marriageReqTabBtn.click();
+  355 |       await pageRaj.waitForTimeout(1000);
   356 | 
-  357 |     // ── STEP 11: Login Female User (Priya) & Accept Proposal ──────────
-  358 |     await test.step("Login Priya and Accept Proposal", async () => {
-  359 |       // Login
-  360 |       await page.fill('input[type="email"]', femaleEmail);
-  361 |       await page.fill('input[type="password"]', password);
-  362 |       await page.click('button[type="submit"]');
-  363 |       await page.waitForURL("**/dashboard", { timeout: 20000 });
-  364 |       await page.waitForTimeout(2000);
-  365 | 
-  366 |       // Open Notification dropdown and click on the proposal notification
-  367 |       const notificationBell = page.locator('button[aria-label="Notifications"]');
-  368 |       await expect(notificationBell).toBeVisible({ timeout: 5000 });
-  369 |       await notificationBell.click();
-  370 |       await page.waitForTimeout(1000);
-  371 | 
-  372 |       const proposalNotification = page.locator(`text=${maleName} proposed a marriage setup!`);
-  373 |       await expect(proposalNotification).toBeVisible({ timeout: 5000 });
-  374 |       await proposalNotification.click();
-  375 |       await page.waitForTimeout(2000);
-  376 | 
-  377 |       // Verify we are on Interests tab -> Marriage Requests sub-tab
-  378 |       const marriageReqTabBtn = page.locator('button:has-text("Marriage Requests")');
-  379 |       await expect(marriageReqTabBtn).toBeVisible({ timeout: 5000 });
-  380 |       await marriageReqTabBtn.click();
-  381 |       await page.waitForTimeout(1000);
-  382 | 
-  383 |       // Find the pending proposal Accept button and click it
-  384 |       const acceptProposalBtn = page.locator('button:has-text("Accept")').first();
-  385 |       await expect(acceptProposalBtn).toBeVisible({ timeout: 5000 });
-  386 |       await acceptProposalBtn.click();
-  387 |       
-  388 |       // Wait for updates & celebration animation
-  389 |       await page.waitForTimeout(3000);
-  390 | 
-  391 |       // We should be redirected to the "Success Stories" tab
-  392 |       await expect(page.url()).toContain("tab=stories");
-  393 |     });
-  394 | 
-  395 |     // ── STEP 12: Verify UI Banners ────────────────────────────────────
-  396 |     await test.step("Verify Partner UI Banner displays Marriage Fixed & Verify notifications", async () => {
-  397 |       // Navigate to My Profile tab to verify partner banner
-  398 |       await page.goto("/dashboard?tab=my-profile");
-  399 |       await page.waitForTimeout(2000);
-  400 | 
-  401 |       const partnerNameLabel = page.locator(`text=${maleName}`);
-  402 |       await expect(partnerNameLabel).toBeVisible({ timeout: 5000 });
-  403 | 
-  404 |       const bannerStatus = page.locator('button:has-text("Marriage Fixed")');
-  405 |       await expect(bannerStatus).toBeVisible({ timeout: 5000 });
-  406 | 
-  407 |       // Logout Priya
-  408 |       await page.evaluate(() => {
-  409 |         (window as any).firebaseAuth.signOut();
-  410 |       }).catch(() => {});
-  411 |       await page.waitForTimeout(2000);
-  412 |       await page.goto("/login");
-  413 | 
-  414 |       // Login Raj
-  415 |       await page.fill('input[type="email"]', maleEmail);
-  416 |       await page.fill('input[type="password"]', password);
-  417 |       await page.click('button[type="submit"]');
-  418 |       await page.waitForURL("**/dashboard", { timeout: 20000 });
-  419 |       await page.waitForTimeout(2000);
-  420 | 
-  421 |       // Open notifications dropdown
-  422 |       await page.locator('button[aria-label="Notifications"]').click();
-  423 |       await page.waitForTimeout(1000);
-  424 | 
-  425 |       // Assert notification of acceptance in bell
+  357 |       // Find the pending proposal Accept button and click it
+  358 |       const acceptProposalBtn = pageRaj.locator('button:has-text("Accept")').first();
+  359 |       await expect(acceptProposalBtn).toBeVisible({ timeout: 5000 });
+  360 |       await acceptProposalBtn.click();
+  361 |       
+  362 |       // Wait for updates & celebration animation
+  363 |       await pageRaj.waitForTimeout(3000);
+  364 | 
+  365 |       // We should be redirected to the "Success Stories" tab
+  366 |       await expect(pageRaj.url()).toContain("tab=stories");
+  367 |     });
+  368 | 
+  369 |     // ── STEP 9: Verify UI Banners ─────────────────────────────────────
+  370 |     await test.step("Verify Partner UI Banner displays Marriage Fixed & Verify notifications", async () => {
+  371 |       // Navigate to My Profile tab to verify partner banner
+  372 |       await pageRaj.goto("/dashboard?tab=my-profile");
+  373 |       await pageRaj.waitForTimeout(2000);
+  374 | 
+  375 |       const partnerNameLabel = pageRaj.locator(`text=${femaleName}`);
+  376 |       await expect(partnerNameLabel).toBeVisible({ timeout: 5000 });
+  377 | 
+  378 |       const bannerStatus = pageRaj.locator('button:has-text("Marriage Fixed")');
+  379 |       await expect(bannerStatus).toBeVisible({ timeout: 5000 });
+  380 | 
+  381 |       // Go to Priya's dashboard to fetch updated profile state with banner
+  382 |       await pagePriya.goto("/dashboard");
+  383 | 
+  384 |       // Open notifications dropdown on Priya's page
+  385 |       await pagePriya.locator('button[aria-label="Notifications"]').click();
+  386 |       await pagePriya.waitForTimeout(1000);
+  387 | 
+  388 |       // Assert notification of acceptance in bell
+  389 |       const acceptedNotification = pagePriya.locator(`text=${maleName} accepted your marriage proposal! Congratulations!`);
+  390 |       await expect(acceptedNotification).toBeVisible({ timeout: 5000 });
+  391 |     });
+  392 | 
+  393 |     await contextRaj.close();
+  394 |     await contextPriya.close();
+  395 |   });
+  396 | 
+  397 |   test("Interest Rejection and Marriage Proposal Rejection Connection Reset Flow", async ({ browser }) => {
+  398 |     // Open separate browser contexts for Aman and Neha
+  399 |     const contextAman = await browser.newContext();
+  400 |     const pageAman = await contextAman.newPage();
+  401 | 
+  402 |     const contextNeha = await browser.newContext();
+  403 |     const pageNeha = await contextNeha.newPage();
+  404 | 
+  405 |     let boyEmail = `boy_${rand()}@example.com`;
+  406 |     let girlEmail = `girl_${rand()}@example.com`;
+  407 |     let bSuffix = rand();
+  408 |     let boyName = `Aman Sen${bSuffix}`;
+  409 |     let girlName = `Nisha Shah${bSuffix}`;
+  410 | 
+  411 |     // 1. Register Boy (Aman)
+  412 |     await test.step("Register Boy (Aman)", async () => {
+  413 |       await pageAman.goto("/register");
+  414 |       await pageAman.waitForSelector('input[name="firstName"]', { timeout: 10000 });
+  415 |       await pageAman.fill('input[name="firstName"]', "Aman");
+  416 |       await pageAman.fill('input[name="lastName"]', `Sen${bSuffix}`);
+  417 |       await pageAman.selectOption('select[name="gender"]', "Male");
+  418 |       await pageAman.fill('input[name="dob"]', "1993-05-12");
+  419 |       await pageAman.fill('input[name="mobile"]', "9123456780");
+  420 |       await pageAman.fill('input[name="email"]', boyEmail);
+  421 |       await pageAman.fill('input[name="password"]', password);
+  422 |       await pageAman.fill('input[name="confirmPassword"]', password);
+  423 |       await pageAman.click('button:has-text("Continue")');
+  424 |       await pageAman.waitForTimeout(1000);
+  425 | 
+  426 |       await pageAman.waitForSelector('select[name="subCaste"]', { timeout: 5000 });
+  427 |       await pageAman.selectOption('select[name="subCaste"]', "Panchal");
+  428 |       await pageAman.click('button:has-text("Continue")');
+  429 |       await pageAman.waitForTimeout(1000);
+  430 | 
+  431 |       await pageAman.waitForSelector('input[name="aadhaarNumber"]', { timeout: 5000 });
+  432 |       await pageAman.fill('input[name="aadhaarNumber"]', "123456789014");
+  433 |       await pageAman.check('input[id="termsAccepted"]');
+  434 |       pageAman.once("dialog", async (dialog) => await dialog.accept());
+  435 |       await pageAman.click('button[type="submit"]');
+  436 |       await pageAman.waitForURL("**/dashboard", { timeout: 20000 });
+  437 |       await pageAman.waitForTimeout(2000);
+  438 |       await completeOnboarding(pageAman, boyName);
+  439 |     });
+  440 | 
+  441 |     // 2. Seed Boy details
+  442 |     await test.step("Seed Boy Profile (Aman)", async () => {
+  443 |       await pageAman.evaluate(async ({ email, profileData }) => {
+  444 |         const { collection, query, where, getDocs, doc, updateDoc } = (window as any).firestoreHelpers;
+  445 |         const db = (window as any).firebaseDb;
+  446 |         const q = query(collection(db, "profiles"), where("email", "==", email));
+  447 |         const snapshot = await getDocs(q);
 ```

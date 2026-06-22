@@ -43,7 +43,7 @@ async function completeOnboarding(page: any, name: string) {
   await page.waitForTimeout(500);
 
   // Step 4: Relatives Info
-  await wizard.locator('input[type="text"]').first().waitFor({ state: "visible", timeout: 10000 });
+  await wizard.locator('button:has-text("Add Relative")').waitFor({ state: "visible", timeout: 10000 });
   await wizard.locator('input[type="text"]').first().fill(`Relative of ${name}`);
   await wizard.locator('input[type="text"]').last().fill("Bandra, Mumbai");
   await wizard.locator('button:has-text("Next")').click();
@@ -75,42 +75,48 @@ test.describe("Marriage Proposal E2E Flow", () => {
     femaleName = `Priya Patil${suffix}`;
   });
 
-  test("Register, Seed, Mutual Interest, and Send & Accept Marriage Proposal", async ({ page }) => {
-    // ── STEP 1: Register User A (Male) ─────────────────────────────────
+  test("Register, Seed, Mutual Interest, and Send & Accept Marriage Proposal", async ({ browser }) => {
+    // Open separate browser contexts for Raj and Priya
+    const contextRaj = await browser.newContext();
+    const pageRaj = await contextRaj.newPage();
+
+    const contextPriya = await browser.newContext();
+    const pagePriya = await contextPriya.newPage();
+
+    // ── STEP 1: Register User A (Male: Raj) ─────────────────────────────
     await test.step("Register Male User (Raj)", async () => {
-      await page.goto("/register");
-      await page.waitForSelector('input[name="firstName"]', { timeout: 10000 });
-      await page.fill('input[name="firstName"]', "Raj");
-      await page.fill('input[name="lastName"]', `Sharma${suffix}`);
-      await page.selectOption('select[name="gender"]', "Male");
-      await page.fill('input[name="dob"]', "1994-08-15");
-      await page.fill('input[name="mobile"]', "9876543210");
-      await page.fill('input[name="email"]', maleEmail);
-      await page.fill('input[name="password"]', password);
-      await page.fill('input[name="confirmPassword"]', password);
-      await page.click('button:has-text("Continue")');
-      await page.waitForTimeout(1000);
+      await pageRaj.goto("/register");
+      await pageRaj.waitForSelector('input[name="firstName"]', { timeout: 10000 });
+      await pageRaj.fill('input[name="firstName"]', "Raj");
+      await pageRaj.fill('input[name="lastName"]', `Sharma${suffix}`);
+      await pageRaj.selectOption('select[name="gender"]', "Male");
+      await pageRaj.fill('input[name="dob"]', "1994-08-15");
+      await pageRaj.fill('input[name="mobile"]', "9876543210");
+      await pageRaj.fill('input[name="email"]', maleEmail);
+      await pageRaj.fill('input[name="password"]', password);
+      await pageRaj.fill('input[name="confirmPassword"]', password);
+      await pageRaj.click('button:has-text("Continue")');
+      await pageRaj.waitForTimeout(1000);
 
-      await page.waitForSelector('select[name="subCaste"]', { timeout: 5000 });
-      await page.selectOption('select[name="subCaste"]', "Panchal");
-      await page.click('button:has-text("Continue")');
-      await page.waitForTimeout(1000);
+      await pageRaj.waitForSelector('select[name="subCaste"]', { timeout: 5000 });
+      await pageRaj.selectOption('select[name="subCaste"]', "Panchal");
+      await pageRaj.click('button:has-text("Continue")');
+      await pageRaj.waitForTimeout(1000);
 
-      await page.waitForSelector('input[name="aadhaarNumber"]', { timeout: 5000 });
-      await page.fill('input[name="aadhaarNumber"]', "123456789012");
-      await page.check('input[id="termsAccepted"]');
+      await pageRaj.waitForSelector('input[name="aadhaarNumber"]', { timeout: 5000 });
+      await pageRaj.fill('input[name="aadhaarNumber"]', "123456789012");
+      await pageRaj.check('input[id="termsAccepted"]');
       
-      // Accept confirmation dialog
-      page.once("dialog", async (dialog) => await dialog.accept());
-      await page.click('button[type="submit"]');
-      await page.waitForURL("**/dashboard", { timeout: 20000 });
-      await page.waitForTimeout(2000);
-      await completeOnboarding(page, maleName);
+      pageRaj.once("dialog", async (dialog) => await dialog.accept());
+      await pageRaj.click('button[type="submit"]');
+      await pageRaj.waitForURL("**/dashboard", { timeout: 20000 });
+      await pageRaj.waitForTimeout(2000);
+      await completeOnboarding(pageRaj, maleName);
     });
 
     // ── STEP 2: Seed Male Profile Details ─────────────────────────────
     await test.step("Seed Male Profile (Raj) via Firestore Helpers", async () => {
-      await page.evaluate(async ({ email, profileData }) => {
+      await pageRaj.evaluate(async ({ email, profileData }) => {
         const { collection, query, where, getDocs, doc, updateDoc } = (window as any).firestoreHelpers;
         const db = (window as any).firebaseDb;
         const q = query(collection(db, "profiles"), where("email", "==", email));
@@ -157,53 +163,43 @@ test.describe("Marriage Proposal E2E Flow", () => {
           hobbies: "Reading, Traveling"
         }
       });
-      await page.waitForTimeout(1000);
+      await pageRaj.waitForTimeout(1000);
     });
 
-    // ── STEP 3: Logout Male User ──────────────────────────────────────
-    await test.step("Logout Male User", async () => {
-      await page.evaluate(() => {
-        (window as any).firebaseAuth.signOut();
-      }).catch(() => {});
-      await page.waitForTimeout(2000);
-      await page.goto("/login");
-      await page.waitForSelector('input[type="email"]', { timeout: 10000 });
-    });
-
-    // ── STEP 4: Register User B (Female) ───────────────────────────────
+    // ── STEP 3: Register User B (Female: Priya) ─────────────────────────
     await test.step("Register Female User (Priya)", async () => {
-      await page.goto("/register");
-      await page.waitForSelector('input[name="firstName"]', { timeout: 10000 });
-      await page.fill('input[name="firstName"]', "Priya");
-      await page.fill('input[name="lastName"]', `Patil${suffix}`);
-      await page.selectOption('select[name="gender"]', "Female");
-      await page.fill('input[name="dob"]', "1996-03-10");
-      await page.fill('input[name="mobile"]', "9876543211");
-      await page.fill('input[name="email"]', femaleEmail);
-      await page.fill('input[name="password"]', password);
-      await page.fill('input[name="confirmPassword"]', password);
-      await page.click('button:has-text("Continue")');
-      await page.waitForTimeout(1000);
+      await pagePriya.goto("/register");
+      await pagePriya.waitForSelector('input[name="firstName"]', { timeout: 10000 });
+      await pagePriya.fill('input[name="firstName"]', "Priya");
+      await pagePriya.fill('input[name="lastName"]', `Patil${suffix}`);
+      await pagePriya.selectOption('select[name="gender"]', "Female");
+      await pagePriya.fill('input[name="dob"]', "1996-03-10");
+      await pagePriya.fill('input[name="mobile"]', "9876543211");
+      await pagePriya.fill('input[name="email"]', femaleEmail);
+      await pagePriya.fill('input[name="password"]', password);
+      await pagePriya.fill('input[name="confirmPassword"]', password);
+      await pagePriya.click('button:has-text("Continue")');
+      await pagePriya.waitForTimeout(1000);
 
-      await page.waitForSelector('select[name="subCaste"]', { timeout: 5000 });
-      await page.selectOption('select[name="subCaste"]', "Gadi Lohar");
-      await page.click('button:has-text("Continue")');
-      await page.waitForTimeout(1000);
+      await pagePriya.waitForSelector('select[name="subCaste"]', { timeout: 5000 });
+      await pagePriya.selectOption('select[name="subCaste"]', "Gadi Lohar");
+      await pagePriya.click('button:has-text("Continue")');
+      await pagePriya.waitForTimeout(1000);
 
-      await page.waitForSelector('input[name="aadhaarNumber"]', { timeout: 5000 });
-      await page.fill('input[name="aadhaarNumber"]', "123456789013");
-      await page.check('input[id="termsAccepted"]');
+      await pagePriya.waitForSelector('input[name="aadhaarNumber"]', { timeout: 5000 });
+      await pagePriya.fill('input[name="aadhaarNumber"]', "123456789013");
+      await pagePriya.check('input[id="termsAccepted"]');
       
-      page.once("dialog", async (dialog) => await dialog.accept());
-      await page.click('button[type="submit"]');
-      await page.waitForURL("**/dashboard", { timeout: 20000 });
-      await page.waitForTimeout(2000);
-      await completeOnboarding(page, femaleName);
+      pagePriya.once("dialog", async (dialog) => await dialog.accept());
+      await pagePriya.click('button[type="submit"]');
+      await pagePriya.waitForURL("**/dashboard", { timeout: 20000 });
+      await pagePriya.waitForTimeout(2000);
+      await completeOnboarding(pagePriya, femaleName);
     });
 
-    // ── STEP 5: Seed Female Profile Details ───────────────────────────
+    // ── STEP 4: Seed Female Profile Details ───────────────────────────
     await test.step("Seed Female Profile (Priya) via Firestore Helpers", async () => {
-      await page.evaluate(async ({ email, profileData }) => {
+      await pagePriya.evaluate(async ({ email, profileData }) => {
         const { collection, query, where, getDocs, doc, updateDoc } = (window as any).firestoreHelpers;
         const db = (window as any).firebaseDb;
         const q = query(collection(db, "profiles"), where("email", "==", email));
@@ -248,228 +244,203 @@ test.describe("Marriage Proposal E2E Flow", () => {
           smoking: "No",
           drinking: "Occasionally",
           hobbies: "Dancing, Cooking",
-          subCaste: "Deshmukh" // Direct override to Deshmukh in seed data
+          subCaste: "Deshmukh"
         }
       });
-      await page.waitForTimeout(2000);
+      await pagePriya.waitForTimeout(2000);
     });
 
-    // ── STEP 6: Send Interest from Priya (Female) to Raj (Male) ────────
+    // ── STEP 5: Send Interest from Priya (Female) to Raj (Male) ────────
     await test.step("Send Interest to Raj Sharma", async () => {
       // Go to Advanced Search Tab
-      await page.goto("/dashboard?tab=search");
-      await page.waitForTimeout(2050);
+      await pagePriya.goto("/dashboard?tab=search");
+      await pagePriya.waitForTimeout(2050);
 
       // Search specifically for the unique male name
-      const searchInput = page.locator('input[type="text"]');
+      const searchInput = pagePriya.locator('input[type="text"]');
       await searchInput.fill(maleName);
-      await page.waitForTimeout(2050);
+      await pagePriya.waitForTimeout(2050);
 
       // Click "Interest" on Raj's card
-      const sendInterestBtn = page.locator('button').filter({ hasText: /^Interest$/ }).first();
+      const sendInterestBtn = pagePriya.locator('button').filter({ hasText: /^Interest$/ }).first();
       await expect(sendInterestBtn).toBeVisible({ timeout: 10000 });
       await sendInterestBtn.click();
       
       // Wait for button state to update to "Sent"
-      await expect(page.locator('button').filter({ hasText: /^Sent$/ }).first()).toBeVisible({ timeout: 10000 });
-      await page.waitForTimeout(1000);
+      await expect(pagePriya.locator('button').filter({ hasText: /^Sent$/ }).first()).toBeVisible({ timeout: 10000 });
+      await pagePriya.waitForTimeout(1000);
     });
 
-    // ── STEP 7: Logout Female User ────────────────────────────────────
-    await test.step("Logout Female User", async () => {
-      await page.evaluate(() => {
-        (window as any).firebaseAuth.signOut();
-      }).catch(() => {});
-      await page.waitForTimeout(2000);
-      await page.goto("/login");
-      await page.waitForSelector('input[type="email"]', { timeout: 10000 });
-    });
+    // ── STEP 6: Approve Interest as Raj ───────────────────────────────
+    await test.step("Approve Priya's Interest as Raj", async () => {
+      // Go to Raj's Interests tab directly to fetch newly registered Priya's profile
+      await pageRaj.goto("/dashboard?tab=interests");
+      await pageRaj.waitForTimeout(2000);
 
-    // ── STEP 8: Login Male User (Raj) & Approve Interest ──────────────
-    await test.step("Login Raj and Approve Priya's Interest", async () => {
-      // Login
-      await page.fill('input[type="email"]', maleEmail);
-      await page.fill('input[type="password"]', password);
-      await page.click('button[type="submit"]');
-      await page.waitForURL("**/dashboard", { timeout: 20000 });
-      await page.waitForTimeout(2000);
-
-      // Go to Interests Tab
-      await page.goto("/dashboard?tab=interests");
-      await page.waitForTimeout(2000);
+      // Assert: Marriage Requests sub-tab should not be visible before interest is approved
+      await expect(pageRaj.locator('button:has-text("Marriage Requests")')).not.toBeVisible();
 
       // Accept Priya Patil's interest request
-      const approveBtn = page.locator('button:has-text("Approve")').first();
+      const approveBtn = pageRaj.locator('button:has-text("Approve")').first();
       await expect(approveBtn).toBeVisible({ timeout: 10000 });
       await approveBtn.click();
 
       // Wait for the Approve button to disappear, meaning it was processed
       await expect(approveBtn).not.toBeVisible({ timeout: 10000 });
-      await page.waitForTimeout(1000);
+      await pageRaj.waitForTimeout(1000);
+
+      // Assert: Marriage Requests tab is now visible after interest acceptance
+      await expect(pageRaj.locator('button:has-text("Marriage Requests")')).toBeVisible({ timeout: 5000 });
     });
 
-    // ── STEP 9: View Priya's Profile & Send Marriage Proposal ─────────
-    await test.step("Send Marriage Proposal to Priya", async () => {
-      // Go to Interests tab
-      await page.goto("/dashboard?tab=interests");
-      await page.waitForTimeout(2000);
+    // ── STEP 7: Send Marriage Proposal from Priya to Raj ────────────────
+    await test.step("Priya Sends Marriage Proposal to Raj", async () => {
+      // Go to Priya's Interests tab directly to fetch accepted connection state
+      await pagePriya.goto("/dashboard?tab=interests");
+      await pagePriya.waitForTimeout(2000);
 
       // Click on "Sent Requests" sub-tab
-      const sentRequestsTabBtn = page.locator('button:has-text("Sent Requests")');
+      const sentRequestsTabBtn = pagePriya.locator('button:has-text("Sent Requests")');
       await expect(sentRequestsTabBtn).toBeVisible({ timeout: 5000 });
       await sentRequestsTabBtn.click();
-      await page.waitForTimeout(1000);
+      await pagePriya.waitForTimeout(1000);
 
-      // Click on Priya's card image to redirect to her profile view
-      const priyaCardImage = page.locator(`img[alt="${femaleName}"]`);
-      await expect(priyaCardImage).toBeVisible({ timeout: 5000 });
-      await priyaCardImage.click();
-      await page.waitForTimeout(2000);
+      // Assert: Marriage Requests tab is visible to Priya
+      await expect(pagePriya.locator('button:has-text("Marriage Requests")')).toBeVisible({ timeout: 5000 });
+
+      // Click on Raj's card image to redirect to his profile view
+      const rajCardImage = pagePriya.locator(`img[alt="${maleName}"]`);
+      await expect(rajCardImage).toBeVisible({ timeout: 5000 });
+      await rajCardImage.click({ force: true });
+      await pagePriya.waitForTimeout(2000);
 
       // Verify URL redirect to view-profile tab
-      await expect(page.url()).toContain("tab=view-profile");
+      await expect(pagePriya.url()).toContain("tab=view-profile");
 
       // Verify the "Let's Get Married!" button is visible and click it
-      const letsGetMarriedBtn = page.locator('button:has-text("Let\'s Get Married!")');
+      const letsGetMarriedBtn = pagePriya.locator('button:has-text("Let\'s Get Married!")');
       await expect(letsGetMarriedBtn).toBeVisible({ timeout: 10000 });
       await letsGetMarriedBtn.click();
 
       // In Marriage Proposal Modal, fill out details:
-      await page.fill('input[type="date"]', "2027-12-25");
-      await page.fill('input[type="time"]', "18:00");
-      await page.fill('input[placeholder*="Grand Palace"]', "Grand Palace Resort, Mumbai");
+      await pagePriya.fill('input[type="date"]', "2027-12-25");
+      await pagePriya.fill('input[type="time"]', "18:00");
+      await pagePriya.fill('input[placeholder*="Grand Palace"]', "Grand Palace Resort, Mumbai");
 
       // Click "Send Marriage Request"
-      await page.click('button:has-text("Send Marriage Request")');
-      await page.waitForTimeout(2500);
+      await pagePriya.click('button:has-text("Send Marriage Request")');
+      await pagePriya.waitForTimeout(2500);
     });
 
-    // ── STEP 10: Logout Male User ────────────────────────────────────
-    await test.step("Logout Male User", async () => {
-      await page.evaluate(() => {
-        (window as any).firebaseAuth.signOut();
-      }).catch(() => {});
-      await page.waitForTimeout(2000);
-      await page.goto("/login");
-      await page.waitForSelector('input[type="email"]', { timeout: 10000 });
-    });
-
-    // ── STEP 11: Login Female User (Priya) & Accept Proposal ──────────
-    await test.step("Login Priya and Accept Proposal", async () => {
-      // Login
-      await page.fill('input[type="email"]', femaleEmail);
-      await page.fill('input[type="password"]', password);
-      await page.click('button[type="submit"]');
-      await page.waitForURL("**/dashboard", { timeout: 20000 });
-      await page.waitForTimeout(2000);
+    // ── STEP 8: Accept Proposal as Raj ─────────────────────────────────
+    await test.step("Accept Proposal as Raj", async () => {
+      // Go to Raj's dashboard to fetch newly created marriage request
+      await pageRaj.goto("/dashboard");
 
       // Open Notification dropdown and click on the proposal notification
-      const notificationBell = page.locator('button[aria-label="Notifications"]');
+      const notificationBell = pageRaj.locator('button[aria-label="Notifications"]');
       await expect(notificationBell).toBeVisible({ timeout: 5000 });
       await notificationBell.click();
-      await page.waitForTimeout(1000);
+      await pageRaj.waitForTimeout(1000);
 
-      const proposalNotification = page.locator(`text=${maleName} proposed a marriage setup!`);
+      const proposalNotification = pageRaj.locator(`text=${femaleName} proposed a marriage setup!`);
       await expect(proposalNotification).toBeVisible({ timeout: 5000 });
       await proposalNotification.click();
-      await page.waitForTimeout(2000);
+      await pageRaj.waitForTimeout(2000);
 
       // Verify we are on Interests tab -> Marriage Requests sub-tab
-      const marriageReqTabBtn = page.locator('button:has-text("Marriage Requests")');
+      const marriageReqTabBtn = pageRaj.locator('button:has-text("Marriage Requests")');
       await expect(marriageReqTabBtn).toBeVisible({ timeout: 5000 });
       await marriageReqTabBtn.click();
-      await page.waitForTimeout(1000);
+      await pageRaj.waitForTimeout(1000);
 
       // Find the pending proposal Accept button and click it
-      const acceptProposalBtn = page.locator('button:has-text("Accept")').first();
+      const acceptProposalBtn = pageRaj.locator('button:has-text("Accept")').first();
       await expect(acceptProposalBtn).toBeVisible({ timeout: 5000 });
       await acceptProposalBtn.click();
       
       // Wait for updates & celebration animation
-      await page.waitForTimeout(3000);
+      await pageRaj.waitForTimeout(3000);
 
       // We should be redirected to the "Success Stories" tab
-      await expect(page.url()).toContain("tab=stories");
+      await expect(pageRaj.url()).toContain("tab=stories");
     });
 
-    // ── STEP 12: Verify UI Banners ────────────────────────────────────
+    // ── STEP 9: Verify UI Banners ─────────────────────────────────────
     await test.step("Verify Partner UI Banner displays Marriage Fixed & Verify notifications", async () => {
       // Navigate to My Profile tab to verify partner banner
-      await page.goto("/dashboard?tab=my-profile");
-      await page.waitForTimeout(2000);
+      await pageRaj.goto("/dashboard?tab=my-profile");
+      await pageRaj.waitForTimeout(2000);
 
-      const partnerNameLabel = page.locator(`text=${maleName}`);
+      const partnerNameLabel = pageRaj.locator(`text=${femaleName}`);
       await expect(partnerNameLabel).toBeVisible({ timeout: 5000 });
 
-      const bannerStatus = page.locator('button:has-text("Marriage Fixed")');
+      const bannerStatus = pageRaj.locator('button:has-text("Marriage Fixed")');
       await expect(bannerStatus).toBeVisible({ timeout: 5000 });
 
-      // Logout Priya
-      await page.evaluate(() => {
-        (window as any).firebaseAuth.signOut();
-      }).catch(() => {});
-      await page.waitForTimeout(2000);
-      await page.goto("/login");
+      // Go to Priya's dashboard to fetch updated profile state with banner
+      await pagePriya.goto("/dashboard");
 
-      // Login Raj
-      await page.fill('input[type="email"]', maleEmail);
-      await page.fill('input[type="password"]', password);
-      await page.click('button[type="submit"]');
-      await page.waitForURL("**/dashboard", { timeout: 20000 });
-      await page.waitForTimeout(2000);
-
-      // Open notifications dropdown
-      await page.locator('button[aria-label="Notifications"]').click();
-      await page.waitForTimeout(1000);
+      // Open notifications dropdown on Priya's page
+      await pagePriya.locator('button[aria-label="Notifications"]').click();
+      await pagePriya.waitForTimeout(1000);
 
       // Assert notification of acceptance in bell
-      const acceptedNotification = page.locator(`text=${femaleName} accepted your marriage proposal! Congratulations!`);
+      const acceptedNotification = pagePriya.locator(`text=${maleName} accepted your marriage proposal! Congratulations!`);
       await expect(acceptedNotification).toBeVisible({ timeout: 5000 });
-      await page.locator('body').click(); // close dropdown
-      await page.waitForTimeout(500);
     });
+
+    await contextRaj.close();
+    await contextPriya.close();
   });
 
-  test("Interest Rejection and Marriage Proposal Rejection Connection Reset Flow", async ({ page }) => {
+  test("Interest Rejection and Marriage Proposal Rejection Connection Reset Flow", async ({ browser }) => {
+    // Open separate browser contexts for Aman and Neha
+    const contextAman = await browser.newContext();
+    const pageAman = await contextAman.newPage();
+
+    const contextNeha = await browser.newContext();
+    const pageNeha = await contextNeha.newPage();
+
     let boyEmail = `boy_${rand()}@example.com`;
     let girlEmail = `girl_${rand()}@example.com`;
     let bSuffix = rand();
     let boyName = `Aman Sen${bSuffix}`;
-    let girlName = `Neha Shah${bSuffix}`;
+    let girlName = `Nisha Shah${bSuffix}`;
 
-    // 1. Register Boy
+    // 1. Register Boy (Aman)
     await test.step("Register Boy (Aman)", async () => {
-      await page.goto("/register");
-      await page.waitForSelector('input[name="firstName"]', { timeout: 10000 });
-      await page.fill('input[name="firstName"]', "Aman");
-      await page.fill('input[name="lastName"]', `Sen${bSuffix}`);
-      await page.selectOption('select[name="gender"]', "Male");
-      await page.fill('input[name="dob"]', "1993-05-12");
-      await page.fill('input[name="mobile"]', "9123456780");
-      await page.fill('input[name="email"]', boyEmail);
-      await page.fill('input[name="password"]', password);
-      await page.fill('input[name="confirmPassword"]', password);
-      await page.click('button:has-text("Continue")');
-      await page.waitForTimeout(1000);
+      await pageAman.goto("/register");
+      await pageAman.waitForSelector('input[name="firstName"]', { timeout: 10000 });
+      await pageAman.fill('input[name="firstName"]', "Aman");
+      await pageAman.fill('input[name="lastName"]', `Sen${bSuffix}`);
+      await pageAman.selectOption('select[name="gender"]', "Male");
+      await pageAman.fill('input[name="dob"]', "1993-05-12");
+      await pageAman.fill('input[name="mobile"]', "9123456780");
+      await pageAman.fill('input[name="email"]', boyEmail);
+      await pageAman.fill('input[name="password"]', password);
+      await pageAman.fill('input[name="confirmPassword"]', password);
+      await pageAman.click('button:has-text("Continue")');
+      await pageAman.waitForTimeout(1000);
 
-      await page.waitForSelector('select[name="subCaste"]', { timeout: 5000 });
-      await page.selectOption('select[name="subCaste"]', "Panchal");
-      await page.click('button:has-text("Continue")');
-      await page.waitForTimeout(1000);
+      await pageAman.waitForSelector('select[name="subCaste"]', { timeout: 5000 });
+      await pageAman.selectOption('select[name="subCaste"]', "Panchal");
+      await pageAman.click('button:has-text("Continue")');
+      await pageAman.waitForTimeout(1000);
 
-      await page.waitForSelector('input[name="aadhaarNumber"]', { timeout: 5000 });
-      await page.fill('input[name="aadhaarNumber"]', "123456789014");
-      await page.check('input[id="termsAccepted"]');
-      page.once("dialog", async (dialog) => await dialog.accept());
-      await page.click('button[type="submit"]');
-      await page.waitForURL("**/dashboard", { timeout: 20000 });
-      await page.waitForTimeout(2000);
-      await completeOnboarding(page, boyName);
+      await pageAman.waitForSelector('input[name="aadhaarNumber"]', { timeout: 5000 });
+      await pageAman.fill('input[name="aadhaarNumber"]', "123456789014");
+      await pageAman.check('input[id="termsAccepted"]');
+      pageAman.once("dialog", async (dialog) => await dialog.accept());
+      await pageAman.click('button[type="submit"]');
+      await pageAman.waitForURL("**/dashboard", { timeout: 20000 });
+      await pageAman.waitForTimeout(2000);
+      await completeOnboarding(pageAman, boyName);
     });
 
     // 2. Seed Boy details
     await test.step("Seed Boy Profile (Aman)", async () => {
-      await page.evaluate(async ({ email, profileData }) => {
+      await pageAman.evaluate(async ({ email, profileData }) => {
         const { collection, query, where, getDocs, doc, updateDoc } = (window as any).firestoreHelpers;
         const db = (window as any).firebaseDb;
         const q = query(collection(db, "profiles"), where("email", "==", email));
@@ -481,6 +452,8 @@ test.describe("Marriage Proposal E2E Flow", () => {
         email: boyEmail,
         profileData: {
           name: boyName,
+          firstName: "Aman",
+          lastName: `Sen${bSuffix}`,
           state: "Maharashtra",
           city: "Mumbai",
           district: "Mumbai Suburban",
@@ -489,62 +462,55 @@ test.describe("Marriage Proposal E2E Flow", () => {
           photo: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop"
         }
       });
-      await page.waitForTimeout(1000);
+      await pageAman.waitForTimeout(1000);
     });
 
-    // 3. Logout Boy
-    await test.step("Logout Aman", async () => {
-      await page.evaluate(() => {
-        (window as any).firebaseAuth.signOut();
-      }).catch(() => {});
-      await page.waitForTimeout(2000);
-      await page.goto("/login");
+    // 3. Register Girl (Nisha)
+    await test.step("Register Girl (Nisha)", async () => {
+      await pageNeha.goto("/register");
+      await pageNeha.waitForSelector('input[name="firstName"]', { timeout: 10000 });
+      await pageNeha.fill('input[name="firstName"]', "Nisha");
+      await pageNeha.fill('input[name="lastName"]', `Shah${bSuffix}`);
+      await pageNeha.selectOption('select[name="gender"]', "Female");
+      await pageNeha.fill('input[name="dob"]', "1995-10-20");
+      await pageNeha.fill('input[name="mobile"]', "9123456781");
+      await pageNeha.fill('input[name="email"]', girlEmail);
+      await pageNeha.fill('input[name="password"]', password);
+      await pageNeha.fill('input[name="confirmPassword"]', password);
+      await pageNeha.click('button:has-text("Continue")');
+      await pageNeha.waitForTimeout(1000);
+
+      await pageNeha.waitForSelector('select[name="subCaste"]', { timeout: 5000 });
+      await pageNeha.selectOption('select[name="subCaste"]', "Gadi Lohar");
+      await pageNeha.click('button:has-text("Continue")');
+      await pageNeha.waitForTimeout(1000);
+
+      await pageNeha.waitForSelector('input[name="aadhaarNumber"]', { timeout: 5000 });
+      await pageNeha.fill('input[name="aadhaarNumber"]', "123456789015");
+      await pageNeha.check('input[id="termsAccepted"]');
+      pageNeha.once("dialog", async (dialog) => await dialog.accept());
+      await pageNeha.click('button[type="submit"]');
+      await pageNeha.waitForURL("**/dashboard", { timeout: 20000 });
+      await pageNeha.waitForTimeout(2000);
+      await completeOnboarding(pageNeha, girlName);
     });
 
-    // 4. Register Girl
-    await test.step("Register Girl (Neha)", async () => {
-      await page.goto("/register");
-      await page.waitForSelector('input[name="firstName"]', { timeout: 10000 });
-      await page.fill('input[name="firstName"]', "Neha");
-      await page.fill('input[name="lastName"]', `Shah${bSuffix}`);
-      await page.selectOption('select[name="gender"]', "Female");
-      await page.fill('input[name="dob"]', "1995-10-20");
-      await page.fill('input[name="mobile"]', "9123456781");
-      await page.fill('input[name="email"]', girlEmail);
-      await page.fill('input[name="password"]', password);
-      await page.fill('input[name="confirmPassword"]', password);
-      await page.click('button:has-text("Continue")');
-      await page.waitForTimeout(1000);
-
-      await page.waitForSelector('select[name="subCaste"]', { timeout: 5000 });
-      await page.selectOption('select[name="subCaste"]', "Gadi Lohar");
-      await page.click('button:has-text("Continue")');
-      await page.waitForTimeout(1000);
-
-      await page.waitForSelector('input[name="aadhaarNumber"]', { timeout: 5000 });
-      await page.fill('input[name="aadhaarNumber"]', "123456789015");
-      await page.check('input[id="termsAccepted"]');
-      page.once("dialog", async (dialog) => await dialog.accept());
-      await page.click('button[type="submit"]');
-      await page.waitForURL("**/dashboard", { timeout: 20000 });
-      await page.waitForTimeout(2000);
-      await completeOnboarding(page, girlName);
-    });
-
-    // 5. Seed Girl details
-    await test.step("Seed Girl Profile (Neha)", async () => {
-      await page.evaluate(async ({ email, profileData }) => {
+    // 4. Seed Girl Profile (Nisha)
+    await test.step("Seed Girl Profile (Nisha)", async () => {
+      await pageNeha.evaluate(async ({ email, profileData }) => {
         const { collection, query, where, getDocs, doc, updateDoc } = (window as any).firestoreHelpers;
         const db = (window as any).firebaseDb;
         const q = query(collection(db, "profiles"), where("email", "==", email));
         const snapshot = await getDocs(q);
-        if (snapshot.empty) throw new Error("Neha not found");
+        if (snapshot.empty) throw new Error("Nisha not found");
         const ref = doc(db, "profiles", snapshot.docs[0].id);
         await updateDoc(ref, profileData);
       }, {
         email: girlEmail,
         profileData: {
           name: girlName,
+          firstName: "Nisha",
+          lastName: `Shah${bSuffix}`,
           state: "Maharashtra",
           city: "Mumbai",
           district: "Mumbai Suburban",
@@ -553,254 +519,181 @@ test.describe("Marriage Proposal E2E Flow", () => {
           photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop"
         }
       });
-      await page.waitForTimeout(1000);
+      await pageNeha.waitForTimeout(1000);
     });
 
-    // 6. Logout Girl
-    await test.step("Logout Neha", async () => {
-      await page.evaluate(() => {
-        (window as any).firebaseAuth.signOut();
-      }).catch(() => {});
-      await page.waitForTimeout(2000);
-      await page.goto("/login");
-    });
-
-    // 7. Login Boy (Aman) & Send Interest to Neha
-    await test.step("Aman Sends Interest to Neha", async () => {
-      await page.fill('input[type="email"]', boyEmail);
-      await page.fill('input[type="password"]', password);
-      await page.click('button[type="submit"]');
-      await page.waitForURL("**/dashboard", { timeout: 20000 });
-      await page.waitForTimeout(2000);
-
-      // Search for Neha
-      await page.goto("/dashboard?tab=search");
-      await page.waitForTimeout(2050);
-      const searchInput = page.locator('input[type="text"]');
+    // 5. Aman Sends Interest to Nisha
+    await test.step("Aman Sends Interest to Nisha", async () => {
+      // Search for Nisha directly
+      await pageAman.goto("/dashboard?tab=search");
+      await pageAman.waitForTimeout(2050);
+      const searchInput = pageAman.locator('input[type="text"]');
       await searchInput.fill(girlName);
-      await page.waitForTimeout(2050);
+      await pageAman.waitForTimeout(2050);
 
       // Click Interest
-      const sendInterestBtn = page.locator('button').filter({ hasText: /^Interest$/ }).first();
+      const sendInterestBtn = pageAman.locator('button').filter({ hasText: /^Interest$/ }).first();
       await expect(sendInterestBtn).toBeVisible({ timeout: 10000 });
       await sendInterestBtn.click();
-      await expect(page.locator('button').filter({ hasText: /^Sent$/ }).first()).toBeVisible({ timeout: 10000 });
+      await expect(pageAman.locator('button').filter({ hasText: /^Sent$/ }).first()).toBeVisible({ timeout: 10000 });
     });
 
-    // 8. Logout Aman
-    await test.step("Logout Aman", async () => {
-      await page.evaluate(() => {
-        (window as any).firebaseAuth.signOut();
-      }).catch(() => {});
-      await page.waitForTimeout(2000);
-      await page.goto("/login");
-    });
+    // 6. Nisha Declines Aman's Interest (Rejection Flow)
+    await test.step("Nisha Declines Aman's Interest", async () => {
+      // Go to Nisha's Interests tab directly
+      await pageNeha.goto("/dashboard?tab=interests");
+      await pageNeha.waitForTimeout(2000);
 
-    // 9. Login Neha & Decline Interest (Rejection Flow)
-    await test.step("Neha Declines Aman's Interest", async () => {
-      await page.fill('input[type="email"]', girlEmail);
-      await page.fill('input[type="password"]', password);
-      await page.click('button[type="submit"]');
-      await page.waitForURL("**/dashboard", { timeout: 20000 });
-      await page.waitForTimeout(2000);
-
-      // Go to Interests tab
-      await page.goto("/dashboard?tab=interests");
-      await page.waitForTimeout(2000);
+      // Assert: Marriage Requests sub-tab should not be visible before interest is approved
+      await expect(pageNeha.locator('button:has-text("Marriage Requests")')).not.toBeVisible();
 
       // Reject connection
-      const rejectBtn = page.locator('button:has-text("Reject")').first();
+      const rejectBtn = pageNeha.locator('button:has-text("Reject")').first();
       await expect(rejectBtn).toBeVisible({ timeout: 10000 });
       await rejectBtn.click();
       await expect(rejectBtn).not.toBeVisible({ timeout: 10000 });
     });
 
-    // 10. Logout Neha
-    await test.step("Logout Neha", async () => {
-      await page.evaluate(() => {
-        (window as any).firebaseAuth.signOut();
-      }).catch(() => {});
-      await page.waitForTimeout(2000);
-      await page.goto("/login");
-    });
-
-    // 11. Login Aman & Verify connection was reset (Aman's Sent tab is empty, receives notification)
+    // 7. Aman Verifies Interest Rejection Reset
     await test.step("Aman Verifies Interest Rejection Reset", async () => {
-      await page.fill('input[type="email"]', boyEmail);
-      await page.fill('input[type="password"]', password);
-      await page.click('button[type="submit"]');
-      await page.waitForURL("**/dashboard", { timeout: 20000 });
-      await page.waitForTimeout(2000);
+      // Go to Aman's dashboard directly
+      await pageAman.goto("/dashboard");
 
       // Check notification bell for rejection
-      await page.locator('button[aria-label="Notifications"]').click();
-      await page.waitForTimeout(1000);
-      const declineNoti = page.locator(`text=${girlName} respectfully declined your interest.`);
+      await pageAman.locator('button[aria-label="Notifications"]').click();
+      await pageAman.waitForTimeout(1000);
+      const declineNoti = pageAman.locator(`text=${girlName} respectfully declined your interest.`);
       await expect(declineNoti).toBeVisible({ timeout: 5000 });
       await declineNoti.click();
-      await page.waitForTimeout(1000);
+      await pageAman.waitForTimeout(1000);
 
       // Verify Sent Requests tab is empty (Aman doesn't see Neha's card in Interests Sent anymore)
-      const sentRequestsTabBtn = page.locator('button:has-text("Sent Requests")');
+      const sentRequestsTabBtn = pageAman.locator('button:has-text("Sent Requests")');
       await expect(sentRequestsTabBtn).toBeVisible({ timeout: 5000 });
       await sentRequestsTabBtn.click();
-      await page.waitForTimeout(1500);
+      await pageAman.waitForTimeout(1500);
 
       // Assert Neha Shah is not visible in Interests Sent
-      await expect(page.locator(`text=${girlName}`)).not.toBeVisible({ timeout: 2000 });
+      await expect(pageAman.locator(`text=${girlName}`)).not.toBeVisible({ timeout: 2000 });
     });
 
-    // 12. Send Interest Again & Accept Interest (Prepare for marriage proposal rejection)
+    // 8. Send Interest Again & Accept Interest (Prepare for marriage proposal rejection)
     await test.step("Aman Sends Interest Again & Neha Approves", async () => {
       // Go to Search, find Neha, and click Interest again
-      await page.goto("/dashboard?tab=search");
-      await page.waitForTimeout(2050);
-      const searchInput = page.locator('input[type="text"]');
+      await pageAman.goto("/dashboard?tab=search");
+      await pageAman.waitForTimeout(2050);
+      const searchInput = pageAman.locator('input[type="text"]');
       await searchInput.fill(girlName);
-      await page.waitForTimeout(2050);
+      await pageAman.waitForTimeout(2050);
 
-      const sendInterestBtn = page.locator('button').filter({ hasText: /^Interest$/ }).first();
+      const sendInterestBtn = pageAman.locator('button').filter({ hasText: /^Interest$/ }).first();
       await expect(sendInterestBtn).toBeVisible({ timeout: 5000 });
       await sendInterestBtn.click();
-      await expect(page.locator('button').filter({ hasText: /^Sent$/ }).first()).toBeVisible({ timeout: 5000 });
+      await expect(pageAman.locator('button').filter({ hasText: /^Sent$/ }).first()).toBeVisible({ timeout: 5000 });
 
-      // Logout Aman
-      await page.evaluate(() => {
-        (window as any).firebaseAuth.signOut();
-      }).catch(() => {});
-      await page.waitForTimeout(2000);
-      await page.goto("/login");
+      // Go to Interests, approve Aman on Nisha's page directly
+      await pageNeha.goto("/dashboard?tab=interests");
+      await pageNeha.waitForTimeout(2000);
 
-      // Login Neha
-      await page.fill('input[type="email"]', girlEmail);
-      await page.fill('input[type="password"]', password);
-      await page.click('button[type="submit"]');
-      await page.waitForURL("**/dashboard", { timeout: 20000 });
-      await page.waitForTimeout(2000);
+      // Assert: Marriage Requests sub-tab should not be visible before interest is approved
+      await expect(pageNeha.locator('button:has-text("Marriage Requests")')).not.toBeVisible();
 
-      // Go to Interests, approve Aman
-      await page.goto("/dashboard?tab=interests");
-      await page.waitForTimeout(2000);
-      const approveBtn = page.locator('button:has-text("Approve")').first();
+      const approveBtn = pageNeha.locator('button:has-text("Approve")').first();
       await expect(approveBtn).toBeVisible({ timeout: 10000 });
       await approveBtn.click();
       await expect(approveBtn).not.toBeVisible({ timeout: 5000 });
+
+      // Assert: Marriage Requests sub-tab is now visible after interest acceptance
+      await expect(pageNeha.locator('button:has-text("Marriage Requests")')).toBeVisible({ timeout: 5000 });
     });
 
-    // 13. Logout Neha, Login Aman, and Send Marriage Proposal
-    await test.step("Aman Sends Marriage Proposal to Neha", async () => {
-      // Logout Neha
-      await page.evaluate(() => {
-        (window as any).firebaseAuth.signOut();
-      }).catch(() => {});
-      await page.waitForTimeout(2000);
-      await page.goto("/login");
-
-      // Login Aman
-      await page.fill('input[type="email"]', boyEmail);
-      await page.fill('input[type="password"]', password);
-      await page.click('button[type="submit"]');
-      await page.waitForURL("**/dashboard", { timeout: 20000 });
-      await page.waitForTimeout(2000);
-
-      // Go to Interests tab -> Sent Requests, click Neha's card (Accepted)
-      await page.goto("/dashboard?tab=interests");
-      await page.waitForTimeout(2000);
-      const sentRequestsTabBtn = page.locator('button:has-text("Sent Requests")');
+    // 9. Aman Sends Marriage Proposal
+    await test.step("Aman Sends Marriage Proposal to Nisha", async () => {
+      // Go to Aman's Interests tab directly
+      await pageAman.goto("/dashboard?tab=interests");
+      await pageAman.waitForTimeout(2000);
+      const sentRequestsTabBtn = pageAman.locator('button:has-text("Sent Requests")');
       await sentRequestsTabBtn.click();
-      await page.waitForTimeout(1000);
+      await pageAman.waitForTimeout(1000);
 
-      const nehaCardImage = page.locator(`img[alt="${girlName}"]`);
+      const nehaCardImage = pageAman.locator(`img[alt="${girlName}"]`);
       await expect(nehaCardImage).toBeVisible({ timeout: 5000 });
-      await nehaCardImage.click();
-      await page.waitForTimeout(2000);
+      await nehaCardImage.click({ force: true });
+      await pageAman.waitForTimeout(2000);
 
       // Send Marriage Proposal
-      const letsGetMarriedBtn = page.locator('button:has-text("Let\'s Get Married!")');
+      const letsGetMarriedBtn = pageAman.locator('button:has-text("Let\'s Get Married!")');
       await expect(letsGetMarriedBtn).toBeVisible({ timeout: 5000 });
       await letsGetMarriedBtn.click();
 
-      await page.fill('input[type="date"]', "2027-12-25");
-      await page.fill('input[type="time"]', "18:00");
-      await page.fill('input[placeholder*="Grand Palace"]', "Grand Palace Resort, Mumbai");
-      await page.click('button:has-text("Send Marriage Request")');
-      await page.waitForTimeout(2500);
+      await pageAman.fill('input[type="date"]', "2027-12-25");
+      await pageAman.fill('input[type="time"]', "18:00");
+      await pageAman.fill('input[placeholder*="Grand Palace"]', "Grand Palace Resort, Mumbai");
+      await pageAman.click('button:has-text("Send Marriage Request")');
+      await pageAman.waitForTimeout(2500);
     });
 
-    // 14. Logout Aman, Login Neha, Decline Marriage Proposal
-    await test.step("Neha Declines Marriage Proposal & Verifies Reset", async () => {
-      // Logout Aman
-      await page.evaluate(() => {
-        (window as any).firebaseAuth.signOut();
-      }).catch(() => {});
-      await page.waitForTimeout(2000);
-      await page.goto("/login");
-
-      // Login Neha
-      await page.fill('input[type="email"]', girlEmail);
-      await page.fill('input[type="password"]', password);
-      await page.click('button[type="submit"]');
-      await page.waitForURL("**/dashboard", { timeout: 20000 });
-      await page.waitForTimeout(2000);
+    // 10. Nisha Declines Marriage Proposal
+    await test.step("Nisha Declines Marriage Proposal & Verifies Reset", async () => {
+      // Go to Nisha's dashboard directly
+      await pageNeha.goto("/dashboard");
 
       // Open Notifications and click proposal notification
-      await page.locator('button[aria-label="Notifications"]').click();
-      await page.waitForTimeout(1000);
-      const proposalNoti = page.locator(`text=${boyName} proposed a marriage setup!`);
+      await pageNeha.locator('button[aria-label="Notifications"]').click();
+      await pageNeha.waitForTimeout(1000);
+      const proposalNoti = pageNeha.locator(`text=${boyName} proposed a marriage setup!`);
       await expect(proposalNoti).toBeVisible({ timeout: 5000 });
       await proposalNoti.click();
-      await page.waitForTimeout(2000);
+      await pageNeha.waitForTimeout(2000);
 
       // Go to Interests -> Marriage Requests sub-tab
-      const marriageReqTabBtn = page.locator('button:has-text("Marriage Requests")');
+      const marriageReqTabBtn = pageNeha.locator('button:has-text("Marriage Requests")');
       await expect(marriageReqTabBtn).toBeVisible({ timeout: 5000 });
       await marriageReqTabBtn.click();
-      await page.waitForTimeout(1000);
+      await pageNeha.waitForTimeout(1000);
 
       // Decline proposal
-      const declineProposalBtn = page.locator('button:has-text("Decline")').first();
+      const declineProposalBtn = pageNeha.locator('button:has-text("Decline")').first();
       await expect(declineProposalBtn).toBeVisible({ timeout: 5000 });
       await declineProposalBtn.click();
       await expect(declineProposalBtn).not.toBeVisible({ timeout: 5000 });
-      await page.waitForTimeout(1500);
+      await pageNeha.waitForTimeout(1500);
+
+      // Assert: Marriage Requests sub-tab is now hidden because interest was also deleted
+      await expect(pageNeha.locator('button:has-text("Marriage Requests")')).not.toBeVisible({ timeout: 5000 });
 
       // Assert that Interests tab is empty and connection is cleared
-      await page.goto("/dashboard?tab=interests");
-      await page.waitForTimeout(1500);
-      await expect(page.locator(`text=${boyName}`)).not.toBeVisible({ timeout: 2000 });
+      await pageNeha.goto("/dashboard?tab=interests");
+      await pageNeha.waitForTimeout(1500);
+      await expect(pageNeha.locator(`text=${boyName}`)).not.toBeVisible({ timeout: 2000 });
     });
 
-    // 15. Logout Neha, Login Aman, Verify Marriage Proposal Decline Notification and Connection Reset
+    // 11. Aman Verifies Marriage Proposal Decline Notification and Connection Reset
     await test.step("Aman Verifies Marriage Rejection Reset", async () => {
-      // Logout Neha
-      await page.evaluate(() => {
-        (window as any).firebaseAuth.signOut();
-      }).catch(() => {});
-      await page.waitForTimeout(2000);
-      await page.goto("/login");
-
-      // Login Aman
-      await page.fill('input[type="email"]', boyEmail);
-      await page.fill('input[type="password"]', password);
-      await page.click('button[type="submit"]');
-      await page.waitForURL("**/dashboard", { timeout: 20000 });
-      await page.waitForTimeout(2000);
+      // Go to Aman's dashboard directly
+      await pageAman.goto("/dashboard");
 
       // Check notification bell for marriage rejection
-      await page.locator('button[aria-label="Notifications"]').click();
-      await page.waitForTimeout(1000);
-      const declineMarriageNoti = page.locator(`text=${girlName} declined your marriage proposal.`);
+      await pageAman.locator('button[aria-label="Notifications"]').click();
+      await pageAman.waitForTimeout(1000);
+      const declineMarriageNoti = pageAman.locator(`text=${girlName} declined your marriage proposal.`);
       await expect(declineMarriageNoti).toBeVisible({ timeout: 5000 });
       await declineMarriageNoti.click();
-      await page.waitForTimeout(1500);
+      await pageAman.waitForTimeout(1500);
+
+      // Assert: Marriage Requests sub-tab should not be visible for Aman
+      await expect(pageAman.locator('button:has-text("Marriage Requests")')).not.toBeVisible();
 
       // Assert Aman's Interests Sent page is empty for Neha
-      await page.goto("/dashboard?tab=interests");
-      await page.waitForTimeout(1000);
-      const sentRequestsTabBtn = page.locator('button:has-text("Sent Requests")');
+      await pageAman.goto("/dashboard?tab=interests");
+      await pageAman.waitForTimeout(1000);
+      const sentRequestsTabBtn = pageAman.locator('button:has-text("Sent Requests")');
       await sentRequestsTabBtn.click();
-      await page.waitForTimeout(1500);
-      await expect(page.locator(`text=${girlName}`)).not.toBeVisible({ timeout: 2000 });
+      await pageAman.waitForTimeout(1500);
+      await expect(pageAman.locator(`text=${girlName}`)).not.toBeVisible({ timeout: 2000 });
     });
+
+    await contextAman.close();
+    await contextNeha.close();
   });
 });

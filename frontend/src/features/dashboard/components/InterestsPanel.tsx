@@ -45,8 +45,7 @@ const InterestsPanel: React.FC<InterestsPanelProps> = ({
 
   const hasApprovedReceived = approvedReceivedIds.length > 0;
   const hasAcceptedInterests = sentInterests.some(int => int.status === "approved") || hasApprovedReceived;
-  const hasMarriageRequests = marriageRequests.length > 0;
-  const showMarriageTab = hasAcceptedInterests || hasMarriageRequests;
+  const showMarriageTab = hasAcceptedInterests;
 
   return (
     <div className="space-y-6">
