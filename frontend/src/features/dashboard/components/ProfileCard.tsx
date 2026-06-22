@@ -178,12 +178,20 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
             )}
           </div>
 
-          <p className="text-[9px] sm:text-[10px] md:text-xs font-semibold text-slate-655 dark:text-slate-400 truncate">
-            {[`${profile.age || 25} yrs`, profile.height, profile.subCaste, profile.maritalStatus].filter(Boolean).join(" • ") || "\u00A0"}
-          </p>
-          <p className="text-[8px] sm:text-[9px] md:text-[10px] text-slate-505 dark:text-slate-400 uppercase tracking-wide font-medium truncate">
-            {[profile.education, profile.income].filter(Boolean).join(" • ") || "\u00A0"}
-          </p>
+          <div className="flex flex-wrap gap-1.5 pt-1 pb-1">
+            {[`${profile.age || 25} yrs`, profile.height, profile.subCaste, profile.maritalStatus].filter(Boolean).map((item, idx) => (
+              <span key={`attr1-${idx}`} className="bg-slate-100 dark:bg-dark-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] md:text-[11px] font-medium border border-slate-200 dark:border-dark-700">
+                {item}
+              </span>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-1.5 pt-0.5">
+            {[profile.education, profile.income].filter(Boolean).map((item, idx) => (
+              <span key={`attr2-${idx}`} className="bg-slate-50 dark:bg-dark-850 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded-md text-[8px] sm:text-[9px] md:text-[10px] uppercase tracking-wide font-medium border border-slate-200/50 dark:border-dark-700/50">
+                {item}
+              </span>
+            ))}
+          </div>
 
           <p className="text-[8px] sm:text-[9px] md:text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-0.5 sm:gap-1 pt-0.5 sm:pt-1 truncate">
             <MapPin className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-3.5 md:w-3.5 text-maroon-700 dark:text-gold-450 flex-shrink-0" />
@@ -207,64 +215,86 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-4 sm:mt-5 pt-2 sm:pt-3">
-          {marriageFixed ? (
+        {profile.partnerId ? (
+          <div className="mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-slate-100 dark:border-dark-800 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <img 
+                src={profile.partnerPhoto || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop"} 
+                alt={profile.partnerName || "Partner"} 
+                className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-dark-700" 
+              />
+              <span className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-slate-300">
+                {profile.partnerName}
+              </span>
+            </div>
             <button
               disabled
-              className="w-full py-2 sm:py-2 md:py-3 rounded-xl bg-slate-100 dark:bg-dark-800 text-slate-400 dark:text-slate-500 font-bold text-[10px] sm:text-[10px] md:text-xs flex items-center justify-center gap-1.5 cursor-not-allowed border border-slate-200/50 dark:border-dark-700/50"
+              className="py-1.5 px-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 font-bold text-[10px] sm:text-xs flex items-center gap-1.5 border border-amber-200/60 dark:border-amber-800/30 shadow-sm"
             >
-              <Lock className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />
-              <span>Locked</span>
+              <Heart className="h-3 w-3 sm:h-3.5 sm:w-3.5 fill-amber-500 text-amber-500" />
+              {profile.weddingDate && new Date(profile.weddingDate) > new Date() ? "Marriage Fixed" : "Married"}
             </button>
-          ) : (
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              animate={interestSentIds.includes(profile.id) ? {
-                opacity: [1, 0.7, 1],
-                scale: [1, 1.02, 1]
-              } : {}}
-              transition={interestSentIds.includes(profile.id) ? {
-                repeat: Infinity,
-                duration: 1.2,
-                ease: "easeInOut"
-              } : { duration: 0.2 }}
-              onClick={(e) => onToggleInterest(profile.id, e)}
-              className={`w-full py-2 sm:py-2 md:py-3 rounded-xl text-[10px] sm:text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer ${interestSentIds.includes(profile.id)
-                ? "bg-emerald-500 text-white shadow-emerald-500/15"
-                : "bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:hover:bg-rose-900/40 dark:text-rose-300 border border-rose-200/60 dark:border-rose-900/30"
-                }`}
-            >
-              <motion.div
-                animate={interestSentIds.includes(profile.id) ? { scale: [1, 1.4, 1] } : {}}
-                transition={{ duration: 0.3 }}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-4 sm:mt-5 pt-2 sm:pt-3">
+            {marriageFixed ? (
+              <button
+                disabled
+                className="w-full py-2 sm:py-2 md:py-3 rounded-xl bg-slate-100 dark:bg-dark-800 text-slate-400 dark:text-slate-500 font-bold text-[10px] sm:text-[10px] md:text-xs flex items-center justify-center gap-1.5 cursor-not-allowed border border-slate-200/50 dark:border-dark-700/50"
               >
-                <Heart className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />
-              </motion.div>
-              {interestSentIds.includes(profile.id) ? t("interest.sent") : t("interest.send")}
-            </motion.button>
-          )}
+                <Lock className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />
+                <span>Locked</span>
+              </button>
+            ) : (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                animate={interestSentIds.includes(profile.id) ? {
+                  opacity: [1, 0.7, 1],
+                  scale: [1, 1.02, 1]
+                } : {}}
+                transition={interestSentIds.includes(profile.id) ? {
+                  repeat: Infinity,
+                  duration: 1.2,
+                  ease: "easeInOut"
+                } : { duration: 0.2 }}
+                onClick={(e) => onToggleInterest(profile.id, e)}
+                className={`w-full py-2 sm:py-2 md:py-3 rounded-xl text-[10px] sm:text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer ${interestSentIds.includes(profile.id)
+                  ? "bg-emerald-500 text-white shadow-emerald-500/15"
+                  : "bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:hover:bg-rose-900/40 dark:text-rose-300 border border-rose-200/60 dark:border-rose-900/30"
+                  }`}
+              >
+                <motion.div
+                  animate={interestSentIds.includes(profile.id) ? { scale: [1, 1.4, 1] } : {}}
+                  transition={{ duration: 0.3 }}
+                >
+                  <Heart className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />
+                </motion.div>
+                {interestSentIds.includes(profile.id) ? t("interest.sent") : t("interest.send")}
+              </motion.button>
+            )}
 
-          {marriageFixed ? (
-            <button
-              disabled
-              className="w-full py-2 sm:py-2 md:py-3 rounded-xl bg-slate-100 dark:bg-dark-800 text-slate-400 dark:text-slate-500 font-bold text-[10px] sm:text-[10px] md:text-xs flex items-center justify-center gap-1.5 cursor-not-allowed border border-slate-200/50 dark:border-dark-700/50"
-            >
-              <Lock className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />
-              <span>Locked</span>
-            </button>
-          ) : (
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={(e) => onStartChat(profile, e)}
-              className="w-full py-2 sm:py-2 md:py-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:hover:bg-rose-900/40 dark:text-rose-300 border border-rose-200/60 dark:border-rose-900/30 text-[10px] sm:text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
-            >
-              <MessageSquare className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />
-              {t("action.chat")}
-            </motion.button>
-          )}
-        </div>
+            {marriageFixed ? (
+              <button
+                disabled
+                className="w-full py-2 sm:py-2 md:py-3 rounded-xl bg-slate-100 dark:bg-dark-800 text-slate-400 dark:text-slate-500 font-bold text-[10px] sm:text-[10px] md:text-xs flex items-center justify-center gap-1.5 cursor-not-allowed border border-slate-200/50 dark:border-dark-700/50"
+              >
+                <Lock className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />
+                <span>Locked</span>
+              </button>
+            ) : (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={(e) => onStartChat(profile, e)}
+                className="w-full py-2 sm:py-2 md:py-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:hover:bg-rose-900/40 dark:text-rose-300 border border-rose-200/60 dark:border-rose-900/30 text-[10px] sm:text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
+              >
+                <MessageSquare className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />
+                {t("action.chat")}
+              </motion.button>
+            )}
+          </div>
+        )}
       </div>
     </motion.div>
   );

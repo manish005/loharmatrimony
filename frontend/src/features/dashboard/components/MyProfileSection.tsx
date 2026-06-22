@@ -134,6 +134,28 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
                   {t("action.edit")}
                 </button>
               )}
+
+              {myProfile.partnerId && !isEditingProfile && (
+                <div className="mt-4 pt-3 border-t border-slate-100 dark:border-dark-800 flex items-center justify-between sm:justify-start sm:gap-6">
+                  <div className="flex items-center gap-2">
+                    <img 
+                      src={myProfile.partnerPhoto || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop"} 
+                      alt={myProfile.partnerName || "Partner"} 
+                      className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover border border-slate-200 dark:border-dark-700 shadow-sm" 
+                    />
+                    <span className="text-xs md:text-sm font-bold text-slate-700 dark:text-slate-300">
+                      {myProfile.partnerName}
+                    </span>
+                  </div>
+                  <button
+                    disabled
+                    className="py-1.5 px-3 md:px-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 font-bold text-[10px] md:text-xs flex items-center gap-1.5 border border-amber-200/60 dark:border-amber-800/30 shadow-sm"
+                  >
+                    <Heart className="h-3 w-3 md:h-4 md:w-4 fill-amber-500 text-amber-500" />
+                    {myProfile.weddingDate && new Date(myProfile.weddingDate) > new Date() ? "Marriage Fixed" : "Married"}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

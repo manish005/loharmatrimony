@@ -628,12 +628,29 @@ export const Dashboard: React.FC = () => {
       // 1. Update request status
       await updateDoc(requestRef, { status: "accepted" });
 
-      // 2. Set both profiles to isMarried = true and maritalStatus = "Married"
+      // 2. Set both profiles to isMarried = true, maritalStatus = "Married", and save partner info
       const myProfileRef = doc(db, "profiles", myProfile.id);
       const senderProfileRef = doc(db, "profiles", senderProfile.id);
       
-      await updateDoc(myProfileRef, { isMarried: true, maritalStatus: "Married" });
-      await updateDoc(senderProfileRef, { isMarried: true, maritalStatus: "Married" });
+      const weddingDate = reqData.weddingDate || "";
+      
+      await updateDoc(myProfileRef, { 
+        isMarried: true, 
+        maritalStatus: "Married",
+        partnerId: senderProfile.id,
+        partnerName: senderProfile.name,
+        partnerPhoto: senderProfile.photos?.[0] || senderProfile.photo || "",
+        weddingDate: weddingDate
+      });
+      
+      await updateDoc(senderProfileRef, { 
+        isMarried: true, 
+        maritalStatus: "Married",
+        partnerId: myProfile.id,
+        partnerName: myProfile.name,
+        partnerPhoto: myProfile.photos?.[0] || myProfile.photo || "",
+        weddingDate: weddingDate
+      });
 
       // 3. Create Success Story
       await addDoc(collection(db, "successStories"), {
@@ -649,7 +666,15 @@ export const Dashboard: React.FC = () => {
       });
 
       showToast(`Congratulations! You are engaged to ${senderProfile.name}!`);
-      setMyProfile((prev: any) => ({ ...prev, isMarried: true, maritalStatus: "Married" }));
+      setMyProfile((prev: any) => ({ 
+        ...prev, 
+        isMarried: true, 
+        maritalStatus: "Married",
+        partnerId: senderProfile.id,
+        partnerName: senderProfile.name,
+        partnerPhoto: senderProfile.photos?.[0] || senderProfile.photo || "",
+        weddingDate: reqData.weddingDate || ""
+      }));
       setShowCelebration(true);
       setTimeout(() => setShowCelebration(false), 5000);
       setActiveTab("stories");
