@@ -189,6 +189,7 @@ export const AdminDashboard: React.FC = () => {
   const [searchMembers, setSearchMembers] = useState("");
   const [confirmDeleteMember, setConfirmDeleteMember] = useState<any | null>(null);
   const [deletingMembers, setDeletingMembers] = useState(false);
+  const [deletionProgress, setDeletionProgress] = useState({ deleted: 0, total: 0 });
 
   // Pagination states
   const [unverifiedPage, setUnverifiedPage] = useState(1);
@@ -343,6 +344,7 @@ export const AdminDashboard: React.FC = () => {
 
   const deleteUserCascade = async (profile: any) => {
     setDeletingMembers(true);
+    setDeletionProgress({ deleted: 0, total: 1 });
     try {
       const profileId = profile.id;
       const uid = profile.uid;
@@ -432,10 +434,12 @@ export const AdminDashboard: React.FC = () => {
       }
 
       toast.success(`User "${profile.name || profileId}" deleted successfully. Auth record deletion requires deploying the deleteAuthUser cloud function.`);
+      setDeletionProgress({ deleted: 1, total: 1 });
     } catch (err: any) {
       toast.error(err.message || "Failed to delete user.");
     } finally {
       setDeletingMembers(false);
+      setDeletionProgress({ deleted: 0, total: 0 });
       setConfirmDeleteMember(null);
       setSelectedMemberIds(new Set());
       setSelectAll(false);
@@ -447,6 +451,7 @@ export const AdminDashboard: React.FC = () => {
     if (targetIds.size === 0) return;
     setDeletingMembers(true);
     const profilesToDelete = onlineMembers.filter((m: any) => targetIds.has(m.id));
+    setDeletionProgress({ deleted: 0, total: profilesToDelete.length });
     let successCount = 0;
     let failCount = 0;
     for (const profile of profilesToDelete) {
@@ -513,14 +518,24 @@ export const AdminDashboard: React.FC = () => {
           } catch {}
         }
         successCount++;
+        setDeletionProgress(prev => ({ ...prev, deleted: prev.deleted + 1 }));
       } catch {
         failCount++;
       }
     }
     toast.success(`${successCount} user(s) deleted.${failCount > 0 ? ` ${failCount} failed.` : ""} Auth deletion requires deploying deleteAuthUser cloud function.`);
     setDeletingMembers(false);
+    setDeletionProgress({ deleted: 0, total: 0 });
     setSelectedMemberIds(new Set());
     setSelectAll(false);
+    setDashboardSelectedIds(new Set());
+    setDashboardSelectAll(false);
+  };
+
+  const closeDeleteModal = () => {
+    if (deletingMembers) return;
+    setConfirmDeleteMember(null);
+    setDeletionProgress({ deleted: 0, total: 0 });
   };
 
   // Filtered lists
@@ -1618,65 +1633,6 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Delete Confirmation Modal */}
-                <AnimatePresence>
-                  {confirmDeleteMember && (
-                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-55 flex items-center justify-center p-4">
-                      <motion.div 
-                        initial={{ scale: 0.95, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.95, opacity: 0 }}
-                        className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-5"
-                      >
-                        <div className="flex justify-between items-center border-b pb-3">
-                          <h3 className="font-serif text-base font-bold text-slate-900 dark:text-white">
-                            {confirmDeleteMember.bulk ? "Delete Members" : "Delete Member"}
-                          </h3>
-                          <button onClick={() => setConfirmDeleteMember(null)} className="p-1 rounded hover:bg-slate-100 dark:hover:bg-dark-800 cursor-pointer">
-                            <X className="h-5 w-5" />
-                          </button>
-                        </div>
-                        <div className="space-y-3">
-                          <p className="text-xs text-slate-600 dark:text-slate-300">
-                            {confirmDeleteMember.bulk
-                              ? `Are you sure you want to delete ${confirmDeleteMember.count} member(s)?`
-                              : `Are you sure you want to delete "${confirmDeleteMember.name || confirmDeleteMember.id}"?`
-                            }
-                          </p>
-                          <p className="text-[10px] text-red-500 font-semibold bg-red-50 dark:bg-red-950/20 p-3 rounded-xl border border-red-100 dark:border-red-900/30">
-                            This will permanently delete the profile, all conversations, messages, interests, marriage requests, notifications, and associated data. Auth account deletion requires the deleteAuthUser cloud function to be deployed.
-                          </p>
-                        </div>
-                        <div className="flex gap-3 pt-3 border-t">
-                          <button
-                            onClick={() => {
-                              if (confirmDeleteMember.bulk) {
-                                handleBulkDelete(confirmDeleteMember.ids);
-                              } else {
-                                deleteUserCascade(confirmDeleteMember);
-                              }
-                            }}
-                            disabled={deletingMembers}
-                            className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold text-xs shadow transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-                          >
-                            {deletingMembers ? (
-                              <>Deleting...</>
-                            ) : (
-                              <><Trash2 className="h-3.5 w-3.5" /> Delete</>
-                            )}
-                          </button>
-                          <button
-                            onClick={() => setConfirmDeleteMember(null)}
-                            disabled={deletingMembers}
-                            className="px-4 py-2.5 rounded-xl border text-slate-600 font-bold hover:bg-slate-50 dark:hover:bg-dark-850 transition-colors text-xs cursor-pointer"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </motion.div>
-                    </div>
-                  )}
-                </AnimatePresence>
               </div>
             )}
 
@@ -1692,6 +1648,75 @@ export const AdminDashboard: React.FC = () => {
                 onLogout={handleLogout}
               />
             )}
+
+            {/* Delete Confirmation Modal (always rendered, across all tabs) */}
+            <AnimatePresence>
+              {confirmDeleteMember && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-55 flex items-center justify-center p-4">
+                  <motion.div 
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.95, opacity: 0 }}
+                    className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-5"
+                  >
+                    <div className="flex justify-between items-center border-b pb-3">
+                      <h3 className="font-serif text-base font-bold text-slate-900 dark:text-white">
+                        {confirmDeleteMember.bulk ? "Delete Members" : "Delete Member"}
+                      </h3>
+                      <button onClick={closeDeleteModal} className="p-1 rounded hover:bg-slate-100 dark:hover:bg-dark-800 cursor-pointer">
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+                    <div className="space-y-3">
+                      <p className="text-xs text-slate-600 dark:text-slate-300">
+                        {confirmDeleteMember.bulk
+                          ? `Are you sure you want to delete ${confirmDeleteMember.count} member(s)?`
+                          : `Are you sure you want to delete "${confirmDeleteMember.name || confirmDeleteMember.id}"?`
+                        }
+                      </p>
+                      <p className="text-[10px] text-red-500 font-semibold bg-red-50 dark:bg-red-950/20 p-3 rounded-xl border border-red-100 dark:border-red-900/30">
+                        This will permanently delete the profile, all conversations, messages, interests, marriage requests, notifications, and associated data. Auth account deletion requires the deleteAuthUser cloud function to be deployed.
+                      </p>
+                    </div>
+                    <div className="flex gap-3 pt-3 border-t">
+                      <button
+                        onClick={() => {
+                          if (confirmDeleteMember.bulk) {
+                            handleBulkDelete(confirmDeleteMember.ids);
+                          } else {
+                            deleteUserCascade(confirmDeleteMember);
+                          }
+                        }}
+                        disabled={deletingMembers}
+                        className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold text-xs shadow transition-colors cursor-pointer flex items-center justify-center gap-1.5 backdrop-blur-sm"
+                      >
+                        {deletingMembers ? (
+                          <span className="flex items-center gap-2">
+                            <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            {confirmDeleteMember.bulk
+                              ? `Deleting ${deletionProgress.deleted} of ${deletionProgress.total}`
+                              : "Deleting..."
+                            }
+                          </span>
+                        ) : (
+                          <><Trash2 className="h-3.5 w-3.5" /> Delete</>
+                        )}
+                      </button>
+                      <button
+                          onClick={closeDeleteModal}
+                        disabled={deletingMembers}
+                        className="px-4 py-2.5 rounded-xl border text-slate-600 font-bold hover:bg-slate-50 dark:hover:bg-dark-850 transition-colors text-xs cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </motion.div>
+                </div>
+              )}
+            </AnimatePresence>
 
           </div>
 
