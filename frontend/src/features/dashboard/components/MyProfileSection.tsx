@@ -83,7 +83,12 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
   const { t } = useLanguage();
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-dark-900 rounded-3xl border border-slate-200/50 dark:border-dark-800/50 p-6 shadow-sm">
+      <div className="bg-white dark:bg-dark-900 rounded-3xl border border-slate-200/50 dark:border-dark-800/50 p-6 shadow-sm relative">
+        {!isEditingProfile && (
+          <button onClick={onStartEdit} className="absolute top-3 right-3 lg:hidden p-2.5 rounded-xl bg-slate-100 dark:bg-dark-800 text-slate-700 dark:text-slate-300 text-xs font-bold shadow-sm hover:bg-slate-200 dark:hover:bg-dark-700 transition-all cursor-pointer z-10">
+            {t("action.edit")}
+          </button>
+        )}
         <div className="flex flex-col lg:flex-row items-start gap-5 justify-between">
           <div className="flex flex-col sm:flex-row items-start gap-5 flex-1">
             <div className="relative shrink-0">
@@ -132,7 +137,7 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
               <p className="text-[10px] text-slate-400 mt-1 lg:hidden">ID: {myProfile.id}</p>
 
               {!isEditingProfile && (
-                <button onClick={onStartEdit} className="mt-3 px-5 py-2 rounded-xl bg-slate-100 dark:bg-dark-800 text-slate-700 dark:text-slate-300 text-xs font-bold shadow-sm hover:bg-slate-200 dark:hover:bg-dark-700 transition-all cursor-pointer shrink-0">
+                <button onClick={onStartEdit} className="mt-3 px-5 py-2 rounded-xl bg-slate-100 dark:bg-dark-800 text-slate-700 dark:text-slate-300 text-xs font-bold shadow-sm hover:bg-slate-200 dark:hover:bg-dark-700 transition-all cursor-pointer shrink-0 hidden lg:inline-flex">
                   {t("action.edit")}
                 </button>
               )}

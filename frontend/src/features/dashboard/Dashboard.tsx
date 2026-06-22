@@ -139,10 +139,11 @@ export const Dashboard: React.FC = () => {
   const [profileLoading, setProfileLoading] = useState(true);
 
   const progressPercent = (() => {
-    const fields = [
+    const fields: string[] = [
       "name", "gender", "dob", "mobile", "email", "subCaste", "motherTongue",
       "height", "weight", "maritalStatus", "education", "occupation", "income",
-      "address", "state", "district", "city", "familyDetails", "lifestyle", "hobbies"
+      "address", "state", "district", "city", "familyDetails", "lifestyle", "hobbies",
+      "foodPreference", "smoking", "drinking", "religion", "bio", "manglik"
     ];
     let filled = 0;
     fields.forEach(field => {
@@ -150,6 +151,7 @@ export const Dashboard: React.FC = () => {
         filled++;
       }
     });
+    if (myProfile.photos && myProfile.photos.length > 0) filled++;
     return Math.round((filled / fields.length) * 100);
   })();
 
