@@ -56,7 +56,8 @@ const AppLayout: React.FC = () => {
   }
 
   const isLoggingOut = sessionStorage.getItem("logging_out") === "true";
-  const effectiveUser = isLoggingOut ? null : currentUser;
+  const isRegistering = sessionStorage.getItem("registering") === "true";
+  const effectiveUser = (isLoggingOut || isRegistering) ? null : currentUser;
 
   // Layout guards to hide components on login/register and admin pages
   const showHeader = !["/login", "/register", "/forgot-password", "/reset-password"].includes(location.pathname);

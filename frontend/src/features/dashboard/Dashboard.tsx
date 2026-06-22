@@ -251,6 +251,11 @@ export const Dashboard: React.FC = () => {
             subscriptionPlan: data.subscriptionPlan || "free",
             bio: data.bio || "",
             onboardingCompleted: data.onboardingCompleted || false,
+            isMarried: data.isMarried || false,
+            partnerId: data.partnerId || "",
+            partnerName: data.partnerName || "",
+            partnerPhoto: data.partnerPhoto || "",
+            weddingDate: data.weddingDate || "",
             // Preferences
             prefFamilyType: data.prefFamilyType || "",
             prefWorking: data.prefWorking || "",
@@ -268,7 +273,7 @@ export const Dashboard: React.FC = () => {
 
         if (currentUser?.email) {
           const userEmail = currentUser.email.toLowerCase();
-          const userProfile = dbProfiles.find(p => p.email?.toLowerCase() === userEmail);
+          const userProfile = dbProfiles.find(p => p.uid === currentUser.uid) || dbProfiles.find(p => p.email?.toLowerCase() === userEmail);
           if (userProfile) {
             const updatedProfiles = dbProfiles.map(p => ({
               ...p,
@@ -572,7 +577,7 @@ export const Dashboard: React.FC = () => {
       );
       const snap = await getDocs(q);
       if (!snap.empty) {
-        await updateDoc(snap.docs[0].ref, { status: "rejected" });
+        await deleteDoc(snap.docs[0].ref);
         showToast("Interest declined.");
 
         // Add Notification
@@ -662,6 +667,17 @@ export const Dashboard: React.FC = () => {
         weddingDate: weddingDate
       });
 
+      // Add Notification
+      const myName = myProfile.firstName || myProfile.name || "Someone";
+      await addDoc(collection(db, "notifications"), {
+        receiverId: senderProfile.id,
+        senderId: myProfile.id,
+        text: `${myName} accepted your marriage proposal! Congratulations!`,
+        type: "marriage_proposal_accepted",
+        read: false,
+        createdAt: serverTimestamp()
+      });
+
       // 3. Create Success Story
       await addDoc(collection(db, "successStories"), {
         coupleId: `${senderProfile.id}_${myProfile.id}`,
@@ -697,8 +713,42 @@ export const Dashboard: React.FC = () => {
   const handleRejectMarriageRequest = async (requestId: string) => {
     try {
       const requestRef = doc(db, "marriageRequests", requestId);
-      await updateDoc(requestRef, { status: "rejected" });
-      showToast("Marriage Request declined.");
+      const reqSnap = await getDoc(requestRef);
+      if (reqSnap.exists()) {
+        const reqData = reqSnap.data();
+        const otherUserId = reqData.senderId === myProfile.id ? reqData.receiverId : reqData.senderId;
+
+        // 1. Delete marriage request document
+        await deleteDoc(requestRef);
+
+        // 2. Delete interest document(s) between them
+        const qInterest1 = query(
+          collection(db, "interests"),
+          where("senderId", "==", myProfile.id),
+          where("receiverId", "==", otherUserId)
+        );
+        const qInterest2 = query(
+          collection(db, "interests"),
+          where("senderId", "==", otherUserId),
+          where("receiverId", "==", myProfile.id)
+        );
+        const [snap1, snap2] = await Promise.all([getDocs(qInterest1), getDocs(qInterest2)]);
+        snap1.forEach(d => deleteDoc(d.ref));
+        snap2.forEach(d => deleteDoc(d.ref));
+
+        // 3. Send Notification to the other user
+        const myName = myProfile.firstName || myProfile.name || "Someone";
+        await addDoc(collection(db, "notifications"), {
+          receiverId: otherUserId,
+          senderId: myProfile.id,
+          text: `${myName} declined your marriage proposal.`,
+          type: "marriage_proposal_rejected",
+          read: false,
+          createdAt: serverTimestamp()
+        });
+
+        showToast("Marriage Request declined and connection reset.");
+      }
     } catch (err) {
       console.error("Error rejecting marriage request", err);
       showToast("Failed to decline marriage request", "error");
@@ -1002,7 +1052,7 @@ export const Dashboard: React.FC = () => {
 
     if (["matches", "shortlisted", "interests"].includes(activeTab)) {
       list = list.filter(p => {
-        const matchesSubCaste = searchSubCaste ? p.subCaste.toLowerCase().includes(searchSubCaste.toLowerCase()) : true;
+        const matchesSubCaste = searchSubCaste ? (p.subCaste || "").toLowerCase().includes(searchSubCaste.toLowerCase()) : true;
         const pTaluka = p.city || ""; // Profile's "city" field maps to Taluka
         const matchesTaluka = searchTaluka ? pTaluka.toLowerCase().includes(searchTaluka.toLowerCase()) : true;
         const pDistrict = p.district || "";
@@ -1017,7 +1067,7 @@ export const Dashboard: React.FC = () => {
           ? p.maritalStatus === searchMaritalStatus 
           : true;
         const matchesMatching = searchMatchingOnly
-          ? (p.subCaste.toLowerCase() === (myProfile?.subCaste || "").toLowerCase() || p.compatibility >= 80)
+          ? ((p.subCaste || "").toLowerCase() === (myProfile?.subCaste || "").toLowerCase() || p.compatibility >= 80)
           : true;
         return matchesSubCaste && matchesState && matchesDistrict && matchesTaluka && matchesAgeMin && matchesAgeMax && matchesVerified && matchesOnline && matchesMaritalStatus && matchesMatching;
       });
@@ -1025,10 +1075,10 @@ export const Dashboard: React.FC = () => {
 
     if (activeTab === "search") {
       list = list.filter(p => {
-        const matchesQuery = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.occupation.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.city.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesSubCaste = searchSubCaste ? p.subCaste.toLowerCase().includes(searchSubCaste.toLowerCase()) : true;
+        const matchesQuery = (p.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (p.occupation || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (p.city || "").toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesSubCaste = searchSubCaste ? (p.subCaste || "").toLowerCase().includes(searchSubCaste.toLowerCase()) : true;
         const pTaluka = p.city || "";
         const matchesTaluka = searchTaluka ? pTaluka.toLowerCase().includes(searchTaluka.toLowerCase()) : true;
         const pDistrict = p.district || "";
@@ -1274,6 +1324,7 @@ export const Dashboard: React.FC = () => {
               profiles={profiles}
               currentUserId={myProfile?.id || ""}
               marriageRequests={marriageRequests}
+              approvedReceivedIds={approvedReceivedIds}
               onViewProfile={(id: string) => setActiveTab("view-profile", id)}
               onMessage={(profile: any) => startChat(profile)}
               onApprove={handleApproveInterest}

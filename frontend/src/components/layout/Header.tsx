@@ -108,8 +108,16 @@ export const Header: React.FC = () => {
     }
     setNotiOpen(false);
     
-    if (n.type === "interest_received" || n.type === "interest_approved") {
+    if (
+      n.type === "interest_received" || 
+      n.type === "interest_approved" || 
+      n.type === "interest_rejected" ||
+      n.type === "marriage_proposal" ||
+      n.type === "marriage_proposal_rejected"
+    ) {
       navigate("/dashboard?tab=interests");
+    } else if (n.type === "marriage_proposal_accepted") {
+      navigate("/dashboard?tab=stories");
     }
   };
 

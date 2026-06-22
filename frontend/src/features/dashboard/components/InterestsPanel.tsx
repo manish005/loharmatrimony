@@ -11,6 +11,7 @@ interface InterestsPanelProps {
   profiles: any[];
   currentUserId: string;
   marriageRequests: any[];
+  approvedReceivedIds?: string[];
   onViewProfile: (id: string) => void;
   onMessage: (profile: any) => void;
   onApprove: (senderId: string, senderName: string, senderPhoto: string) => void;
@@ -27,6 +28,7 @@ const InterestsPanel: React.FC<InterestsPanelProps> = ({
   profiles,
   currentUserId,
   marriageRequests,
+  approvedReceivedIds = [],
   onViewProfile,
   onMessage,
   onApprove,
@@ -41,7 +43,8 @@ const InterestsPanel: React.FC<InterestsPanelProps> = ({
     .map(int => profiles.find(p => p.id === int.senderId))
     .filter(Boolean);
 
-  const hasAcceptedInterests = sentInterests.some(int => int.status === "approved");
+  const hasApprovedReceived = approvedReceivedIds.length > 0;
+  const hasAcceptedInterests = sentInterests.some(int => int.status === "approved") || hasApprovedReceived;
   const hasMarriageRequests = marriageRequests.length > 0;
   const showMarriageTab = hasAcceptedInterests || hasMarriageRequests;
 

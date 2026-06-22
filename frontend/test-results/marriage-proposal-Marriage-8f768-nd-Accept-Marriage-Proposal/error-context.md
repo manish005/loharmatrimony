@@ -7,21 +7,21 @@
 # Test info
 
 - Name: marriage-proposal.spec.ts >> Marriage Proposal E2E Flow >> Register, Seed, Mutual Interest, and Send & Accept Marriage Proposal
-- Location: e2e\marriage-proposal.spec.ts:23:3
+- Location: e2e\marriage-proposal.spec.ts:78:3
 
 # Error details
 
 ```
 Error: expect(locator).toBeVisible() failed
 
-Locator: locator('div').filter({ hasText: 'Raj Sharmac5276204' }).last().locator('button').filter({ hasText: /^Interest$/ }).first()
+Locator: locator('img[alt="Priya Patil5778029d"]')
 Expected: visible
 Timeout: 5000ms
 Error: element(s) not found
 
 Call log:
   - Expect "toBeVisible" with timeout 5000ms
-  - waiting for locator('div').filter({ hasText: 'Raj Sharmac5276204' }).last().locator('button').filter({ hasText: /^Interest$/ }).first()
+  - waiting for locator('img[alt="Priya Patil5778029d"]')
 
 ```
 
@@ -35,7 +35,7 @@ Call log:
   - complementary:
     - heading "Dashboard Menu" [level=3]
     - navigation:
-      - button "Recommended Profiles 46"
+      - button "Recommended Profiles 69"
       - button "Advanced Search"
       - button "Shortlisted Profiles 0"
       - button "Interests 0"
@@ -46,234 +46,218 @@ Call log:
       - button "Subscriptions"
       - button "Settings"
   - main:
-    - heading "Advanced Partner Search" [level=2]
-    - paragraph: Filter the Lohar matrimonial directory using specific preferences
-    - textbox "Name, job, city...": Raj Sharmac5276204
-    - button "More Filters"
-    - img "Raj Sharmac5276204"
-    - img "Raj Sharmac5276204"
-    - img "Raj Sharmac5276204"
-    - img "Raj Sharmac5276204"
-    - img "Raj Sharmac5276204"
-    - button "Shortlist Profile"
-    - text: 85% Match
-    - heading "Raj Sharmac5276204" [level=4]
-    - text: Verified 25 yrs 5'11" Panchal Never Married M.Tech in Computer Science ₹15 Lakh - ₹20 Lakh
-    - paragraph: Mumbai, Maharashtra
-    - button "Interest"
-    - button "Chat"
-    - button "Shortlist Profile"
-    - text: 80% Match
-    - heading "Raj Sharmac5276204" [level=4]
-    - text: 25 yrs Panchal Never Married
-    - paragraph
-    - button "Interest"
-    - button "Chat"
+    - heading "Interests" [level=2]
+    - paragraph: Manage your sent and received connection requests
+    - button "Received Requests"
+    - button "Sent Requests"
+    - button "Marriage Requests"
+    - paragraph: No interests sent yet
+    - paragraph: When you send an interest to someone, it will appear here so you can track its status.
 ```
 
 # Test source
 
 ```ts
-  117 |     // ── STEP 4: Register User B (Female) ───────────────────────────────
-  118 |     await test.step("Register Female User (Priya)", async () => {
-  119 |       await page.goto("/register");
-  120 |       await page.waitForSelector('input[name="firstName"]', { timeout: 10000 });
-  121 |       await page.fill('input[name="firstName"]', "Priya");
-  122 |       await page.fill('input[name="lastName"]', `Patil${suffix}`);
-  123 |       await page.selectOption('select[name="gender"]', "Female");
-  124 |       await page.fill('input[name="dob"]', "1996-03-10");
-  125 |       await page.fill('input[name="mobile"]', "9876543211");
-  126 |       await page.fill('input[name="email"]', femaleEmail);
-  127 |       await page.fill('input[name="password"]', password);
-  128 |       await page.fill('input[name="confirmPassword"]', password);
-  129 |       await page.click('button:has-text("Continue")');
-  130 |       await page.waitForTimeout(1000);
-  131 | 
-  132 |       await page.waitForSelector('select[name="subCaste"]', { timeout: 5000 });
-  133 |       await page.selectOption('select[name="subCaste"]', "Gadi Lohar");
-  134 |       await page.click('button:has-text("Continue")');
-  135 |       await page.waitForTimeout(1000);
-  136 | 
-  137 |       await page.waitForSelector('input[name="aadhaarNumber"]', { timeout: 5000 });
-  138 |       await page.fill('input[name="aadhaarNumber"]', "123456789013");
-  139 |       await page.check('input[id="termsAccepted"]');
-  140 |       
-  141 |       page.once("dialog", async (dialog) => await dialog.accept());
-  142 |       await page.click('button[type="submit"]');
-  143 |       await page.waitForURL("**/dashboard", { timeout: 20000 });
-  144 |       await page.waitForTimeout(2000);
-  145 |     });
-  146 | 
-  147 |     // ── STEP 5: Seed Female Profile Details ───────────────────────────
-  148 |     await test.step("Seed Female Profile (Priya) via Firestore Helpers", async () => {
-  149 |       await page.evaluate(async ({ email, profileData }) => {
-  150 |         const { collection, query, where, getDocs, doc, updateDoc } = (window as any).firestoreHelpers;
-  151 |         const db = (window as any).firebaseDb;
-  152 |         const q = query(collection(db, "profiles"), where("email", "==", email));
-  153 |         const snapshot = await getDocs(q);
-  154 |         if (snapshot.empty) {
-  155 |           throw new Error(`Profile document not found for email: ${email}`);
-  156 |         }
-  157 |         const profileDocId = snapshot.docs[0].id;
-  158 |         const ref = doc(db, "profiles", profileDocId);
-  159 |         await updateDoc(ref, profileData);
-  160 |       }, {
-  161 |         email: femaleEmail,
-  162 |         profileData: {
-  163 |           name: femaleName,
-  164 |           firstName: "Priya",
-  165 |           lastName: `Patil${suffix}`,
-  166 |           state: "Maharashtra",
-  167 |           city: "Mumbai",
-  168 |           district: "Mumbai Suburban",
-  169 |           address: "Bandra East",
-  170 |           familyDetails: "Joint family.",
-  171 |           fatherOccupation: "Government Employee",
-  172 |           motherOccupation: "Homemaker",
-  173 |           siblings: "1 Sister",
-  174 |           photos: [
-  175 |             "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
-  176 |             "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop",
-  177 |             "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop",
-  178 |             "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&h=400&fit=crop",
-  179 |             "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=400&fit=crop"
-  180 |           ],
-  181 |           photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
-  182 |           isVerified: true,
-  183 |           isPremium: true,
-  184 |           occupation: "Financial Analyst",
-  185 |           education: "MBA in Finance",
-  186 |           income: "₹10 Lakh - ₹12 Lakh",
-  187 |           height: "5'4\"",
-  188 |           weight: "58 kg",
-  189 |           lifestyle: "Modern",
-  190 |           foodPreference: "Vegetarian",
-  191 |           smoking: "No",
-  192 |           drinking: "Occasionally",
-  193 |           hobbies: "Dancing, Cooking",
-  194 |           subCaste: "Deshmukh" // Direct override to Deshmukh in seed data
-  195 |         }
-  196 |       });
-  197 |       await page.waitForTimeout(2000);
-  198 |     });
-  199 | 
-  200 |     // ── STEP 6: Send Interest from Priya (Female) to Raj (Male) ────────
-  201 |     await test.step("Send Interest to Raj Sharma", async () => {
-  202 |       // Go to Advanced Search Tab
-  203 |       await page.goto("/dashboard?tab=search");
-  204 |       await page.waitForTimeout(2050);
-  205 | 
-  206 |       // Search specifically for the unique male name
-  207 |       const searchInput = page.locator('input[type="text"]');
-  208 |       await searchInput.fill(maleName);
-  209 |       await page.waitForTimeout(2050);
-  210 | 
-  211 |       // Locate Raj Sharma's unique profile card
-  212 |       const rajCard = page.locator("div").filter({ hasText: maleName }).last();
-  213 |       await expect(rajCard).toBeVisible({ timeout: 10000 });
-  214 | 
-  215 |       // Click "Interest" on Raj's card
-  216 |       const sendInterestBtn = rajCard.locator('button').filter({ hasText: /^Interest$/ }).first();
-> 217 |       await expect(sendInterestBtn).toBeVisible();
-      |                                     ^ Error: expect(locator).toBeVisible() failed
-  218 |       await sendInterestBtn.click();
-  219 |       
-  220 |       // Wait for button state to update to "Sent"
-  221 |       await expect(rajCard.locator('button').filter({ hasText: /^Sent$/ }).first()).toBeVisible({ timeout: 10000 });
-  222 |       await page.waitForTimeout(1000);
-  223 |     });
-  224 | 
-  225 |     // ── STEP 7: Logout Female User ────────────────────────────────────
-  226 |     await test.step("Logout Female User", async () => {
-  227 |       await page.evaluate(() => {
-  228 |         (window as any).firebaseAuth.signOut();
-  229 |       }).catch(() => {});
-  230 |       await page.waitForTimeout(2000);
-  231 |       await page.goto("/login");
-  232 |       await page.waitForSelector('input[type="email"]', { timeout: 10000 });
-  233 |     });
-  234 | 
-  235 |     // ── STEP 8: Login Male User (Raj) & Approve Interest ──────────────
-  236 |     await test.step("Login Raj and Approve Priya's Interest", async () => {
-  237 |       // Login
-  238 |       await page.fill('input[type="email"]', maleEmail);
-  239 |       await page.fill('input[type="password"]', password);
-  240 |       await page.click('button[type="submit"]');
-  241 |       await page.waitForURL("**/dashboard", { timeout: 20000 });
-  242 |       await page.waitForTimeout(2000);
-  243 | 
-  244 |       // Go to Interests Tab
-  245 |       await page.goto("/dashboard?tab=interests");
-  246 |       await page.waitForTimeout(2000);
-  247 | 
-  248 |       // Accept Priya Patil's interest request
-  249 |       const approveBtn = page.locator('button:has-text("Approve")').first();
-  250 |       await expect(approveBtn).toBeVisible({ timeout: 10000 });
-  251 |       await approveBtn.click();
-  252 | 
-  253 |       // Wait for the Approve button to disappear, meaning it was processed
-  254 |       await expect(approveBtn).not.toBeVisible({ timeout: 10000 });
-  255 |       await page.waitForTimeout(1000);
-  256 |     });
-  257 | 
-  258 |     // ── STEP 9: View Priya's Profile & Send Marriage Proposal ─────────
-  259 |     await test.step("Send Marriage Proposal to Priya", async () => {
-  260 |       // Go to Advanced Search tab to find Priya
-  261 |       await page.goto("/dashboard?tab=search");
-  262 |       await page.waitForTimeout(2050);
-  263 | 
-  264 |       // Search specifically for the unique female name
-  265 |       const searchInput = page.locator('input[type="text"]');
-  266 |       await searchInput.fill(femaleName);
-  267 |       await page.waitForTimeout(2050);
-  268 | 
-  269 |       // Click on Priya Patil's card to open her profile detail view
-  270 |       const priyaCard = page.locator("div").filter({ hasText: femaleName }).last();
-  271 |       await expect(priyaCard).toBeVisible({ timeout: 10000 });
-  272 |       await priyaCard.click();
-  273 |       await page.waitForTimeout(2000);
-  274 | 
-  275 |       // Verify the "Let's Get Married!" button is visible
-  276 |       const letsGetMarriedBtn = page.locator('button:has-text("Let\'s Get Married!")');
-  277 |       await expect(letsGetMarriedBtn).toBeVisible({ timeout: 10000 });
-  278 |       await letsGetMarriedBtn.click();
-  279 | 
-  280 |       // In Marriage Proposal Modal, fill out details:
-  281 |       // Proposed Date: future dated (e.g. 2027-12-25)
-  282 |       await page.fill('input[type="date"]', "2027-12-25");
-  283 |       await page.fill('input[type="time"]', "18:00");
-  284 |       await page.fill('input[placeholder*="Grand Palace"]', "Grand Palace Resort, Mumbai");
-  285 | 
-  286 |       // Click "Send Marriage Request"
-  287 |       await page.click('button:has-text("Send Marriage Request")');
-  288 |       
-  289 |       // Wait for toast success
-  290 |       await page.waitForTimeout(2500);
-  291 |     });
-  292 | 
-  293 |     // ── STEP 10: Logout Male User ────────────────────────────────────
-  294 |     await test.step("Logout Male User", async () => {
-  295 |       await page.evaluate(() => {
-  296 |         (window as any).firebaseAuth.signOut();
-  297 |       }).catch(() => {});
-  298 |       await page.waitForTimeout(2000);
-  299 |       await page.goto("/login");
-  300 |       await page.waitForSelector('input[type="email"]', { timeout: 10000 });
-  301 |     });
-  302 | 
-  303 |     // ── STEP 11: Login Female User (Priya) & Accept Proposal ──────────
-  304 |     await test.step("Login Priya and Accept Proposal", async () => {
-  305 |       // Login
-  306 |       await page.fill('input[type="email"]', femaleEmail);
-  307 |       await page.fill('input[type="password"]', password);
-  308 |       await page.click('button[type="submit"]');
-  309 |       await page.waitForURL("**/dashboard", { timeout: 20000 });
-  310 |       await page.waitForTimeout(2000);
-  311 | 
-  312 |       // Verify marriage proposal notification/card is visible
-  313 |       // It shows up in Interests tab -> Marriage Requests sub-tab
+  225 |           district: "Mumbai Suburban",
+  226 |           address: "Bandra East",
+  227 |           familyDetails: "Joint family.",
+  228 |           fatherOccupation: "Government Employee",
+  229 |           motherOccupation: "Homemaker",
+  230 |           siblings: "1 Sister",
+  231 |           photos: [
+  232 |             "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
+  233 |             "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop",
+  234 |             "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop",
+  235 |             "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&h=400&fit=crop",
+  236 |             "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=400&fit=crop"
+  237 |           ],
+  238 |           photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
+  239 |           isVerified: true,
+  240 |           isPremium: true,
+  241 |           occupation: "Financial Analyst",
+  242 |           education: "MBA in Finance",
+  243 |           income: "₹10 Lakh - ₹12 Lakh",
+  244 |           height: "5'4\"",
+  245 |           weight: "58 kg",
+  246 |           lifestyle: "Modern",
+  247 |           foodPreference: "Vegetarian",
+  248 |           smoking: "No",
+  249 |           drinking: "Occasionally",
+  250 |           hobbies: "Dancing, Cooking",
+  251 |           subCaste: "Deshmukh" // Direct override to Deshmukh in seed data
+  252 |         }
+  253 |       });
+  254 |       await page.waitForTimeout(2000);
+  255 |     });
+  256 | 
+  257 |     // ── STEP 6: Send Interest from Priya (Female) to Raj (Male) ────────
+  258 |     await test.step("Send Interest to Raj Sharma", async () => {
+  259 |       // Go to Advanced Search Tab
+  260 |       await page.goto("/dashboard?tab=search");
+  261 |       await page.waitForTimeout(2050);
+  262 | 
+  263 |       // Search specifically for the unique male name
+  264 |       const searchInput = page.locator('input[type="text"]');
+  265 |       await searchInput.fill(maleName);
+  266 |       await page.waitForTimeout(2050);
+  267 | 
+  268 |       // Click "Interest" on Raj's card
+  269 |       const sendInterestBtn = page.locator('button').filter({ hasText: /^Interest$/ }).first();
+  270 |       await expect(sendInterestBtn).toBeVisible({ timeout: 10000 });
+  271 |       await sendInterestBtn.click();
+  272 |       
+  273 |       // Wait for button state to update to "Sent"
+  274 |       await expect(page.locator('button').filter({ hasText: /^Sent$/ }).first()).toBeVisible({ timeout: 10000 });
+  275 |       await page.waitForTimeout(1000);
+  276 |     });
+  277 | 
+  278 |     // ── STEP 7: Logout Female User ────────────────────────────────────
+  279 |     await test.step("Logout Female User", async () => {
+  280 |       await page.evaluate(() => {
+  281 |         (window as any).firebaseAuth.signOut();
+  282 |       }).catch(() => {});
+  283 |       await page.waitForTimeout(2000);
+  284 |       await page.goto("/login");
+  285 |       await page.waitForSelector('input[type="email"]', { timeout: 10000 });
+  286 |     });
+  287 | 
+  288 |     // ── STEP 8: Login Male User (Raj) & Approve Interest ──────────────
+  289 |     await test.step("Login Raj and Approve Priya's Interest", async () => {
+  290 |       // Login
+  291 |       await page.fill('input[type="email"]', maleEmail);
+  292 |       await page.fill('input[type="password"]', password);
+  293 |       await page.click('button[type="submit"]');
+  294 |       await page.waitForURL("**/dashboard", { timeout: 20000 });
+  295 |       await page.waitForTimeout(2000);
+  296 | 
+  297 |       // Go to Interests Tab
+  298 |       await page.goto("/dashboard?tab=interests");
+  299 |       await page.waitForTimeout(2000);
+  300 | 
+  301 |       // Accept Priya Patil's interest request
+  302 |       const approveBtn = page.locator('button:has-text("Approve")').first();
+  303 |       await expect(approveBtn).toBeVisible({ timeout: 10000 });
+  304 |       await approveBtn.click();
+  305 | 
+  306 |       // Wait for the Approve button to disappear, meaning it was processed
+  307 |       await expect(approveBtn).not.toBeVisible({ timeout: 10000 });
+  308 |       await page.waitForTimeout(1000);
+  309 |     });
+  310 | 
+  311 |     // ── STEP 9: View Priya's Profile & Send Marriage Proposal ─────────
+  312 |     await test.step("Send Marriage Proposal to Priya", async () => {
+  313 |       // Go to Interests tab
   314 |       await page.goto("/dashboard?tab=interests");
   315 |       await page.waitForTimeout(2000);
   316 | 
-  317 |       // Click Marriage Requests tab inside Interests panel
+  317 |       // Click on "Sent Requests" sub-tab
+  318 |       const sentRequestsTabBtn = page.locator('button:has-text("Sent Requests")');
+  319 |       await expect(sentRequestsTabBtn).toBeVisible({ timeout: 5000 });
+  320 |       await sentRequestsTabBtn.click();
+  321 |       await page.waitForTimeout(1000);
+  322 | 
+  323 |       // Click on Priya's card image to redirect to her profile view
+  324 |       const priyaCardImage = page.locator(`img[alt="${femaleName}"]`);
+> 325 |       await expect(priyaCardImage).toBeVisible({ timeout: 5000 });
+      |                                    ^ Error: expect(locator).toBeVisible() failed
+  326 |       await priyaCardImage.click();
+  327 |       await page.waitForTimeout(2000);
+  328 | 
+  329 |       // Verify URL redirect to view-profile tab
+  330 |       await expect(page.url()).toContain("tab=view-profile");
+  331 | 
+  332 |       // Verify the "Let's Get Married!" button is visible and click it
+  333 |       const letsGetMarriedBtn = page.locator('button:has-text("Let\'s Get Married!")');
+  334 |       await expect(letsGetMarriedBtn).toBeVisible({ timeout: 10000 });
+  335 |       await letsGetMarriedBtn.click();
+  336 | 
+  337 |       // In Marriage Proposal Modal, fill out details:
+  338 |       await page.fill('input[type="date"]', "2027-12-25");
+  339 |       await page.fill('input[type="time"]', "18:00");
+  340 |       await page.fill('input[placeholder*="Grand Palace"]', "Grand Palace Resort, Mumbai");
+  341 | 
+  342 |       // Click "Send Marriage Request"
+  343 |       await page.click('button:has-text("Send Marriage Request")');
+  344 |       await page.waitForTimeout(2500);
+  345 |     });
+  346 | 
+  347 |     // ── STEP 10: Logout Male User ────────────────────────────────────
+  348 |     await test.step("Logout Male User", async () => {
+  349 |       await page.evaluate(() => {
+  350 |         (window as any).firebaseAuth.signOut();
+  351 |       }).catch(() => {});
+  352 |       await page.waitForTimeout(2000);
+  353 |       await page.goto("/login");
+  354 |       await page.waitForSelector('input[type="email"]', { timeout: 10000 });
+  355 |     });
+  356 | 
+  357 |     // ── STEP 11: Login Female User (Priya) & Accept Proposal ──────────
+  358 |     await test.step("Login Priya and Accept Proposal", async () => {
+  359 |       // Login
+  360 |       await page.fill('input[type="email"]', femaleEmail);
+  361 |       await page.fill('input[type="password"]', password);
+  362 |       await page.click('button[type="submit"]');
+  363 |       await page.waitForURL("**/dashboard", { timeout: 20000 });
+  364 |       await page.waitForTimeout(2000);
+  365 | 
+  366 |       // Open Notification dropdown and click on the proposal notification
+  367 |       const notificationBell = page.locator('button[aria-label="Notifications"]');
+  368 |       await expect(notificationBell).toBeVisible({ timeout: 5000 });
+  369 |       await notificationBell.click();
+  370 |       await page.waitForTimeout(1000);
+  371 | 
+  372 |       const proposalNotification = page.locator(`text=${maleName} proposed a marriage setup!`);
+  373 |       await expect(proposalNotification).toBeVisible({ timeout: 5000 });
+  374 |       await proposalNotification.click();
+  375 |       await page.waitForTimeout(2000);
+  376 | 
+  377 |       // Verify we are on Interests tab -> Marriage Requests sub-tab
+  378 |       const marriageReqTabBtn = page.locator('button:has-text("Marriage Requests")');
+  379 |       await expect(marriageReqTabBtn).toBeVisible({ timeout: 5000 });
+  380 |       await marriageReqTabBtn.click();
+  381 |       await page.waitForTimeout(1000);
+  382 | 
+  383 |       // Find the pending proposal Accept button and click it
+  384 |       const acceptProposalBtn = page.locator('button:has-text("Accept")').first();
+  385 |       await expect(acceptProposalBtn).toBeVisible({ timeout: 5000 });
+  386 |       await acceptProposalBtn.click();
+  387 |       
+  388 |       // Wait for updates & celebration animation
+  389 |       await page.waitForTimeout(3000);
+  390 | 
+  391 |       // We should be redirected to the "Success Stories" tab
+  392 |       await expect(page.url()).toContain("tab=stories");
+  393 |     });
+  394 | 
+  395 |     // ── STEP 12: Verify UI Banners ────────────────────────────────────
+  396 |     await test.step("Verify Partner UI Banner displays Marriage Fixed & Verify notifications", async () => {
+  397 |       // Navigate to My Profile tab to verify partner banner
+  398 |       await page.goto("/dashboard?tab=my-profile");
+  399 |       await page.waitForTimeout(2000);
+  400 | 
+  401 |       const partnerNameLabel = page.locator(`text=${maleName}`);
+  402 |       await expect(partnerNameLabel).toBeVisible({ timeout: 5000 });
+  403 | 
+  404 |       const bannerStatus = page.locator('button:has-text("Marriage Fixed")');
+  405 |       await expect(bannerStatus).toBeVisible({ timeout: 5000 });
+  406 | 
+  407 |       // Logout Priya
+  408 |       await page.evaluate(() => {
+  409 |         (window as any).firebaseAuth.signOut();
+  410 |       }).catch(() => {});
+  411 |       await page.waitForTimeout(2000);
+  412 |       await page.goto("/login");
+  413 | 
+  414 |       // Login Raj
+  415 |       await page.fill('input[type="email"]', maleEmail);
+  416 |       await page.fill('input[type="password"]', password);
+  417 |       await page.click('button[type="submit"]');
+  418 |       await page.waitForURL("**/dashboard", { timeout: 20000 });
+  419 |       await page.waitForTimeout(2000);
+  420 | 
+  421 |       // Open notifications dropdown
+  422 |       await page.locator('button[aria-label="Notifications"]').click();
+  423 |       await page.waitForTimeout(1000);
+  424 | 
+  425 |       // Assert notification of acceptance in bell
 ```

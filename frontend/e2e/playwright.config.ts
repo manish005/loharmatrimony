@@ -6,7 +6,7 @@ export default defineConfig({
   retries: 0,
   use: {
     baseURL: "http://localhost:5173",
-    headless: true,
+    headless: false,
     browserName: "firefox",
     viewport: { width: 1280, height: 720 },
     screenshot: "only-on-failure",

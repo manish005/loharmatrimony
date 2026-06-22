@@ -185,6 +185,7 @@ export const RegisterWizard: React.FC = () => {
 
     setIsUploading(true);
     setUploadError("");
+    sessionStorage.setItem("registering", "true");
 
     try {
       // 1. Create User in Firebase Auth
@@ -222,9 +223,11 @@ export const RegisterWizard: React.FC = () => {
       await addDoc(collection(db, "profiles"), profilePayload);
 
       toast.success("Profile Registered! A verification link has been sent to your email. Please verify your email.");
+      sessionStorage.removeItem("registering");
       navigate("/dashboard");
     } catch (err: any) {
       console.error(err);
+      sessionStorage.removeItem("registering");
       setUploadError(err.message || "Failed to register profile. Please try again.");
     } finally {
       setIsUploading(false);
