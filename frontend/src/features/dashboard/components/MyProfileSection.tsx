@@ -130,7 +130,7 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
                 )}
               </div>
               <p className="text-[10px] text-slate-400 mt-1 lg:hidden">ID: {myProfile.id}</p>
-              
+
               {!isEditingProfile && (
                 <button onClick={onStartEdit} className="mt-3 px-5 py-2 rounded-xl bg-slate-100 dark:bg-dark-800 text-slate-700 dark:text-slate-300 text-xs font-bold shadow-sm hover:bg-slate-200 dark:hover:bg-dark-700 transition-all cursor-pointer shrink-0">
                   {t("action.edit")}
@@ -142,10 +142,10 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
                   {myProfile.partnerId && (
                     <div className="flex items-center gap-2">
                       {myProfile.partnerPhoto ? (
-                        <img 
-                          src={myProfile.partnerPhoto} 
-                          alt={myProfile.partnerName || "Partner"} 
-                          className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover border border-slate-200 dark:border-dark-700 shadow-sm" 
+                        <img
+                          src={myProfile.partnerPhoto}
+                          alt={myProfile.partnerName || "Partner"}
+                          className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover border border-slate-200 dark:border-dark-700 shadow-sm"
                         />
                       ) : (
                         <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-amber-200 dark:bg-amber-800 flex items-center justify-center text-amber-700 dark:text-amber-300 font-bold text-xs md:text-sm border border-slate-200 dark:border-dark-700">
@@ -163,7 +163,7 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
                     title="Click to edit wedding details or cancel connection"
                   >
                     <Heart className="h-3 w-3 md:h-4 md:w-4 fill-amber-500 text-amber-500 animate-pulse" />
-                    {myProfile.maritalStatus === "Married" || (myProfile.weddingDate && new Date(myProfile.weddingDate) < new Date()) ? "Married (Click to edit)" : "Getting Married (Click to edit)"}
+                    {myProfile.maritalStatus === "Married" || (myProfile.weddingDate && new Date(myProfile.weddingDate) < new Date()) ? "Married" : "Getting Married"}
                   </button>
                 </div>
               )}
@@ -324,15 +324,15 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Marital Status</label>
-                  <select name="maritalStatus" value={profileFormState.maritalStatus || ""} onChange={onFormChange}
-                    className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-xl px-3 py-2.5 bg-white dark:bg-dark-950 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-maroon-700/20">
-                    <option value="Never Married">Never Married</option>
-                    <option value="Getting Married">Getting Married</option>
-                    <option value="Married">Married</option>
-                    <option value="Divorced">Divorced</option>
-                    <option value="Widowed">Widowed</option>
-                    <option value="Awaiting Divorce">Awaiting Divorce</option>
-                  </select>
+                <select name="maritalStatus" value={profileFormState.maritalStatus || ""} onChange={onFormChange}
+                  className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-xl px-3 py-2.5 bg-white dark:bg-dark-950 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-maroon-700/20">
+                  <option value="Never Married">Never Married</option>
+                  <option value="Getting Married">Getting Married</option>
+                  <option value="Married">Married</option>
+                  <option value="Divorced">Divorced</option>
+                  <option value="Widowed">Widowed</option>
+                  <option value="Awaiting Divorce">Awaiting Divorce</option>
+                </select>
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Mother Tongue</label>
@@ -521,8 +521,8 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
               <div className="sm:col-span-2 lg:col-span-3">
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-[10px] font-bold text-slate-500 uppercase">Family</label>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={() => {
                       const newRel = [...(profileFormState.relativesList || []), { name: '', relation: 'Papa (Father)', occupation: '', mobile: '', category: 'family' }];
                       onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
@@ -532,59 +532,60 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
                     <Plus className="h-3 w-3" /> Add Family
                   </button>
                 </div>
-                
+
                 <div className="space-y-3">
                   {(profileFormState.relativesList || []).filter((r: any) => ["Papa (Father)", "Mummy (Mother)", "Bhai (Brother)", "Behen (Sister)"].includes(r.relation)).map((rel: any, index: number) => {
                     const realIndex = profileFormState.relativesList.findIndex((r: any) => r === rel);
                     return (
-                    <div key={realIndex} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-start border border-slate-100 dark:border-dark-800 p-2.5 rounded-xl bg-slate-50/50 dark:bg-dark-900/50">
-                      <div className="sm:col-span-3">
-                        <label className="block text-[9px] font-bold text-slate-400 mb-1">Name</label>
-                        <input type="text" value={rel.name} onChange={(e) => {
-                          const newRel = [...profileFormState.relativesList];
-                          newRel[realIndex].name = e.target.value;
-                          onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
-                        }} className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-lg px-2 py-1.5 bg-white dark:bg-dark-950 focus:outline-none focus:border-maroon-700" placeholder="Name" />
+                      <div key={realIndex} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-start border border-slate-100 dark:border-dark-800 p-2.5 rounded-xl bg-slate-50/50 dark:bg-dark-900/50">
+                        <div className="sm:col-span-3">
+                          <label className="block text-[9px] font-bold text-slate-400 mb-1">Name</label>
+                          <input type="text" value={rel.name} onChange={(e) => {
+                            const newRel = [...profileFormState.relativesList];
+                            newRel[realIndex].name = e.target.value;
+                            onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
+                          }} className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-lg px-2 py-1.5 bg-white dark:bg-dark-950 focus:outline-none focus:border-maroon-700" placeholder="Name" />
+                        </div>
+                        <div className="sm:col-span-3">
+                          <label className="block text-[9px] font-bold text-slate-400 mb-1">Relation</label>
+                          <select value={rel.relation} onChange={(e) => {
+                            const newRel = [...profileFormState.relativesList];
+                            newRel[realIndex].relation = e.target.value;
+                            onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
+                          }} className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-lg px-2 py-1.5 bg-white dark:bg-dark-950 focus:outline-none focus:border-maroon-700 appearance-none cursor-pointer">
+                            <option value="Papa (Father)">Papa (Father)</option>
+                            <option value="Mummy (Mother)">Mummy (Mother)</option>
+                            <option value="Bhai (Brother)">Bhai (Brother)</option>
+                            <option value="Behen (Sister)">Behen (Sister)</option>
+                          </select>
+                        </div>
+                        <div className="sm:col-span-3">
+                          <label className="block text-[9px] font-bold text-slate-400 mb-1">Occupation</label>
+                          <input type="text" value={rel.occupation} onChange={(e) => {
+                            const newRel = [...profileFormState.relativesList];
+                            newRel[realIndex].occupation = e.target.value;
+                            onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
+                          }} className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-lg px-2 py-1.5 bg-white dark:bg-dark-950 focus:outline-none focus:border-maroon-700" placeholder="Occupation" />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="block text-[9px] font-bold text-slate-400 mb-1">Mobile</label>
+                          <input type="tel" value={rel.mobile} onChange={(e) => {
+                            const newRel = [...profileFormState.relativesList];
+                            newRel[realIndex].mobile = e.target.value;
+                            onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
+                          }} className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-lg px-2 py-1.5 bg-white dark:bg-dark-950 focus:outline-none focus:border-maroon-700" placeholder="Mobile" />
+                        </div>
+                        <div className="sm:col-span-1 flex justify-end pt-5">
+                          <button type="button" onClick={() => {
+                            const newRel = profileFormState.relativesList.filter((_: any, i: number) => i !== realIndex);
+                            onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
+                          }} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </div>
-                      <div className="sm:col-span-3">
-                        <label className="block text-[9px] font-bold text-slate-400 mb-1">Relation</label>
-                        <select value={rel.relation} onChange={(e) => {
-                          const newRel = [...profileFormState.relativesList];
-                          newRel[realIndex].relation = e.target.value;
-                          onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
-                        }} className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-lg px-2 py-1.5 bg-white dark:bg-dark-950 focus:outline-none focus:border-maroon-700 appearance-none cursor-pointer">
-                          <option value="Papa (Father)">Papa (Father)</option>
-                          <option value="Mummy (Mother)">Mummy (Mother)</option>
-                          <option value="Bhai (Brother)">Bhai (Brother)</option>
-                          <option value="Behen (Sister)">Behen (Sister)</option>
-                        </select>
-                      </div>
-                      <div className="sm:col-span-3">
-                        <label className="block text-[9px] font-bold text-slate-400 mb-1">Occupation</label>
-                        <input type="text" value={rel.occupation} onChange={(e) => {
-                          const newRel = [...profileFormState.relativesList];
-                          newRel[realIndex].occupation = e.target.value;
-                          onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
-                        }} className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-lg px-2 py-1.5 bg-white dark:bg-dark-950 focus:outline-none focus:border-maroon-700" placeholder="Occupation" />
-                      </div>
-                      <div className="sm:col-span-2">
-                        <label className="block text-[9px] font-bold text-slate-400 mb-1">Mobile</label>
-                        <input type="tel" value={rel.mobile} onChange={(e) => {
-                          const newRel = [...profileFormState.relativesList];
-                          newRel[realIndex].mobile = e.target.value;
-                          onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
-                        }} className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-lg px-2 py-1.5 bg-white dark:bg-dark-950 focus:outline-none focus:border-maroon-700" placeholder="Mobile" />
-                      </div>
-                      <div className="sm:col-span-1 flex justify-end pt-5">
-                        <button type="button" onClick={() => {
-                          const newRel = profileFormState.relativesList.filter((_: any, i: number) => i !== realIndex);
-                          onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
-                        }} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  )})}
+                    )
+                  })}
                   {(!profileFormState.relativesList || profileFormState.relativesList.filter((r: any) => ["Papa (Father)", "Mummy (Mother)", "Bhai (Brother)", "Behen (Sister)"].includes(r.relation)).length === 0) && (
                     <div className="text-center py-4 text-xs text-slate-500 border border-dashed border-slate-200 dark:border-dark-800 rounded-xl">
                       No family added yet. Click "+ Add Family" above.
@@ -594,8 +595,8 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
 
                 <div className="flex items-center justify-between mt-4 mb-2">
                   <label className="block text-[10px] font-bold text-slate-500 uppercase">Relatives</label>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={() => {
                       const newRel = [...(profileFormState.relativesList || []), { name: '', relation: 'Chacha/Mama (Uncle)', occupation: '', mobile: '', category: 'relative' }];
                       onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
@@ -605,62 +606,63 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
                     <Plus className="h-3 w-3" /> Add Relative
                   </button>
                 </div>
-                
+
                 <div className="space-y-3">
                   {(profileFormState.relativesList || []).filter((r: any) => !["Papa (Father)", "Mummy (Mother)", "Bhai (Brother)", "Behen (Sister)"].includes(r.relation)).map((rel: any, index: number) => {
                     const realIndex = profileFormState.relativesList.findIndex((r: any) => r === rel);
                     return (
-                    <div key={realIndex} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-start border border-slate-100 dark:border-dark-800 p-2.5 rounded-xl bg-slate-50/50 dark:bg-dark-900/50">
-                      <div className="sm:col-span-3">
-                        <label className="block text-[9px] font-bold text-slate-400 mb-1">Name</label>
-                        <input type="text" value={rel.name} onChange={(e) => {
-                          const newRel = [...profileFormState.relativesList];
-                          newRel[realIndex].name = e.target.value;
-                          onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
-                        }} className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-lg px-2 py-1.5 bg-white dark:bg-dark-950 focus:outline-none focus:border-maroon-700" placeholder="Name" />
+                      <div key={realIndex} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-start border border-slate-100 dark:border-dark-800 p-2.5 rounded-xl bg-slate-50/50 dark:bg-dark-900/50">
+                        <div className="sm:col-span-3">
+                          <label className="block text-[9px] font-bold text-slate-400 mb-1">Name</label>
+                          <input type="text" value={rel.name} onChange={(e) => {
+                            const newRel = [...profileFormState.relativesList];
+                            newRel[realIndex].name = e.target.value;
+                            onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
+                          }} className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-lg px-2 py-1.5 bg-white dark:bg-dark-950 focus:outline-none focus:border-maroon-700" placeholder="Name" />
+                        </div>
+                        <div className="sm:col-span-3">
+                          <label className="block text-[9px] font-bold text-slate-400 mb-1">Relation</label>
+                          <select value={rel.relation} onChange={(e) => {
+                            const newRel = [...profileFormState.relativesList];
+                            newRel[realIndex].relation = e.target.value;
+                            onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
+                          }} className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-lg px-2 py-1.5 bg-white dark:bg-dark-950 focus:outline-none focus:border-maroon-700 appearance-none cursor-pointer">
+                            <option value="Chacha/Mama (Uncle)">Chacha/Mama (Uncle)</option>
+                            <option value="Chachi/Mami (Aunt)">Chachi/Mami (Aunt)</option>
+                            <option value="Bhatija/Bhanja (Nephew)">Bhatija/Bhanja (Nephew)</option>
+                            <option value="Bhatiji/Bhanji (Niece)">Bhatiji/Bhanji (Niece)</option>
+                            <option value="Dada/Nana (Grandfather)">Dada/Nana (Grandfather)</option>
+                            <option value="Dadi/Nani (Grandmother)">Dadi/Nani (Grandmother)</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+                        <div className="sm:col-span-3">
+                          <label className="block text-[9px] font-bold text-slate-400 mb-1">Occupation</label>
+                          <input type="text" value={rel.occupation} onChange={(e) => {
+                            const newRel = [...profileFormState.relativesList];
+                            newRel[realIndex].occupation = e.target.value;
+                            onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
+                          }} className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-lg px-2 py-1.5 bg-white dark:bg-dark-950 focus:outline-none focus:border-maroon-700" placeholder="Occupation" />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="block text-[9px] font-bold text-slate-400 mb-1">Mobile</label>
+                          <input type="tel" value={rel.mobile} onChange={(e) => {
+                            const newRel = [...profileFormState.relativesList];
+                            newRel[realIndex].mobile = e.target.value;
+                            onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
+                          }} className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-lg px-2 py-1.5 bg-white dark:bg-dark-950 focus:outline-none focus:border-maroon-700" placeholder="Mobile" />
+                        </div>
+                        <div className="sm:col-span-1 flex justify-end pt-5">
+                          <button type="button" onClick={() => {
+                            const newRel = profileFormState.relativesList.filter((_: any, i: number) => i !== realIndex);
+                            onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
+                          }} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </div>
-                      <div className="sm:col-span-3">
-                        <label className="block text-[9px] font-bold text-slate-400 mb-1">Relation</label>
-                        <select value={rel.relation} onChange={(e) => {
-                          const newRel = [...profileFormState.relativesList];
-                          newRel[realIndex].relation = e.target.value;
-                          onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
-                        }} className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-lg px-2 py-1.5 bg-white dark:bg-dark-950 focus:outline-none focus:border-maroon-700 appearance-none cursor-pointer">
-                          <option value="Chacha/Mama (Uncle)">Chacha/Mama (Uncle)</option>
-                          <option value="Chachi/Mami (Aunt)">Chachi/Mami (Aunt)</option>
-                          <option value="Bhatija/Bhanja (Nephew)">Bhatija/Bhanja (Nephew)</option>
-                          <option value="Bhatiji/Bhanji (Niece)">Bhatiji/Bhanji (Niece)</option>
-                          <option value="Dada/Nana (Grandfather)">Dada/Nana (Grandfather)</option>
-                          <option value="Dadi/Nani (Grandmother)">Dadi/Nani (Grandmother)</option>
-                          <option value="Other">Other</option>
-                        </select>
-                      </div>
-                      <div className="sm:col-span-3">
-                        <label className="block text-[9px] font-bold text-slate-400 mb-1">Occupation</label>
-                        <input type="text" value={rel.occupation} onChange={(e) => {
-                          const newRel = [...profileFormState.relativesList];
-                          newRel[realIndex].occupation = e.target.value;
-                          onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
-                        }} className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-lg px-2 py-1.5 bg-white dark:bg-dark-950 focus:outline-none focus:border-maroon-700" placeholder="Occupation" />
-                      </div>
-                      <div className="sm:col-span-2">
-                        <label className="block text-[9px] font-bold text-slate-400 mb-1">Mobile</label>
-                        <input type="tel" value={rel.mobile} onChange={(e) => {
-                          const newRel = [...profileFormState.relativesList];
-                          newRel[realIndex].mobile = e.target.value;
-                          onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
-                        }} className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-lg px-2 py-1.5 bg-white dark:bg-dark-950 focus:outline-none focus:border-maroon-700" placeholder="Mobile" />
-                      </div>
-                      <div className="sm:col-span-1 flex justify-end pt-5">
-                        <button type="button" onClick={() => {
-                          const newRel = profileFormState.relativesList.filter((_: any, i: number) => i !== realIndex);
-                          onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
-                        }} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  )})}
+                    )
+                  })}
                   {(!profileFormState.relativesList || profileFormState.relativesList.filter((r: any) => !["Papa (Father)", "Mummy (Mother)", "Bhai (Brother)", "Behen (Sister)"].includes(r.relation)).length === 0) && (
                     <div className="text-center py-4 text-xs text-slate-500 border border-dashed border-slate-200 dark:border-dark-800 rounded-xl">
                       No relatives added yet. Click "+ Add Relative" above.
