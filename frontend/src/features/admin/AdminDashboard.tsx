@@ -59,94 +59,166 @@ export const AdminDashboard: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const seedDummyUsers = async () => {
+  const resetAndSeedUsers = async () => {
+    const confirmed = window.confirm(
+      "This will DELETE ALL existing members and their associated data (conversations, messages, interests, etc.) and create 3 new demo profiles. Continue?"
+    );
+    if (!confirmed) return;
+
+    setDeletingMembers(true);
+    setDeletionProgress({ deleted: 0, total: 0 });
+    const toastId = toast.loading("Deleting existing members...");
+
     try {
-      const maleUser = {
-        id: "LM-TEST-MALE1",
-        firstName: "Raj",
-        lastName: "Sharma",
-        name: "Raj Sharma",
-        email: "raj.sharma@example.com",
+      // Step 1: Delete all existing profiles and their cascade data
+      const allProfiles = await getDocs(collection(db, "profiles"));
+      setDeletionProgress({ deleted: 0, total: allProfiles.size });
+      let deleted = 0;
+
+      for (const profileDoc of allProfiles.docs) {
+        const profile = { id: profileDoc.id, ...profileDoc.data() };
+        try {
+          // Delete profile
+          await deleteDoc(doc(db, "profiles", profile.id)).catch(() => {});
+
+          // Delete conversations + messages
+          const convQuery = query(collection(db, "conversations"), where("participants", "array-contains", profile.id));
+          const convSnap = await getDocs(convQuery);
+          const batch = writeBatch(db);
+          for (const convDoc of convSnap.docs) {
+            const msgSnap = await getDocs(collection(db, "conversations", convDoc.id, "messages"));
+            msgSnap.docs.forEach(m => batch.delete(m.ref));
+            batch.delete(convDoc.ref);
+          }
+          await batch.commit();
+
+          // Delete interests
+          const i1 = await getDocs(query(collection(db, "interests"), where("senderId", "==", profile.id)));
+          const i2 = await getDocs(query(collection(db, "interests"), where("receiverId", "==", profile.id)));
+          const ib = writeBatch(db);
+          i1.docs.forEach(d => ib.delete(d.ref));
+          i2.docs.forEach(d => ib.delete(d.ref));
+          await ib.commit();
+
+          // Delete marriage requests
+          const m1 = await getDocs(query(collection(db, "marriageRequests"), where("senderId", "==", profile.id)));
+          const m2 = await getDocs(query(collection(db, "marriageRequests"), where("receiverId", "==", profile.id)));
+          const mb = writeBatch(db);
+          m1.docs.forEach(d => mb.delete(d.ref));
+          m2.docs.forEach(d => mb.delete(d.ref));
+          await mb.commit();
+
+          // Delete notifications
+          const ns = await getDocs(query(collection(db, "notifications"), where("receiverId", "==", profile.id)));
+          const nb = writeBatch(db);
+          ns.docs.forEach(d => nb.delete(d.ref));
+          await nb.commit();
+
+          // Try Cloudinary KYC assets
+          try {
+            const { deleteFromCloudinary } = await import("../../utils/cloudinary");
+            await deleteFromCloudinary(`loharmatrimony/assets/profilesandKyc/${profile.id}/KYC images/aadhar_front_image_${profile.id}_*`).catch(() => {});
+            await deleteFromCloudinary(`loharmatrimony/assets/profilesandKyc/${profile.id}/KYC images/aadhar_back_image_${profile.id}_*`).catch(() => {});
+          } catch {}
+
+          deleted++;
+          setDeletionProgress({ deleted, total: allProfiles.size });
+        } catch {
+          // skip failed deletions
+        }
+      }
+
+      toast.loading("Creating 3 new demo profiles...", { id: toastId });
+
+      // Step 2: Create 3 new members
+      const profile1 = {
+        firstName: "Manish",
+        lastName: "Gadekar",
+        name: "Manish Gadekar",
+        email: "manishgadekar1111@gmail.com",
         gender: "Male",
-        dob: "1994-08-15",
-        age: 29,
+        dob: "1995-06-15",
+        age: 30,
         mobile: "+91 9876543210",
         religion: "Hinduism",
-        caste: "Brahmin",
-        subCaste: "Saraswat",
+        caste: "Lohar",
+        subCaste: "Panchal",
         motherTongue: "Marathi",
-        height: "5'11\"",
-        weight: "75 kg",
+        height: "5'10\"",
+        weight: "72 kg",
         maritalStatus: "Never Married",
         isMarried: false,
-        education: "M.Tech in Computer Science",
-        occupation: "Software Engineer",
-        income: "₹15 Lakh - ₹20 Lakh",
-        address: "Andheri West",
-        city: "Mumbai",
+        education: "M.Tech in Mechanical Engineering",
+        occupation: "Automobile Engineer",
+        income: "₹12 Lakh - ₹15 Lakh",
+        address: "Shivaji Nagar",
+        city: "Pune",
         state: "Maharashtra",
-        district: "Mumbai Suburban",
-        familyDetails: "Nuclear family with traditional values.",
-        fatherOccupation: "Businessman",
+        district: "Pune",
+        familyDetails: "Nuclear family with strong traditional values. Father is a retired government officer, mother is a homemaker. One younger sister who is pursuing CA.",
+        fatherOccupation: "Retired Government Officer",
         motherOccupation: "Homemaker",
-        siblings: "1 Brother",
+        siblings: "1 Sister",
         lifestyle: "Moderate",
         foodPreference: "Vegetarian",
         smoking: "No",
         drinking: "No",
-        hobbies: "Reading, Traveling",
+        hobbies: "Trekking, Photography, Reading, Playing Cricket",
         isOnline: true,
         isVerified: true,
         isPremium: true,
-        compatibility: 95,
+        compatibility: 90,
         photos: [
-          "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop",
+          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
           "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop",
-          "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=400&fit=crop",
           "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop",
-          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop"
+          "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=400&fit=crop",
+          "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop"
         ],
-        photo: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop"
+        photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
+        bio: "I am a simple and caring person looking for a life partner who understands and supports mutual growth. I believe in family values and modern thinking.",
+        onboardingCompleted: true,
+        registeredAt: new Date().toISOString(),
+        role: "user",
       };
 
-      const femaleUser = {
-        id: "LM-TEST-FEMALE1",
-        firstName: "Priya",
-        lastName: "Patil",
-        name: "Priya Patil",
-        email: "priya.patil@example.com",
+      const profile2 = {
+        firstName: "Manisha",
+        lastName: "Gadekar",
+        name: "Manisha Gadekar",
+        email: "gadekarmanish62@gmail.com",
         gender: "Female",
-        dob: "1996-03-10",
+        dob: "1997-09-22",
         age: 28,
         mobile: "+91 9876543211",
         religion: "Hinduism",
-        caste: "Maratha",
-        subCaste: "Deshmukh",
+        caste: "Lohar",
+        subCaste: "Panchal",
         motherTongue: "Marathi",
         height: "5'4\"",
-        weight: "58 kg",
+        weight: "55 kg",
         maritalStatus: "Never Married",
         isMarried: false,
-        education: "MBA in Finance",
-        occupation: "Financial Analyst",
-        income: "₹10 Lakh - ₹12 Lakh",
-        address: "Bandra East",
-        city: "Mumbai",
+        education: "M.Sc. in Computer Science",
+        occupation: "Software Developer",
+        income: "₹8 Lakh - ₹10 Lakh",
+        address: "Baner Road",
+        city: "Pune",
         state: "Maharashtra",
-        district: "Mumbai Suburban",
-        familyDetails: "Joint family.",
-        fatherOccupation: "Government Employee",
-        motherOccupation: "Homemaker",
-        siblings: "1 Sister",
+        district: "Pune",
+        familyDetails: "Joint family with traditional Marathi values. Father runs a small business, mother is a school teacher. One elder brother who is a lawyer in Mumbai.",
+        fatherOccupation: "Small Business Owner",
+        motherOccupation: "School Teacher",
+        siblings: "1 Brother",
         lifestyle: "Modern",
         foodPreference: "Vegetarian",
         smoking: "No",
         drinking: "Occasionally",
-        hobbies: "Dancing, Cooking",
+        hobbies: "Reading, Yoga, Cooking, Painting Mandala Art",
         isOnline: true,
         isVerified: true,
-        isPremium: true,
-        compatibility: 92,
+        isPremium: false,
+        compatibility: 88,
         photos: [
           "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
           "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop",
@@ -154,19 +226,83 @@ export const AdminDashboard: React.FC = () => {
           "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&h=400&fit=crop",
           "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=400&fit=crop"
         ],
-        photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop"
+        photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
+        bio: "I am an ambitious and kind-hearted woman who values honesty and respect. Looking for a partner who shares similar values and enjoys life's simple pleasures.",
+        onboardingCompleted: true,
+        registeredAt: new Date().toISOString(),
+        role: "user",
       };
 
-      await setDoc(doc(db, "profiles", maleUser.id), maleUser);
-      await setDoc(doc(db, "profiles", femaleUser.id), femaleUser);
+      const profile3 = {
+        firstName: "Manisha",
+        lastName: "Gadekar",
+        name: "Manisha Gadekar",
+        email: "msgadekar284@gmail.com",
+        gender: "Female",
+        dob: "1996-12-05",
+        age: 29,
+        mobile: "+91 9876543212",
+        religion: "Hinduism",
+        caste: "Lohar",
+        subCaste: "Panchal",
+        motherTongue: "Marathi",
+        height: "5'3\"",
+        weight: "54 kg",
+        maritalStatus: "Never Married",
+        isMarried: false,
+        education: "MBA in Human Resources",
+        occupation: "HR Manager",
+        income: "₹10 Lakh - ₹12 Lakh",
+        address: "Kothrud",
+        city: "Pune",
+        state: "Maharashtra",
+        district: "Pune",
+        familyDetails: "Nuclear family. Father is a bank manager, mother is a homemaker. One younger brother studying engineering. Family values education and culture.",
+        fatherOccupation: "Bank Manager",
+        motherOccupation: "Homemaker",
+        siblings: "1 Brother",
+        lifestyle: "Moderate",
+        foodPreference: "Vegetarian",
+        smoking: "No",
+        drinking: "No",
+        hobbies: "Traveling, Dance, Reading Novels, Gardening",
+        isOnline: true,
+        isVerified: true,
+        isPremium: true,
+        compatibility: 92,
+        photos: [
+          "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=400&h=400&fit=crop",
+          "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop",
+          "https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=400&h=400&fit=crop",
+          "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=400&fit=crop",
+          "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&h=400&fit=crop"
+        ],
+        photo: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=400&h=400&fit=crop",
+        bio: "I am a cheerful and family-oriented person who loves traveling and exploring new places. Looking for a caring and understanding life partner.",
+        onboardingCompleted: true,
+        registeredAt: new Date().toISOString(),
+        role: "user",
+      };
 
-      toast.success("Dummy users generated successfully!");
-    } catch(err) {
-      console.error(err);
-      toast.error("Failed to generate dummy users");
+      // Create profiles with specific doc IDs based on email hash for predictability
+      const doc1 = await addDoc(collection(db, "profiles"), profile1);
+      const doc2 = await addDoc(collection(db, "profiles"), profile2);
+      const doc3 = await addDoc(collection(db, "profiles"), profile3);
+
+      // Update the profile doc with its own ID
+      await updateDoc(doc(db, "profiles", doc1.id), { id: doc1.id });
+      await updateDoc(doc(db, "profiles", doc2.id), { id: doc2.id });
+      await updateDoc(doc(db, "profiles", doc3.id), { id: doc3.id });
+
+      toast.success("Database reset complete! 3 new demo members created.", { id: toastId });
+    } catch (err: any) {
+      toast.error("Reset failed: " + err.message, { id: toastId });
+    } finally {
+      setDeletingMembers(false);
+      setDeletionProgress({ deleted: 0, total: 0 });
     }
   };
-
+ 
   // Search/Filter states
   const [searchKyc, setSearchKyc] = useState("");
   const [searchOnline, setSearchOnline] = useState("");
@@ -802,6 +938,20 @@ export const AdminDashboard: React.FC = () => {
                     </div>
                   </div>
                 </section>
+
+                <div className="flex justify-end">
+                  <button
+                    onClick={resetAndSeedUsers}
+                    disabled={deletingMembers}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    {deletingMembers ? (
+                      <><svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg> Resetting...</>
+                    ) : (
+                      <>Reset & Seed 3 Users</>
+                    )}
+                  </button>
+                </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   {/* Unverified & Recently Registered Profiles */}
