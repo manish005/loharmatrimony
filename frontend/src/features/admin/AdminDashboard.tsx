@@ -178,6 +178,7 @@ export const AdminDashboard: React.FC = () => {
   // Modals state
   const [editingSub, setEditingSub] = useState<any | null>(null);
   const [selectedKyc, setSelectedKyc] = useState<any | null>(null);
+  const [kycRejectModal, setKycRejectModal] = useState<{ profile: any; reason: string } | null>(null);
   const [activeZoomImage, setActiveZoomImage] = useState<string | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
 
@@ -287,23 +288,32 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleRejectKYC = async (id: string) => {
-    const reason = prompt("Enter verification rejection reason:");
-    if (reason !== null) {
-      try {
-        await updateDoc(doc(db, "profiles", id), { kycRejectReason: reason });
-        await addDoc(collection(db, "notifications"), {
-          userId: id,
-          title: "KYC Rejected",
-          message: `Your KYC documents were rejected. Reason: ${reason}`,
-          type: "error",
-          read: false,
-          timestamp: serverTimestamp()
-        });
-        toast.success(`KYC Document rejected. User notified.`);
-        setSelectedKyc(null);
-      } catch (err: any) {
-        toast.error(err.message || "Failed to reject KYC.");
-      }
+    setKycRejectModal({ profile: selectedKyc, reason: "" });
+  };
+
+  const confirmRejectKYC = async () => {
+    if (!kycRejectModal) return;
+    const id = kycRejectModal.profile.id;
+    const reason = kycRejectModal.reason.trim();
+    if (!reason) {
+      toast.error("Please enter a rejection reason.");
+      return;
+    }
+    try {
+      await updateDoc(doc(db, "profiles", id), { kycRejectReason: reason });
+      await addDoc(collection(db, "notifications"), {
+        userId: id,
+        title: "KYC Rejected",
+        message: `Your KYC documents were rejected. Reason: ${reason}`,
+        type: "error",
+        read: false,
+        timestamp: serverTimestamp()
+      });
+      toast.success(`KYC Document rejected. User notified.`);
+      setSelectedKyc(null);
+      setKycRejectModal(null);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to reject KYC.");
     }
   };
 
@@ -1204,6 +1214,52 @@ export const AdminDashboard: React.FC = () => {
                         alt="Zoomed KYC Document" 
                         className="max-w-full max-h-[90vh] object-contain rounded-lg" 
                       />
+                    </div>
+                  )}
+                </AnimatePresence>
+
+                {/* KYC Reject Reason Modal */}
+                <AnimatePresence>
+                  {kycRejectModal && (
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-55 flex items-center justify-center p-4">
+                      <motion.div 
+                        initial={{ scale: 0.95, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0.95, opacity: 0 }}
+                        className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-5"
+                      >
+                        <div className="flex justify-between items-center border-b pb-3">
+                          <h3 className="font-serif text-base font-bold text-slate-900 dark:text-white">Reject KYC</h3>
+                          <button onClick={() => setKycRejectModal(null)} className="p-1 rounded hover:bg-slate-100 dark:hover:bg-dark-800 cursor-pointer">
+                            <X className="h-5 w-5" />
+                          </button>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Rejection Reason</label>
+                          <textarea
+                            value={kycRejectModal.reason}
+                            onChange={(e) => setKycRejectModal({ ...kycRejectModal, reason: e.target.value })}
+                            rows={4}
+                            placeholder="Enter the reason for rejecting this KYC verification..."
+                            className="w-full border border-slate-200 dark:border-dark-800 rounded-xl px-3 py-2.5 bg-slate-50 dark:bg-dark-950 text-slate-900 dark:text-white text-xs focus:ring-1 focus:ring-maroon-700 resize-none"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="flex gap-3 pt-3 border-t">
+                          <button
+                            onClick={confirmRejectKYC}
+                            className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow transition-colors cursor-pointer"
+                          >
+                            Confirm Reject
+                          </button>
+                          <button
+                            onClick={() => setKycRejectModal(null)}
+                            className="px-4 py-2.5 rounded-xl border text-slate-600 font-bold hover:bg-slate-50 dark:hover:bg-dark-850 transition-colors text-xs cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </motion.div>
                     </div>
                   )}
                 </AnimatePresence>
