@@ -21,7 +21,7 @@ import {
   Settings
 } from "lucide-react";
 import { db, auth } from "../../config/firebase";
-import { collection, getDocs, updateDoc, doc, onSnapshot, query, where, getDoc, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, getDocs, updateDoc, doc, setDoc, onSnapshot, query, where, getDoc, addDoc, serverTimestamp } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
@@ -57,6 +57,114 @@ export const AdminDashboard: React.FC = () => {
   
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const seedDummyUsers = async () => {
+    try {
+      const maleUser = {
+        id: "LM-TEST-MALE1",
+        firstName: "Raj",
+        lastName: "Sharma",
+        name: "Raj Sharma",
+        email: "raj.sharma@example.com",
+        gender: "Male",
+        dob: "1994-08-15",
+        age: 29,
+        mobile: "+91 9876543210",
+        religion: "Hinduism",
+        caste: "Brahmin",
+        subCaste: "Saraswat",
+        motherTongue: "Marathi",
+        height: "5'11\"",
+        weight: "75 kg",
+        maritalStatus: "Never Married",
+        isMarried: false,
+        education: "M.Tech in Computer Science",
+        occupation: "Software Engineer",
+        income: "₹15 Lakh - ₹20 Lakh",
+        address: "Andheri West",
+        city: "Mumbai",
+        state: "Maharashtra",
+        district: "Mumbai Suburban",
+        familyDetails: "Nuclear family with traditional values.",
+        fatherOccupation: "Businessman",
+        motherOccupation: "Homemaker",
+        siblings: "1 Brother",
+        lifestyle: "Moderate",
+        foodPreference: "Vegetarian",
+        smoking: "No",
+        drinking: "No",
+        hobbies: "Reading, Traveling",
+        isOnline: true,
+        isVerified: true,
+        isPremium: true,
+        compatibility: 95,
+        photos: [
+          "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop",
+          "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop",
+          "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=400&fit=crop",
+          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop",
+          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop"
+        ],
+        photo: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop"
+      };
+
+      const femaleUser = {
+        id: "LM-TEST-FEMALE1",
+        firstName: "Priya",
+        lastName: "Patil",
+        name: "Priya Patil",
+        email: "priya.patil@example.com",
+        gender: "Female",
+        dob: "1996-03-10",
+        age: 28,
+        mobile: "+91 9876543211",
+        religion: "Hinduism",
+        caste: "Maratha",
+        subCaste: "Deshmukh",
+        motherTongue: "Marathi",
+        height: "5'4\"",
+        weight: "58 kg",
+        maritalStatus: "Never Married",
+        isMarried: false,
+        education: "MBA in Finance",
+        occupation: "Financial Analyst",
+        income: "₹10 Lakh - ₹12 Lakh",
+        address: "Bandra East",
+        city: "Mumbai",
+        state: "Maharashtra",
+        district: "Mumbai Suburban",
+        familyDetails: "Joint family.",
+        fatherOccupation: "Government Employee",
+        motherOccupation: "Homemaker",
+        siblings: "1 Sister",
+        lifestyle: "Modern",
+        foodPreference: "Vegetarian",
+        smoking: "No",
+        drinking: "Occasionally",
+        hobbies: "Dancing, Cooking",
+        isOnline: true,
+        isVerified: true,
+        isPremium: true,
+        compatibility: 92,
+        photos: [
+          "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
+          "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop",
+          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop",
+          "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&h=400&fit=crop",
+          "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=400&fit=crop"
+        ],
+        photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop"
+      };
+
+      await setDoc(doc(db, "profiles", maleUser.id), maleUser);
+      await setDoc(doc(db, "profiles", femaleUser.id), femaleUser);
+
+      toast.success("Dummy users generated successfully!");
+    } catch(err) {
+      console.error(err);
+      toast.error("Failed to generate dummy users");
+    }
+  };
 
   // Search/Filter states
   const [searchKyc, setSearchKyc] = useState("");
@@ -325,6 +433,13 @@ export const AdminDashboard: React.FC = () => {
                 );
               })}
             </nav>
+            
+            <button
+              onClick={seedDummyUsers}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all"
+            >
+              Seed Dummy Users
+            </button>
           </div>
         </aside>
 

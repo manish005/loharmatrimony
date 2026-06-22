@@ -22,7 +22,7 @@ service cloud.firestore {
 
       // User can update their own profile, or just marriage status fields if they are interacting with another user
       allow update: if request.auth != null && (
-        resource.data.email == request.auth.token.email ||
+        resource.data.uid == request.auth.uid ||
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isMarried', 'maritalStatus', 'partnerId', 'partnerName', 'partnerPhoto', 'weddingDate'])
       );
 

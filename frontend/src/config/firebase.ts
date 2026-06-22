@@ -23,4 +23,15 @@ export const googleProvider = new GoogleAuthProvider();
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
+import { doc, updateDoc, setDoc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+
+if (typeof window !== "undefined") {
+  (window as any).firebaseAuth = auth;
+  (window as any).firebaseDb = db;
+  (window as any).firestoreHelpers = { doc, updateDoc, setDoc, getDoc, collection, query, where, getDocs };
+}
+
 export default app;
+
+
+
