@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ChevronRight, Sparkles, ShieldCheck, Heart, MessageSquare, Phone, Mail, MapPin, Info, CheckCircle2, ChevronLeft, X } from "lucide-react";
+import { ChevronRight, Sparkles, ShieldCheck, Heart, MessageSquare, Phone, Mail, MapPin, Info, CheckCircle2, ChevronLeft, X, Calendar } from "lucide-react";
 import type { TabType } from "../dashboardHelpers";
 
 interface Profile {
@@ -26,6 +26,7 @@ interface Profile {
 interface ViewProfileProps {
   profile: Profile;
   myProfile?: any;
+  allProfiles: any[];
   showContactPremium: boolean;
   userSubscription: string;
   interestSentIds: string[];
@@ -45,6 +46,7 @@ interface ViewProfileProps {
 const ViewProfile: React.FC<ViewProfileProps> = ({
   profile,
   myProfile,
+  allProfiles,
   showContactPremium,
   userSubscription,
   interestSentIds,
@@ -164,23 +166,45 @@ const ViewProfile: React.FC<ViewProfileProps> = ({
               const acceptedReq = marriageRequests.find((r: any) => (r.receiverId === profile.id || r.senderId === profile.id) && r.status === 'accepted');
               const pendingReq = marriageRequests.find((r: any) => (r.receiverId === profile.id || r.senderId === profile.id) && r.status === 'pending');
               const canPropose = approvedConnectionIds.includes(profile.id) && !myProfile?.isMarried && !acceptedReq && !pendingReq;
+              const weddingDate = profile.weddingDate || acceptedReq?.weddingDate || "";
+              const isDatePassed = weddingDate ? new Date(weddingDate) < new Date() : false;
+              const statusLabel = isDatePassed ? "Married" : "Getting Married";
 
               if (acceptedReq || profile.isMarried || myProfile?.isMarried) {
+                const partnerId = acceptedReq
+                  ? (acceptedReq.senderId === profile.id ? acceptedReq.receiverId : acceptedReq.senderId)
+                  : (profile.partnerId || "");
+                const partnerProfile = allProfiles.find((p: any) => p.id === partnerId);
+                const partnerName = partnerProfile?.name || profile.partnerName || "Partner";
+                const partnerPhoto = partnerProfile?.photos?.[0] || partnerProfile?.photo || profile.partnerPhoto || "";
+
                 return (
-                  <div className="w-full mt-3 py-4 px-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl text-center">
-                    <div className="flex items-center justify-center gap-2 mb-1">
+                  <div className="w-full mt-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl text-center">
+                    <div className="flex items-center justify-center gap-2 mb-2">
                       <Heart className="h-4 w-4 text-amber-600 dark:text-amber-400 fill-amber-500" />
-                      <span className="text-xs font-bold text-amber-800 dark:text-amber-400">Marriage Fixed! 💍</span>
+                      <span className="text-xs font-bold text-amber-800 dark:text-amber-400">{statusLabel}</span>
                     </div>
-                    {(profile.weddingDate || acceptedReq?.weddingDate) && (
-                      <p className="text-[10px] text-amber-700 dark:text-amber-500 font-semibold">
-                        Wedding: {profile.weddingDate || acceptedReq.weddingDate}
-                      </p>
-                    )}
-                    {profile.partnerName && (
-                      <p className="text-[10px] text-amber-700 dark:text-amber-500 font-semibold">
-                        Partner: {profile.partnerName}
-                      </p>
+                    {partnerName && (
+                      <div className="flex items-center gap-3 justify-center mt-2">
+                        {partnerPhoto ? (
+                          <img
+                            src={partnerPhoto}
+                            alt={partnerName}
+                            className="w-10 h-10 rounded-full object-cover border-2 border-amber-300 dark:border-amber-700"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-amber-200 dark:bg-amber-800 flex items-center justify-center text-amber-700 dark:text-amber-300 font-bold text-sm">
+                            {partnerName.charAt(0)}
+                          </div>
+                        )}
+                        <div className="text-left">
+                          <p className="text-xs font-bold text-amber-900 dark:text-amber-300">{partnerName}</p>
+                          <p className="text-[10px] text-amber-700 dark:text-amber-500 flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {weddingDate ? new Date(weddingDate).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" }) : "Date TBD"}
+                          </p>
+                        </div>
+                      </div>
                     )}
                   </div>
                 );

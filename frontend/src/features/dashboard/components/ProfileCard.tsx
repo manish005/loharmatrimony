@@ -156,7 +156,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
         )}
         {marriageFixed && (
           <div className="absolute bottom-3 left-3 bg-amber-500/90 backdrop-blur border border-white/10 px-2 py-0.5 md:px-2.5 md:py-1 rounded-lg md:rounded-xl text-[9px] md:text-[10px] font-bold text-white flex items-center gap-1">
-            <Heart className="h-2.5 w-2.5 md:h-3 md:w-3 fill-white" /> Married
+            <Heart className="h-2.5 w-2.5 md:h-3 md:w-3 fill-white" /> {profile.weddingDate && new Date(profile.weddingDate) < new Date() ? "Married" : "Taken"}
           </div>
         )}
       </div>
@@ -200,7 +200,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
 
           {marriageFixed && (
             <div className="mt-1.5 px-2 py-1 bg-amber-500/10 border border-amber-500/25 text-amber-800 dark:text-amber-400 text-[8px] sm:text-[9px] rounded-lg font-bold flex items-center justify-between">
-              <span>Marriage Fixed!</span>
+              <span>{profile.weddingDate && new Date(profile.weddingDate) < new Date() ? "Married" : "Getting Married"}</span>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -232,7 +232,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
               className="py-1.5 px-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 font-bold text-[10px] sm:text-xs flex items-center gap-1.5 border border-amber-200/60 dark:border-amber-800/30 shadow-sm"
             >
               <Heart className="h-3 w-3 sm:h-3.5 sm:w-3.5 fill-amber-500 text-amber-500" />
-              {profile.weddingDate && new Date(profile.weddingDate) > new Date() ? "Marriage Fixed" : "Married"}
+              {profile.weddingDate && new Date(profile.weddingDate) < new Date() ? "Married" : "Getting Married"}
             </button>
           </div>
         ) : (

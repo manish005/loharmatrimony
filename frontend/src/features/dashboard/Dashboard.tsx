@@ -618,7 +618,7 @@ export const Dashboard: React.FC = () => {
       
       await updateDoc(myProfileRef, { 
         isMarried: true, 
-        maritalStatus: "Married",
+        maritalStatus: "Getting Married",
         partnerId: senderProfile.id,
         partnerName: senderProfile.name,
         partnerPhoto: senderProfile.photos?.[0] || senderProfile.photo || "",
@@ -627,7 +627,7 @@ export const Dashboard: React.FC = () => {
       
       await updateDoc(senderProfileRef, { 
         isMarried: true, 
-        maritalStatus: "Married",
+        maritalStatus: "Getting Married",
         partnerId: myProfile.id,
         partnerName: myProfile.name,
         partnerPhoto: myProfile.photos?.[0] || myProfile.photo || "",
@@ -662,7 +662,7 @@ export const Dashboard: React.FC = () => {
       setMyProfile((prev: any) => ({ 
         ...prev, 
         isMarried: true, 
-        maritalStatus: "Married",
+        maritalStatus: "Getting Married",
         partnerId: senderProfile.id,
         partnerName: senderProfile.name,
         partnerPhoto: senderProfile.photos?.[0] || senderProfile.photo || "",
@@ -1394,6 +1394,7 @@ export const Dashboard: React.FC = () => {
             <ViewProfile
               profile={activeProfile}
               myProfile={myProfile}
+              allProfiles={profiles}
               showContactPremium={showContactPremium}
               userSubscription={userSubscription}
               interestSentIds={interestSentIds}
