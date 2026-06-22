@@ -9,8 +9,18 @@ async function loginUser(page: any, email: string) {
   await page.waitForSelector('input[name="email"]', { timeout: 15000 });
   await page.fill('input[name="email"]', email);
   await page.fill('input[name="password"]', "Test@123!!");
-  await page.click('button[type="submit"]');
-  await page.waitForURL("**/dashboard", { timeout: 35000 });
+  
+  try {
+    await page.click('button[type="submit"]');
+    await page.waitForURL("**/dashboard", { timeout: 15000 });
+  } catch (err) {
+    const errorDiv = page.locator('div.bg-red-50, div.text-red-650');
+    if (await errorDiv.first().isVisible()) {
+      const errorText = await errorDiv.first().innerText();
+      throw new Error(`Login failed for ${email} with error: ${errorText}`);
+    }
+    throw err;
+  }
   await page.waitForTimeout(1000);
 }
 
