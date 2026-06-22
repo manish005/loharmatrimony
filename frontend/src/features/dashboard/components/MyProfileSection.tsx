@@ -507,11 +507,84 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="sm:col-span-2 lg:col-span-3">
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase">Family & Relatives</label>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase">Family</label>
                   <button 
                     type="button" 
                     onClick={() => {
-                      const newRel = [...(profileFormState.relativesList || []), { name: '', relation: 'Papa (Father)', occupation: '', mobile: '' }];
+                      const newRel = [...(profileFormState.relativesList || []), { name: '', relation: 'Papa (Father)', occupation: '', mobile: '', category: 'family' }];
+                      onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
+                    }}
+                    className="flex items-center gap-1 text-[10px] text-maroon-700 dark:text-gold-400 font-bold hover:underline cursor-pointer"
+                  >
+                    <Plus className="h-3 w-3" /> Add Family
+                  </button>
+                </div>
+                
+                <div className="space-y-3">
+                  {(profileFormState.relativesList || []).filter((r: any) => ["Papa (Father)", "Mummy (Mother)", "Bhai (Brother)", "Behen (Sister)"].includes(r.relation)).map((rel: any, index: number) => {
+                    const realIndex = profileFormState.relativesList.findIndex((r: any) => r === rel);
+                    return (
+                    <div key={realIndex} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-start border border-slate-100 dark:border-dark-800 p-2.5 rounded-xl bg-slate-50/50 dark:bg-dark-900/50">
+                      <div className="sm:col-span-3">
+                        <label className="block text-[9px] font-bold text-slate-400 mb-1">Name</label>
+                        <input type="text" value={rel.name} onChange={(e) => {
+                          const newRel = [...profileFormState.relativesList];
+                          newRel[realIndex].name = e.target.value;
+                          onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
+                        }} className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-lg px-2 py-1.5 bg-white dark:bg-dark-950 focus:outline-none focus:border-maroon-700" placeholder="Name" />
+                      </div>
+                      <div className="sm:col-span-3">
+                        <label className="block text-[9px] font-bold text-slate-400 mb-1">Relation</label>
+                        <select value={rel.relation} onChange={(e) => {
+                          const newRel = [...profileFormState.relativesList];
+                          newRel[realIndex].relation = e.target.value;
+                          onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
+                        }} className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-lg px-2 py-1.5 bg-white dark:bg-dark-950 focus:outline-none focus:border-maroon-700 appearance-none cursor-pointer">
+                          <option value="Papa (Father)">Papa (Father)</option>
+                          <option value="Mummy (Mother)">Mummy (Mother)</option>
+                          <option value="Bhai (Brother)">Bhai (Brother)</option>
+                          <option value="Behen (Sister)">Behen (Sister)</option>
+                        </select>
+                      </div>
+                      <div className="sm:col-span-3">
+                        <label className="block text-[9px] font-bold text-slate-400 mb-1">Occupation</label>
+                        <input type="text" value={rel.occupation} onChange={(e) => {
+                          const newRel = [...profileFormState.relativesList];
+                          newRel[realIndex].occupation = e.target.value;
+                          onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
+                        }} className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-lg px-2 py-1.5 bg-white dark:bg-dark-950 focus:outline-none focus:border-maroon-700" placeholder="Occupation" />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="block text-[9px] font-bold text-slate-400 mb-1">Mobile</label>
+                        <input type="tel" value={rel.mobile} onChange={(e) => {
+                          const newRel = [...profileFormState.relativesList];
+                          newRel[realIndex].mobile = e.target.value;
+                          onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
+                        }} className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-lg px-2 py-1.5 bg-white dark:bg-dark-950 focus:outline-none focus:border-maroon-700" placeholder="Mobile" />
+                      </div>
+                      <div className="sm:col-span-1 flex justify-end pt-5">
+                        <button type="button" onClick={() => {
+                          const newRel = profileFormState.relativesList.filter((_: any, i: number) => i !== realIndex);
+                          onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
+                        }} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )})}
+                  {(!profileFormState.relativesList || profileFormState.relativesList.filter((r: any) => ["Papa (Father)", "Mummy (Mother)", "Bhai (Brother)", "Behen (Sister)"].includes(r.relation)).length === 0) && (
+                    <div className="text-center py-4 text-xs text-slate-500 border border-dashed border-slate-200 dark:border-dark-800 rounded-xl">
+                      No family added yet. Click "+ Add Family" above.
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between mt-4 mb-2">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase">Relatives</label>
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      const newRel = [...(profileFormState.relativesList || []), { name: '', relation: 'Chacha/Mama (Uncle)', occupation: '', mobile: '', category: 'relative' }];
                       onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
                     }}
                     className="flex items-center gap-1 text-[10px] text-maroon-700 dark:text-gold-400 font-bold hover:underline cursor-pointer"
@@ -521,13 +594,15 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
                 </div>
                 
                 <div className="space-y-3">
-                  {(profileFormState.relativesList || []).map((rel: any, index: number) => (
-                    <div key={index} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-start border border-slate-100 dark:border-dark-800 p-2.5 rounded-xl bg-slate-50/50 dark:bg-dark-900/50">
+                  {(profileFormState.relativesList || []).filter((r: any) => !["Papa (Father)", "Mummy (Mother)", "Bhai (Brother)", "Behen (Sister)"].includes(r.relation)).map((rel: any, index: number) => {
+                    const realIndex = profileFormState.relativesList.findIndex((r: any) => r === rel);
+                    return (
+                    <div key={realIndex} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-start border border-slate-100 dark:border-dark-800 p-2.5 rounded-xl bg-slate-50/50 dark:bg-dark-900/50">
                       <div className="sm:col-span-3">
                         <label className="block text-[9px] font-bold text-slate-400 mb-1">Name</label>
                         <input type="text" value={rel.name} onChange={(e) => {
                           const newRel = [...profileFormState.relativesList];
-                          newRel[index].name = e.target.value;
+                          newRel[realIndex].name = e.target.value;
                           onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
                         }} className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-lg px-2 py-1.5 bg-white dark:bg-dark-950 focus:outline-none focus:border-maroon-700" placeholder="Name" />
                       </div>
@@ -535,13 +610,9 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
                         <label className="block text-[9px] font-bold text-slate-400 mb-1">Relation</label>
                         <select value={rel.relation} onChange={(e) => {
                           const newRel = [...profileFormState.relativesList];
-                          newRel[index].relation = e.target.value;
+                          newRel[realIndex].relation = e.target.value;
                           onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
                         }} className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-lg px-2 py-1.5 bg-white dark:bg-dark-950 focus:outline-none focus:border-maroon-700 appearance-none cursor-pointer">
-                          <option value="Papa (Father)">Papa (Father)</option>
-                          <option value="Mummy (Mother)">Mummy (Mother)</option>
-                          <option value="Bhai (Brother)">Bhai (Brother)</option>
-                          <option value="Behen (Sister)">Behen (Sister)</option>
                           <option value="Chacha/Mama (Uncle)">Chacha/Mama (Uncle)</option>
                           <option value="Chachi/Mami (Aunt)">Chachi/Mami (Aunt)</option>
                           <option value="Bhatija/Bhanja (Nephew)">Bhatija/Bhanja (Nephew)</option>
@@ -555,7 +626,7 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
                         <label className="block text-[9px] font-bold text-slate-400 mb-1">Occupation</label>
                         <input type="text" value={rel.occupation} onChange={(e) => {
                           const newRel = [...profileFormState.relativesList];
-                          newRel[index].occupation = e.target.value;
+                          newRel[realIndex].occupation = e.target.value;
                           onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
                         }} className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-lg px-2 py-1.5 bg-white dark:bg-dark-950 focus:outline-none focus:border-maroon-700" placeholder="Occupation" />
                       </div>
@@ -563,21 +634,21 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
                         <label className="block text-[9px] font-bold text-slate-400 mb-1">Mobile</label>
                         <input type="tel" value={rel.mobile} onChange={(e) => {
                           const newRel = [...profileFormState.relativesList];
-                          newRel[index].mobile = e.target.value;
+                          newRel[realIndex].mobile = e.target.value;
                           onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
                         }} className="w-full text-xs border border-slate-200 dark:border-dark-800 rounded-lg px-2 py-1.5 bg-white dark:bg-dark-950 focus:outline-none focus:border-maroon-700" placeholder="Mobile" />
                       </div>
                       <div className="sm:col-span-1 flex justify-end pt-5">
                         <button type="button" onClick={() => {
-                          const newRel = profileFormState.relativesList.filter((_: any, i: number) => i !== index);
+                          const newRel = profileFormState.relativesList.filter((_: any, i: number) => i !== realIndex);
                           onFormChange({ target: { name: 'relativesList', value: newRel } } as any);
                         }} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer">
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
                     </div>
-                  ))}
-                  {(!profileFormState.relativesList || profileFormState.relativesList.length === 0) && (
+                  )})}
+                  {(!profileFormState.relativesList || profileFormState.relativesList.filter((r: any) => !["Papa (Father)", "Mummy (Mother)", "Bhai (Brother)", "Behen (Sister)"].includes(r.relation)).length === 0) && (
                     <div className="text-center py-4 text-xs text-slate-500 border border-dashed border-slate-200 dark:border-dark-800 rounded-xl">
                       No relatives added yet. Click "+ Add Relative" above.
                     </div>
@@ -781,10 +852,30 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
               <div className="col-span-1 sm:col-span-2 lg:col-span-4 mt-2">
+                <span className="text-slate-500 block mb-2 font-bold uppercase tracking-wider text-[10px]">Family</span>
+                {(myProfile.relativesList || []).filter((r: any) => ["Papa (Father)", "Mummy (Mother)", "Bhai (Brother)", "Behen (Sister)"].includes(r.relation)).length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+                    {(myProfile.relativesList || []).filter((r: any) => ["Papa (Father)", "Mummy (Mother)", "Bhai (Brother)", "Behen (Sister)"].includes(r.relation)).map((rel: any, idx: number) => (
+                      <div key={idx} className="bg-slate-50 dark:bg-dark-850 p-3 rounded-xl border border-slate-100 dark:border-dark-800 flex items-center justify-between shadow-sm">
+                        <div>
+                          <strong className="text-slate-900 dark:text-white font-semibold block text-xs">{rel.name || "Unknown"}</strong>
+                          <span className="text-[10px] text-slate-500">{rel.relation} {rel.occupation ? `• ${rel.occupation}` : ""}</span>
+                        </div>
+                        {rel.mobile && (
+                          <div className="text-[10px] font-bold text-maroon-700 dark:text-gold-400 bg-maroon-50 dark:bg-maroon-900/20 px-2 py-1 rounded-md">
+                            {rel.mobile}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <strong className="text-slate-900 dark:text-white font-semibold block mb-4">N/A</strong>
+                )}
                 <span className="text-slate-500 block mb-2 font-bold uppercase tracking-wider text-[10px]">Relatives</span>
-                {myProfile.relativesList && myProfile.relativesList.length > 0 ? (
+                {(myProfile.relativesList || []).filter((r: any) => !["Papa (Father)", "Mummy (Mother)", "Bhai (Brother)", "Behen (Sister)"].includes(r.relation)).length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {myProfile.relativesList.map((rel: any, idx: number) => (
+                    {(myProfile.relativesList || []).filter((r: any) => !["Papa (Father)", "Mummy (Mother)", "Bhai (Brother)", "Behen (Sister)"].includes(r.relation)).map((rel: any, idx: number) => (
                       <div key={idx} className="bg-slate-50 dark:bg-dark-850 p-3 rounded-xl border border-slate-100 dark:border-dark-800 flex items-center justify-between shadow-sm">
                         <div>
                           <strong className="text-slate-900 dark:text-white font-semibold block text-xs">{rel.name || "Unknown"}</strong>
