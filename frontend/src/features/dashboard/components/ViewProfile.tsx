@@ -433,6 +433,27 @@ const ViewProfile: React.FC<ViewProfileProps> = ({
               <ChevronRight className="h-6 w-6 sm:h-10 sm:w-10" />
             </button>
           )}
+
+          {profilePhotos.length > 1 && (
+            <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 sm:gap-3 bg-black/60 backdrop-blur rounded-2xl px-3 sm:px-5 py-2 sm:py-3 z-50">
+              {profilePhotos.map((url: string, idx: number) => (
+                <button
+                  key={idx}
+                  onClick={() => setModalImgIdx(idx)}
+                  className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl overflow-hidden border-2 transition-all cursor-pointer shrink-0 ${
+                    idx === modalImgIdx
+                      ? 'border-white scale-110 shadow-lg shadow-white/20'
+                      : 'border-white/30 opacity-60 hover:opacity-100 hover:border-white/60'
+                  }`}
+                >
+                  <img src={url} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
+                </button>
+              ))}
+              <span className="text-[10px] sm:text-xs text-white/70 font-bold ml-1 shrink-0">
+                {modalImgIdx + 1}/{profilePhotos.length}
+              </span>
+            </div>
+          )}
         </div>
       )}
     </div>
