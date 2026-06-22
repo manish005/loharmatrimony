@@ -179,9 +179,9 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
               </span>
             ))}
           </div>
-          <div className="flex flex-wrap gap-1.5 pt-0.5">
+          <div className="flex gap-1.5 pt-0.5 min-w-0">
             {[profile.education, profile.income].filter(Boolean).map((item, idx) => (
-              <span key={`attr2-${idx}`} className="bg-slate-50 dark:bg-dark-850 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded-md text-[8px] sm:text-[9px] md:text-[10px] uppercase tracking-wide font-medium border border-slate-200/50 dark:border-dark-700/50">
+              <span key={`attr2-${idx}`} className="bg-slate-50 dark:bg-dark-850 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded-md text-[8px] sm:text-[9px] md:text-[10px] uppercase tracking-wide font-medium border border-slate-200/50 dark:border-dark-700/50 truncate max-w-[50%]">
                 {item}
               </span>
             ))}
