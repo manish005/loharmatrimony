@@ -230,7 +230,8 @@ export const AdminDashboard: React.FC = () => {
     const unsubProfiles = onSnapshot(collection(db, "profiles"), (snapshot) => {
       const profilesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setOnlineMembers(profilesData);
-      setKycProfiles(profilesData.filter((p: any) => p.isVerified === false));
+      // KYC list: not verified AND not rejected
+      setKycProfiles(profilesData.filter((p: any) => !p.isVerified && p.kycStatus !== "rejected"));
     });
 
     // Subscriptions
@@ -300,7 +301,11 @@ export const AdminDashboard: React.FC = () => {
       return;
     }
     try {
-      await updateDoc(doc(db, "profiles", id), { kycRejectReason: reason });
+      await updateDoc(doc(db, "profiles", id), {
+        kycRejectReason: reason,
+        kycStatus: "rejected",
+        kycDocuments: null,
+      });
       await addDoc(collection(db, "notifications"), {
         userId: id,
         title: "KYC Rejected",

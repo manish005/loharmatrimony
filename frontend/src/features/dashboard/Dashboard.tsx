@@ -110,10 +110,9 @@ export const Dashboard: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  const [kycStatus, setKycStatus] = useState<"not_started" | "pending" | "approved">("approved");
-  const [kycDocs, setKycDocs] = useState<{ name: string; size: string; status: string; url?: string; publicId?: string }[]>([
-    { name: "Aadhaar_Card_Front.jpg", size: "142 KB", status: "Verified" }
-  ]);
+  const [kycStatus, setKycStatus] = useState<"not_started" | "pending" | "approved" | "rejected">("not_started");
+  const [kycRejectReason, setKycRejectReason] = useState("");
+  const [kycDocs, setKycDocs] = useState<{ name: string; size: string; status: string; url?: string; publicId?: string }[]>([]);
   const [kycUploading, setKycUploading] = useState(false);
 
   const [supportSubmitted, setSupportSubmitted] = useState(false);
@@ -265,7 +264,9 @@ export const Dashboard: React.FC = () => {
             nakshatra: data.nakshatra || "",
             manglik: data.manglik || "No",
             birthTime: data.birthTime || "",
-            birthPlace: data.birthPlace || ""
+            birthPlace: data.birthPlace || "",
+            kycStatus: data.kycStatus || "",
+            kycRejectReason: data.kycRejectReason || "",
           };
         });
 
@@ -281,6 +282,8 @@ export const Dashboard: React.FC = () => {
             }));
             setProfiles(updatedProfiles);
             setMyProfile(userProfile);
+            setKycStatus(userProfile.kycStatus === "rejected" ? "rejected" : userProfile.isVerified ? "approved" : userProfile.kycStatus === "pending" ? "pending" : "not_started");
+            setKycRejectReason(userProfile.kycRejectReason || "");
             setUserSubscription(userProfile.subscriptionPlan || "free");
             setPhotos(userProfile.photos || []);
             if (!userProfile.uid) {
@@ -783,6 +786,17 @@ export const Dashboard: React.FC = () => {
       
       setKycDocs(prev => [...prev, { name: file.name, size: `${(file.size / 1024).toFixed(0)} KB`, status: "Pending Audit", url: uploadUrl, publicId: `${folder}/${publicId}` }]);
       setKycStatus("pending");
+      setKycRejectReason("");
+
+      // Save to Firestore so admin can review
+      const profileRef = doc(db, "profiles", myProfile.id);
+      const key = typeLower === "front" ? "front" : "back";
+      await updateDoc(profileRef, {
+        [`kycDocuments.${key}`]: uploadUrl,
+        kycStatus: "pending",
+        kycRejectReason: null,
+      });
+
       showToast(`${type} Document uploaded successfully! Our administration board will review and update within 24 hours.`);
     } catch (err: any) {
       console.error("KYC upload failed:", err);
@@ -1364,6 +1378,7 @@ export const Dashboard: React.FC = () => {
             <KYCPanel
               kycDocs={kycDocs}
               kycStatus={kycStatus}
+              kycRejectReason={kycRejectReason}
               kycUploading={kycUploading}
               onKycUpload={handleKycUpload}
               onKycDelete={handleKycDelete}

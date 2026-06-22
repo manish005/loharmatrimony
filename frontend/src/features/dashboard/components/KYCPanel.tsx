@@ -1,5 +1,5 @@
 import React from "react";
-import { ShieldCheck, Check, Upload, AlertCircle, Trash2 } from "lucide-react";
+import { ShieldCheck, Check, Upload, AlertCircle, Trash2, XCircle } from "lucide-react";
 import { useLanguage } from "../../../context/LanguageContext";
 
 interface KYCDoc {
@@ -7,17 +7,20 @@ interface KYCDoc {
   name: string;
   size: string;
   status: string;
+  url?: string;
+  publicId?: string;
 }
 
 interface KYCPanelProps {
   kycDocs: KYCDoc[];
-  kycStatus: "not_started" | "pending" | "approved";
+  kycStatus: "not_started" | "pending" | "approved" | "rejected";
+  kycRejectReason?: string;
   kycUploading: boolean;
   onKycUpload: (type: string, file: File) => void;
   onKycDelete: (index: number) => void;
 }
 
-const KYCPanel: React.FC<KYCPanelProps> = ({ kycDocs, kycStatus, kycUploading, onKycUpload, onKycDelete }) => {
+const KYCPanel: React.FC<KYCPanelProps> = ({ kycDocs, kycStatus, kycRejectReason, kycUploading, onKycUpload, onKycDelete }) => {
   const { t } = useLanguage();
   return (
     <div className="glass-panel border border-slate-200/40 dark:border-dark-800/40 rounded-3xl p-6 sm:p-8 bg-white/70 space-y-6">
@@ -43,6 +46,30 @@ const KYCPanel: React.FC<KYCPanelProps> = ({ kycDocs, kycStatus, kycUploading, o
             </div>
           </div>
           <div className="text-[10px] text-slate-400 font-semibold font-mono">ID: SEC-895-VER</div>
+        </div>
+      ) : kycStatus === "rejected" ? (
+        <div className="p-5 border border-red-300 dark:border-red-800 bg-red-500/10 rounded-2xl flex flex-col sm:flex-row items-start gap-4 justify-between">
+          <div className="flex items-start gap-3">
+            <div className="h-10 w-10 rounded-full bg-red-500/20 text-red-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <XCircle className="h-5 w-5" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                {t("Verification Failed")} <span className="text-[9px] bg-red-500 text-white px-2 py-0.5 rounded-full font-bold">{t("Rejected")}</span>
+              </h4>
+              <p className="text-[10px] text-red-700 dark:text-red-400 font-semibold mt-0.5">
+                {t("Your KYC documents were rejected. Please upload correct documents for verification.")}
+              </p>
+              {kycRejectReason && (
+                <p className="text-[10px] text-slate-600 dark:text-slate-400 mt-2 bg-white/50 dark:bg-dark-900/50 p-2.5 rounded-lg border border-red-200 dark:border-red-900/30">
+                  <span className="font-bold">{t("Reason")}:</span> {kycRejectReason}
+                </p>
+              )}
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-2">
+                {t("Please remove the rejected images below and upload clear, legible documents.")}
+              </p>
+            </div>
+          </div>
         </div>
       ) : kycStatus === "pending" ? (
         <div className="p-5 border border-amber-500 dark:border-amber-700 bg-amber-500/10 rounded-2xl flex flex-col sm:flex-row items-center gap-4 justify-between">
@@ -77,12 +104,22 @@ const KYCPanel: React.FC<KYCPanelProps> = ({ kycDocs, kycStatus, kycUploading, o
       <div className="space-y-4 pt-2">
         <h4 className="text-xs font-bold text-slate-900 dark:text-white">{t("Uploaded Documents")}</h4>
         <div className="space-y-2.5">
-          {kycDocs.map((doc: any, idx) => (
-            <div key={idx} className="p-3 border border-slate-100 dark:border-dark-800 rounded-xl grid grid-cols-4 items-center justify-items-center gap-2 bg-white/40">
+          {kycDocs.map((doc: any, idx) => {
+            const isRejected = kycStatus === "rejected";
+            return (
+            <div key={idx} className={`p-3 border rounded-xl grid grid-cols-4 items-center justify-items-center gap-2 bg-white/40 ${
+              isRejected
+                ? "border-red-300 dark:border-red-700 bg-red-50/50 dark:bg-red-950/20"
+                : "border-slate-100 dark:border-dark-800"
+            }`}>
               
               {/* Column 1: Image */}
               {doc.url ? (
-                 <img src={doc.url} alt={doc.name} className="h-10 w-14 object-cover rounded shadow-sm border border-slate-200" />
+                 <img src={doc.url} alt={doc.name} className={`h-10 w-14 object-cover rounded shadow-sm border ${
+                   isRejected
+                     ? "border-red-300 dark:border-red-700 ring-1 ring-red-300"
+                     : "border-slate-200"
+                 }`} />
               ) : (
                 <div className="h-10 w-14 rounded bg-slate-100 dark:bg-dark-900 flex items-center justify-center">
                   <Upload className="h-4 w-4 text-slate-400" />
@@ -96,8 +133,14 @@ const KYCPanel: React.FC<KYCPanelProps> = ({ kycDocs, kycStatus, kycUploading, o
               </div>
               
               {/* Column 3: Status */}
-              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${kycStatus === "approved" || doc.status === "Verified" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                {kycStatus === "approved" ? "Verified" : doc.status}
+              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                isRejected
+                  ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                  : kycStatus === "approved" || doc.status === "Verified"
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-amber-100 text-amber-700"
+              }`}>
+                {isRejected ? "Rejected" : kycStatus === "approved" ? "Verified" : doc.status}
               </span>
 
               {/* Column 4: Delete Button */}
@@ -109,7 +152,7 @@ const KYCPanel: React.FC<KYCPanelProps> = ({ kycDocs, kycStatus, kycUploading, o
                 <Trash2 className="h-4 w-4" />
               </button>
             </div>
-          ))}
+          )})}
         </div>
       </div>
 
