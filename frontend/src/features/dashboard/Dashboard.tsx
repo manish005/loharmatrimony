@@ -446,10 +446,27 @@ export const Dashboard: React.FC = () => {
       setMarriageRequests(myRequests);
     });
 
+    // Listen for Notifications to show Toast
+    const qNotifs = query(collection(db, "notifications"), where("receiverId", "==", myProfile.id));
+    const unsubNotifications = onSnapshot(qNotifs, (snapshot) => {
+      if (initialInterestLoadDone.current) {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === "added") {
+            const data = change.doc.data();
+            // Don't show toast if it's already handled by other listeners, though it's safe to show
+            if (data.type !== "marriage_proposal") {
+               showToast(data.text, "info");
+            }
+          }
+        });
+      }
+    });
+
     return () => {
       unsubSent();
       unsubReceived();
       unsubMarriageRequests();
+      unsubNotifications();
     };
   }, [myProfile?.id, profiles]);
 
@@ -547,6 +564,17 @@ export const Dashboard: React.FC = () => {
       if (!snap.empty) {
         await updateDoc(snap.docs[0].ref, { status: "rejected" });
         showToast("Interest declined.");
+
+        // Add Notification
+        const myName = myProfile.firstName || myProfile.name || "Someone";
+        await addDoc(collection(db, "notifications"), {
+          receiverId: senderId,
+          senderId: myProfile.id,
+          text: `${myName} respectfully declined your interest.`,
+          type: "interest_rejected",
+          read: false,
+          createdAt: serverTimestamp()
+        });
       }
     } catch (err) {
       console.error("Error rejecting interest:", err);
@@ -600,12 +628,12 @@ export const Dashboard: React.FC = () => {
       // 1. Update request status
       await updateDoc(requestRef, { status: "accepted" });
 
-      // 2. Set both profiles to isMarried = true
+      // 2. Set both profiles to isMarried = true and maritalStatus = "Married"
       const myProfileRef = doc(db, "profiles", myProfile.id);
       const senderProfileRef = doc(db, "profiles", senderProfile.id);
       
-      await updateDoc(myProfileRef, { isMarried: true });
-      await updateDoc(senderProfileRef, { isMarried: true });
+      await updateDoc(myProfileRef, { isMarried: true, maritalStatus: "Married" });
+      await updateDoc(senderProfileRef, { isMarried: true, maritalStatus: "Married" });
 
       // 3. Create Success Story
       await addDoc(collection(db, "successStories"), {
@@ -621,9 +649,10 @@ export const Dashboard: React.FC = () => {
       });
 
       showToast(`Congratulations! You are engaged to ${senderProfile.name}!`);
-      setMyProfile((prev: any) => ({ ...prev, isMarried: true }));
+      setMyProfile((prev: any) => ({ ...prev, isMarried: true, maritalStatus: "Married" }));
       setShowCelebration(true);
       setTimeout(() => setShowCelebration(false), 5000);
+      setActiveTab("stories");
     } catch (err) {
       console.error("Error accepting marriage request", err);
       showToast("Failed to accept marriage request", "error");

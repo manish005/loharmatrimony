@@ -116,7 +116,7 @@ const InterestsSentPanel: React.FC<InterestsSentPanelProps> = ({
                     >
                       <MessageSquare className="h-4 w-4" /> Message
                     </button>
-                    {!marriageRequests.some((r: any) => (r.receiverId === profile.id || r.senderId === profile.id) && r.status !== 'rejected') && onOpenMarriageModal && (
+                    {!profile.isMarried && !marriageRequests.some((r: any) => (r.receiverId === profile.id || r.senderId === profile.id) && r.status !== 'rejected') && onOpenMarriageModal && (
                       <button
                         onClick={(e) => { e.stopPropagation(); onOpenMarriageModal(profile); }}
                         className="w-full py-2 px-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white text-xs font-bold rounded-xl shadow-md shadow-red-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
