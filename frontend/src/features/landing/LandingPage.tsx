@@ -45,7 +45,7 @@ const MOCK_NEW_MEMBERS = [
     isOnline: true,
     isVerified: true,
     isPremium: true,
-    photo: "",
+    photo: "https://ui-avatars.com/api/?name=Sunita+Lohar&background=8B1A1A&color=fff&size=256",
     bio: "Looking for a partner who is progressive yet values our cultural tradition."
   },
   {
@@ -59,7 +59,7 @@ const MOCK_NEW_MEMBERS = [
     isOnline: true,
     isVerified: true,
     isPremium: true,
-    photo: "",
+    photo: "https://ui-avatars.com/api/?name=Rajesh+Panchal&background=2C3E50&color=fff&size=256",
     bio: "Passionate about travel, fitness, and reading. Family-oriented mindset."
   },
   {
@@ -73,7 +73,7 @@ const MOCK_NEW_MEMBERS = [
     isOnline: false,
     isVerified: true,
     isPremium: false,
-    photo: "",
+    photo: "https://ui-avatars.com/api/?name=Neha+Lohar&background=E74C3C&color=fff&size=256",
     bio: "Friendly, simple, and love cooking. Looking for an educated partner."
   },
   {
@@ -87,7 +87,7 @@ const MOCK_NEW_MEMBERS = [
     isOnline: true,
     isVerified: false,
     isPremium: false,
-    photo: "",
+    photo: "https://ui-avatars.com/api/?name=Sanjay+Lohar&background=16A085&color=fff&size=256",
     bio: "Creative by heart, love traveling. Looking for a soulmate."
   },
   {
@@ -101,7 +101,7 @@ const MOCK_NEW_MEMBERS = [
     isOnline: true,
     isVerified: true,
     isPremium: true,
-    photo: "",
+    photo: "https://ui-avatars.com/api/?name=Pratiksha+Panchal&background=8E44AD&color=fff&size=256",
     bio: "Goal-oriented, family-loving girl who enjoys classical music."
   }
 ];
@@ -112,14 +112,14 @@ const MOCK_SUCCESS_STORIES = [
     id: 1,
     couple: "Amit & Smita",
     weddingDate: "12th Nov 2025",
-    photo: "",
+    photo: "https://ui-avatars.com/api/?name=Amit+Smita&background=8B1A1A&color=fff&size=128",
     story: "We found each other through Lohar Matrimony. The caste filtering and verified profile filters saved us months of searching. Truly grateful!"
   },
   {
     id: 2,
     couple: "Rahul & Sneha",
     weddingDate: "4th Jan 2026",
-    photo: "",
+    photo: "https://ui-avatars.com/api/?name=Rahul+Sneha&background=2C3E50&color=fff&size=128",
     story: "It was love at first interest request! Highly recommend subscribing to the Gold tier, which gave us direct chat features instantly."
   }
 ];
@@ -417,12 +417,37 @@ export const LandingPage: React.FC = () => {
 
           {/* Hero Right Image Frame (Glassmorphic Mockup) */}
           <div className="lg:col-span-5 relative flex items-center justify-center">
-            <div className="relative w-full max-w-[400px] aspect-[4/5] rounded-[32px] overflow-hidden shadow-2xl border border-white/50 dark:border-white/5 bg-gradient-to-br from-rose-100 via-amber-50 to-maroon-100 dark:from-dark-900 dark:via-dark-850 dark:to-maroon-950/30">
-              <img 
-                src={heroBg} 
-                alt="Indian Bride and Groom"
-                className="absolute inset-0 w-full h-full object-cover opacity-80 dark:opacity-40"
-              />
+            <div className="relative w-full max-w-[400px] aspect-[4/5] rounded-[32px] overflow-hidden shadow-2xl border border-white/50 dark:border-white/5 bg-gradient-to-br from-rose-100 via-amber-50 to-maroon-100 dark:from-dark-900 dark:via-dark-850 dark:to-maroon-950/30 flex items-center justify-center">
+              <svg viewBox="0 0 400 500" className="absolute inset-0 w-full h-full opacity-80 dark:opacity-40" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="mangal" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#b8860b"/>
+                    <stop offset="100%" stopColor="#8B1A1A"/>
+                  </linearGradient>
+                </defs>
+                {/* Mandap */}
+                <path d="M100 350 L200 200 L300 350Z" fill="none" stroke="#b8860b" strokeWidth="3" opacity="0.6"/>
+                <path d="M120 370 L200 230 L280 370Z" fill="none" stroke="#b8860b" strokeWidth="2" opacity="0.4"/>
+                {/* Bride (left) */}
+                <circle cx="160" cy="220" r="28" fill="#8B1A1A" opacity="0.9"/>
+                <rect x="145" y="248" width="30" height="60" rx="5" fill="#8B1A1A" opacity="0.8"/>
+                <path d="M130 250 Q160 200 190 250" fill="none" stroke="#b8860b" strokeWidth="2" opacity="0.7"/>
+                {/* Groom (right) */}
+                <circle cx="240" cy="220" r="28" fill="#D4AF37" opacity="0.9"/>
+                <rect x="225" y="248" width="30" height="60" rx="5" fill="#D4AF37" opacity="0.8"/>
+                <path d="M220 200 L260 200 L260 210 L220 210Z" fill="#2C1810" opacity="0.8"/>
+                {/* Garland */}
+                <path d="M188 235 Q200 250 212 235" fill="none" stroke="#FF6B35" strokeWidth="3" opacity="0.8"/>
+                {/* Sacred fire */}
+                <ellipse cx="200" cy="350" rx="60" ry="15" fill="#FF4500" opacity="0.3"/>
+                <path d="M185 350 Q190 320 200 335 Q210 310 215 350Z" fill="#FF6347" opacity="0.5"/>
+                {/* Flower petals */}
+                <circle cx="140" cy="300" r="4" fill="#FF69B4" opacity="0.6"/>
+                <circle cx="260" cy="280" r="4" fill="#FF69B4" opacity="0.6"/>
+                <circle cx="170" cy="320" r="3" fill="#FFD700" opacity="0.5"/>
+                <circle cx="230" cy="310" r="3" fill="#FFD700" opacity="0.5"/>
+                <circle cx="200" cy="340" r="4" fill="#FFB6C1" opacity="0.6"/>
+              </svg>
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
               
               {/* Floating overlay badge */}

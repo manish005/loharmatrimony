@@ -63,22 +63,6 @@ export const Login: React.FC = () => {
     }
   };
 
-
-
-  const handleFacebookLogin = async () => {
-    setError("");
-    setLoading(true);
-    try {
-      toast.success("Successfully logged in via Facebook!");
-      navigate("/dashboard");
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Failed to log in via Facebook.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="h-screen w-screen flex items-center justify-center bg-gradient-to-br from-maroon-50/20 via-slate-50 to-gold-50/10 dark:from-dark-950 dark:via-dark-900 dark:to-maroon-950/10 relative overflow-hidden px-4">
       {/* Absolute top-left Back to Landing Page button */}
@@ -187,19 +171,17 @@ export const Login: React.FC = () => {
         </div>
 
         {/* Social login buttons */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="flex justify-center">
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="py-2.5 border border-slate-200 dark:border-dark-800 rounded-xl bg-white dark:bg-dark-900 hover:bg-slate-50 dark:hover:bg-dark-850 text-slate-700 dark:text-slate-250 font-bold text-xs shadow-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
+            className="w-full max-w-xs py-2.5 border border-slate-200 dark:border-dark-800 rounded-xl bg-white dark:bg-dark-900 hover:bg-slate-50 dark:hover:bg-dark-850 text-slate-700 dark:text-slate-250 font-bold text-xs shadow-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24">
               <path fill="#ea4335" d="M12.24 10.285V14.4h6.887c-.275 1.565-1.88 4.604-6.887 4.604-4.33 0-7.859-3.578-7.859-8s3.53-8 7.859-8c2.46 0 4.105 1.025 5.047 1.926l3.253-3.13C18.28 1.97 15.54.75 12.24.75c-6.22 0-11.25 5.03-11.25 11.25s5.03 11.25 11.25 11.25c6.49 0 10.8-4.56 10.8-11 0-.74-.08-1.3-.17-1.965H12.24z"/>
             </svg>
             Google
           </button>
-          
-
         </div>
 
         {/* Redirection link */}
