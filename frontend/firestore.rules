@@ -20,9 +20,10 @@ service cloud.firestore {
       allow create: if request.auth != null
         && request.auth.token.email == request.resource.data.email;
 
-      // User can update their own profile, or just marriage status fields if they are interacting with another user
+      // User can update their own profile, or any profile if they are admin
       allow update: if request.auth != null && (
         resource.data.uid == request.auth.uid ||
+        request.auth.token.email.matches(".*admin.*") ||
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isMarried', 'maritalStatus', 'partnerId', 'partnerName', 'partnerPhoto', 'weddingDate'])
       );
 
