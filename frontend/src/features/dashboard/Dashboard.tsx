@@ -1431,6 +1431,7 @@ export const Dashboard: React.FC = () => {
                     onStartChat={startChat}
                     onViewProfile={(id) => setActiveTab("view-profile", id)}
                     onSetSelectedInvitationProfile={setSelectedInvitationProfile}
+                    recommended={true}
                   />
                 </div>
               )}

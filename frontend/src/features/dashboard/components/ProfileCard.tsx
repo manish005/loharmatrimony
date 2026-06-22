@@ -43,6 +43,7 @@ interface ProfileCardProps {
   onStartChat: (profile: Profile, e?: React.MouseEvent) => void;
   onViewProfile: (id: string) => void;
   onSetSelectedInvitationProfile: (profile: Profile) => void;
+  recommended?: boolean;
 }
 
 const ProfileCard: React.FC<ProfileCardProps> = ({
@@ -55,6 +56,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
   onStartChat,
   onViewProfile,
   onSetSelectedInvitationProfile,
+  recommended = false,
 }) => {
   const { t } = useLanguage();
   const marriageFixed = profile.isMarried;
@@ -85,7 +87,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.2 }}
-      className="bg-white dark:bg-dark-900 border border-slate-200/50 dark:border-dark-800 rounded-2xl md:rounded-[28px] overflow-hidden shadow-md dark:shadow-black/50 hover:shadow-xl dark:hover:shadow-black/70 transition-all duration-350 flex flex-col group relative h-fit"
+      className={`bg-white dark:bg-dark-900 border border-slate-200/50 dark:border-dark-800 rounded-2xl md:rounded-[28px] overflow-hidden shadow-md dark:shadow-black/50 hover:shadow-xl dark:hover:shadow-black/70 transition-all duration-350 flex flex-col group relative ${recommended ? 'h-[500px] mb-4' : 'h-fit'}`}
     >
       <div
         onClick={() => marriageFixed ? onSetSelectedInvitationProfile(profile) : onViewProfile(profile.id)}
@@ -155,10 +157,10 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
         )}
       </div>
 
-      <div className="p-4 sm:p-5 pb-6 sm:pb-7 flex flex-col">
+      <div className={`p-4 sm:p-5 ${recommended ? 'pb-10 flex flex-col flex-1 min-h-0' : 'pb-6 sm:pb-7 flex flex-col'}`}>
         <div
           onClick={() => marriageFixed ? onSetSelectedInvitationProfile(profile) : onViewProfile(profile.id)}
-          className="space-y-0.5 sm:space-y-1 cursor-pointer"
+          className={`space-y-0.5 sm:space-y-1 cursor-pointer ${recommended ? 'flex-1 overflow-hidden' : ''}`}
         >
           <div className="flex items-center gap-1">
             <h4 className="font-serif text-[11px] sm:text-xs md:text-sm font-bold text-slate-900 dark:text-white group-hover:text-maroon-700 dark:group-hover:text-gold-400 transition-colors truncate">

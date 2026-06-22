@@ -33,6 +33,7 @@ interface ProfileGridProps {
   onStartChat: (profile: Profile, e?: React.MouseEvent) => void;
   onViewProfile: (id: string) => void;
   onSetSelectedInvitationProfile: (profile: Profile) => void;
+  recommended?: boolean;
 }
 
 const ProfileGrid: React.FC<ProfileGridProps> = ({
@@ -47,6 +48,7 @@ const ProfileGrid: React.FC<ProfileGridProps> = ({
   onStartChat,
   onViewProfile,
   onSetSelectedInvitationProfile,
+  recommended = false,
 }) => {
   const { t } = useLanguage();
   const gridClass = `grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6`;
@@ -81,6 +83,7 @@ const ProfileGrid: React.FC<ProfileGridProps> = ({
               onStartChat={onStartChat}
               onViewProfile={onViewProfile}
               onSetSelectedInvitationProfile={onSetSelectedInvitationProfile}
+              recommended={recommended}
             />
           ))}
         </AnimatePresence>
