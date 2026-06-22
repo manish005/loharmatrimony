@@ -184,6 +184,8 @@ export const AdminDashboard: React.FC = () => {
   // Member selection & delete
   const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
+  const [dashboardSelectedIds, setDashboardSelectedIds] = useState<Set<string>>(new Set());
+  const [dashboardSelectAll, setDashboardSelectAll] = useState(false);
   const [searchMembers, setSearchMembers] = useState("");
   const [confirmDeleteMember, setConfirmDeleteMember] = useState<any | null>(null);
   const [deletingMembers, setDeletingMembers] = useState(false);
@@ -440,10 +442,11 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleBulkDelete = async () => {
-    if (selectedMemberIds.size === 0) return;
+  const handleBulkDelete = async (ids?: Set<string>) => {
+    const targetIds = ids || selectedMemberIds;
+    if (targetIds.size === 0) return;
     setDeletingMembers(true);
-    const profilesToDelete = onlineMembers.filter((m: any) => selectedMemberIds.has(m.id));
+    const profilesToDelete = onlineMembers.filter((m: any) => targetIds.has(m.id));
     let successCount = 0;
     let failCount = 0;
     for (const profile of profilesToDelete) {
@@ -598,6 +601,11 @@ export const AdminDashboard: React.FC = () => {
     setMembersPage(1);
   }, [searchMembers]);
 
+  useEffect(() => {
+    setDashboardSelectedIds(new Set());
+    setDashboardSelectAll(false);
+  }, [searchOnline, statusFilter]);
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-dark-950 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative">
@@ -643,12 +651,6 @@ export const AdminDashboard: React.FC = () => {
               })}
             </nav>
             
-            <button
-              onClick={seedDummyUsers}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all"
-            >
-              Seed Dummy Users
-            </button>
           </div>
         </aside>
 
@@ -910,6 +912,19 @@ export const AdminDashboard: React.FC = () => {
                             <option value="Offline">Offline</option>
                           </select>
                         </div>
+                        {dashboardSelectedIds.size > 0 && (
+                          <button
+                            onClick={() => {
+                              const items = paginatedOnline.filter((m: any) => dashboardSelectedIds.has(m.id));
+                              setConfirmDeleteMember({ bulk: true, count: dashboardSelectedIds.size, ids: dashboardSelectedIds });
+                            }}
+                            disabled={deletingMembers}
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg text-[10px] font-bold transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                            Delete ({dashboardSelectedIds.size})
+                          </button>
+                        )}
                       </div>
                     </div>
                     
@@ -918,14 +933,45 @@ export const AdminDashboard: React.FC = () => {
                         <table className="w-full text-left text-xs font-semibold">
                           <thead className="sticky top-0 z-10 bg-slate-100/90 dark:bg-dark-900/90 backdrop-blur-sm border-b border-slate-200 dark:border-dark-800">
                             <tr className="text-[9px] text-slate-400 uppercase tracking-wider">
+                              <th className="py-2 px-3 w-8">
+                                <input
+                                  type="checkbox"
+                                  checked={dashboardSelectAll && paginatedOnline.length > 0}
+                                  onChange={() => {
+                                    if (dashboardSelectAll) {
+                                      setDashboardSelectedIds(new Set());
+                                      setDashboardSelectAll(false);
+                                    } else {
+                                      setDashboardSelectedIds(new Set(paginatedOnline.map((m: any) => m.id)));
+                                      setDashboardSelectAll(true);
+                                    }
+                                  }}
+                                  className="h-3.5 w-3.5 rounded border-slate-300 text-maroon-700 focus:ring-maroon-700 cursor-pointer"
+                                />
+                              </th>
                               <th className="py-2 px-3">Member Info</th>
                               {adminRole === "super_admin" && <th className="py-2 px-3 text-center">Role</th>}
                               <th className="py-2 px-3 text-center">Status</th>
+                              <th className="py-2 px-3 text-right">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-200 dark:divide-dark-800">
                             {paginatedOnline.map(member => (
                               <tr key={member.id} className="hover:bg-slate-100 dark:hover:bg-dark-900 transition-colors">
+                                <td className="py-2 px-3">
+                                  <input
+                                    type="checkbox"
+                                    checked={dashboardSelectedIds.has(member.id)}
+                                    onChange={() => {
+                                      const next = new Set(dashboardSelectedIds);
+                                      if (next.has(member.id)) next.delete(member.id);
+                                      else next.add(member.id);
+                                      setDashboardSelectedIds(next);
+                                      setDashboardSelectAll(next.size === paginatedOnline.length);
+                                    }}
+                                    className="h-3.5 w-3.5 rounded border-slate-300 text-maroon-700 focus:ring-maroon-700 cursor-pointer"
+                                  />
+                                </td>
                                 <td className="py-2 px-3 flex items-center gap-2">
                                   <img src={member.photos?.[0] || "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop"} alt={member.name} className="h-6 w-6 rounded-md object-cover border" />
                                   <div>
@@ -958,11 +1004,20 @@ export const AdminDashboard: React.FC = () => {
                                     {member.isOnline ? "Active" : "Offline"}
                                   </span>
                                 </td>
+                                <td className="py-2 px-3 text-right">
+                                  <button
+                                    onClick={() => setConfirmDeleteMember(member)}
+                                    disabled={deletingMembers}
+                                    className="inline-flex items-center gap-1 px-2 py-1 rounded border border-red-200 dark:border-red-900/30 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors cursor-pointer disabled:opacity-50 text-[8px] font-bold"
+                                  >
+                                    <Trash2 className="h-2.5 w-2.5" /> Delete
+                                  </button>
+                                </td>
                               </tr>
                             ))}
                             {paginatedOnline.length === 0 && (
                               <tr>
-                                <td colSpan={3} className="py-6 text-center text-[10px] text-slate-500 italic">No members found.</td>
+                                <td colSpan={adminRole === "super_admin" ? 6 : 5} className="py-6 text-center text-[10px] text-slate-500 italic">No members found.</td>
                               </tr>
                             )}
                           </tbody>
@@ -1596,7 +1651,7 @@ export const AdminDashboard: React.FC = () => {
                           <button
                             onClick={() => {
                               if (confirmDeleteMember.bulk) {
-                                handleBulkDelete();
+                                handleBulkDelete(confirmDeleteMember.ids);
                               } else {
                                 deleteUserCascade(confirmDeleteMember);
                               }
