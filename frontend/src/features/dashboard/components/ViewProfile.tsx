@@ -91,19 +91,7 @@ const ViewProfile: React.FC<ViewProfileProps> = ({
             )}
           </div>
 
-          {profilePhotos.length > 1 && (
-            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-              {profilePhotos.map((photo, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => { setModalImgIdx(idx); setIsImageModalOpen(true); }}
-                  className={`h-16 w-16 flex-shrink-0 rounded-xl overflow-hidden border-2 transition-colors cursor-pointer ${idx === modalImgIdx && isImageModalOpen ? 'border-maroon-700 dark:border-gold-500' : 'border-slate-200 dark:border-dark-800 hover:border-maroon-700/50 dark:hover:border-gold-500/50'}`}
-                >
-                  <img src={photo} alt="" className="w-full h-full object-cover" />
-                </button>
-              ))}
-            </div>
-          )}
+
         </div>
 
         <div className="md:col-span-7 space-y-6">
