@@ -33,6 +33,22 @@ export const calculateCompatibility = (myProfile: any, otherProfile: any) => {
   return Math.min(Math.max(score, 45), 100);
 };
 
+export const formatLastSeen = (lastActive: any): string | null => {
+  if (!lastActive) return null;
+  const date = lastActive.toDate ? lastActive.toDate() : new Date(lastActive);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return "Just now";
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} min ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr} hr ago`;
+  const diffDays = Math.floor(diffHr / 24);
+  if (diffDays === 1) return "Yesterday";
+  return `${diffDays} days ago`;
+};
+
 export type TabType =
   | "matches"
   | "search"

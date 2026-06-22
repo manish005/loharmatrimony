@@ -228,6 +228,7 @@ export const Dashboard: React.FC = () => {
             photo: data.photos && data.photos.length > 0 ? data.photos[0] : "",
             compatibility: data.compatibility || null,
             isOnline: data.isOnline || false,
+            lastActive: data.lastActive || null,
             isVerified: data.isVerified || false,
             isPremium: data.isPremium || false,
             subscriptionPlan: data.subscriptionPlan || "free",
@@ -398,6 +399,32 @@ export const Dashboard: React.FC = () => {
       unsubNotifications();
     };
   }, [myProfile?.id, profiles]);
+
+  // Heartbeat: keep isOnline true and update lastActive every 30s
+  useEffect(() => {
+    if (!myProfile?.id) return;
+    const profileRef = doc(db, "profiles", myProfile.id);
+
+    const heartbeat = async () => {
+      try {
+        await updateDoc(profileRef, { isOnline: true, lastActive: serverTimestamp() });
+      } catch { /* ignore */ }
+    };
+
+    heartbeat();
+    const interval = setInterval(heartbeat, 30000);
+
+    const handleBeforeUnload = () => {
+      updateDoc(profileRef, { isOnline: false, lastActive: serverTimestamp() }).catch(() => {});
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      updateDoc(profileRef, { isOnline: false, lastActive: serverTimestamp() }).catch(() => {});
+    };
+  }, [myProfile?.id]);
 
   const toggleShortlist = (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();

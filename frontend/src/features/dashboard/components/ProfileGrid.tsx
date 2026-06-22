@@ -15,7 +15,7 @@ interface Profile {
   city?: string;
   state?: string;
   isOnline?: boolean;
-  isVerified?: boolean;
+  lastActive?: any;
   isPremium?: boolean;
   compatibility?: number;
   [key: string]: any;

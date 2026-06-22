@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { useLanguage } from "../../../context/LanguageContext";
+import { formatLastSeen } from "../dashboardHelpers";
 
 interface Profile {
   id: string;
@@ -27,6 +28,7 @@ interface Profile {
   city?: string;
   state?: string;
   isOnline?: boolean;
+  lastActive?: any;
   isVerified?: boolean;
   isPremium?: boolean;
   compatibility?: number;
@@ -110,12 +112,18 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
 
 
 
-        {profile.isOnline && !marriageFixed && (
+        {!marriageFixed && (
           <div className="absolute top-3 right-3 flex items-center justify-center">
-            <span className="relative flex h-2 w-2 md:h-3 md:w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 md:h-3 md:w-3 bg-emerald-500 border border-white"></span>
-            </span>
+            {profile.isOnline ? (
+              <span className="relative flex h-2 w-2 md:h-3 md:w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 md:h-3 md:w-3 bg-emerald-500 border border-white"></span>
+              </span>
+            ) : (
+              <span className="text-[7px] sm:text-[8px] text-slate-400 dark:text-slate-500 bg-white/80 dark:bg-black/60 backdrop-blur px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap">
+                {formatLastSeen(profile.lastActive) || "Offline"}
+              </span>
+            )}
           </div>
         )}
 

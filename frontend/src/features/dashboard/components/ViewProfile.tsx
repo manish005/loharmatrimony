@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { ChevronRight, Sparkles, ShieldCheck, Heart, MessageSquare, Phone, Mail, MapPin, Info, CheckCircle2, ChevronLeft, X, Calendar } from "lucide-react";
 import type { TabType } from "../dashboardHelpers";
+import { formatLastSeen } from "../dashboardHelpers";
 
 interface Profile {
   id: string;
@@ -17,6 +18,7 @@ interface Profile {
   state?: string;
   bio?: string;
   isOnline?: boolean;
+  lastActive?: any;
   isVerified?: boolean;
   isPremium?: boolean;
   compatibility?: number;
@@ -84,11 +86,18 @@ const ViewProfile: React.FC<ViewProfileProps> = ({
             className="relative aspect-square rounded-[32px] overflow-hidden border border-slate-200/50 dark:border-dark-800 bg-white dark:bg-dark-900 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
           >
             <img src={profilePhotos[0]} alt={profile.name} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
-            {profile.isOnline && (
-              <div className="absolute top-4 right-4 flex items-center gap-1.5 glass-panel px-2.5 py-1 rounded-full text-[10px] font-bold text-emerald-600 dark:text-emerald-450 border border-white/20">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" /> Online
-              </div>
-            )}
+            <div className="absolute top-4 right-4 flex items-center gap-1.5 glass-panel px-2.5 py-1 rounded-full text-[10px] font-bold border border-white/20">
+              {profile.isOnline ? (
+                <>
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-emerald-600 dark:text-emerald-450">Online</span>
+                </>
+              ) : (
+                <span className="text-slate-500 dark:text-slate-400">
+                  {formatLastSeen(profile.lastActive) || "Offline"}
+                </span>
+              )}
+            </div>
           </div>
 
 
@@ -111,7 +120,7 @@ const ViewProfile: React.FC<ViewProfileProps> = ({
                 )}
               </div>
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-455 mt-1">
-                {profile.isOnline ? "Online" : profile.city ? `From ${profile.city}` : "Profile Created"}
+                {profile.isOnline ? "Online" : formatLastSeen(profile.lastActive) ? `Last seen ${formatLastSeen(profile.lastActive)}` : profile.city ? `From ${profile.city}` : "Profile Created"}
               </p>
             </div>
 
