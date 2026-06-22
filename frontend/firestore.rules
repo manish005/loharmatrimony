@@ -27,7 +27,7 @@ service cloud.firestore {
         resource.data.uid == request.auth.uid ||
         (request.auth.token.email != null && resource.data.email != null && resource.data.email.lower() == request.auth.token.email.lower()) ||
         (request.auth.token.email != null && request.auth.token.email.lower().matches(".*admin.*")) ||
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isMarried', 'maritalStatus', 'partnerId', 'partnerName', 'partnerPhoto', 'weddingDate', 'previousMaritalStatus'])
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isMarried', 'maritalStatus', 'partnerId', 'partnerName', 'partnerPhoto', 'weddingDate', 'previousMaritalStatus', 'weddingTime', 'venue'])
       );
 
       // Admin can delete profiles for DB resets

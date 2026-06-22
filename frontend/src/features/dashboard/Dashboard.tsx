@@ -238,6 +238,8 @@ export const Dashboard: React.FC = () => {
             partnerName: data.partnerName || "",
             partnerPhoto: data.partnerPhoto || "",
             weddingDate: data.weddingDate || "",
+            weddingTime: data.weddingTime || "",
+            venue: data.venue || "",
             // Preferences
             prefFamilyType: data.prefFamilyType || "",
             prefWorking: data.prefWorking || "",
@@ -568,7 +570,9 @@ export const Dashboard: React.FC = () => {
         partnerId: senderProfile.id,
         partnerName: senderProfile.name,
         partnerPhoto: senderProfile.photos?.[0] || senderProfile.photo || "",
-        weddingDate: weddingDate
+        weddingDate: weddingDate,
+        weddingTime: reqData.weddingTime || "",
+        venue: reqData.venue || ""
       });
       
       await updateDoc(senderProfileRef, { 
@@ -578,7 +582,9 @@ export const Dashboard: React.FC = () => {
         partnerId: myProfile.id,
         partnerName: myProfile.name,
         partnerPhoto: myProfile.photos?.[0] || myProfile.photo || "",
-        weddingDate: weddingDate
+        weddingDate: weddingDate,
+        weddingTime: reqData.weddingTime || "",
+        venue: reqData.venue || ""
       });
 
       // Add Notification
@@ -608,10 +614,10 @@ export const Dashboard: React.FC = () => {
       // Update local profiles state so profile cards and ViewProfile reflect the change immediately
       setProfiles(prev => prev.map(p => {
         if (p.id === myProfile.id) {
-          return { ...p, isMarried: true, maritalStatus: "Getting Married", previousMaritalStatus: myProfile.maritalStatus || "Never Married", partnerId: senderProfile.id, partnerName: senderProfile.name, partnerPhoto: senderProfile.photos?.[0] || senderProfile.photo || "", weddingDate: reqData.weddingDate || "" };
+          return { ...p, isMarried: true, maritalStatus: "Getting Married", previousMaritalStatus: myProfile.maritalStatus || "Never Married", partnerId: senderProfile.id, partnerName: senderProfile.name, partnerPhoto: senderProfile.photos?.[0] || senderProfile.photo || "", weddingDate: reqData.weddingDate || "", weddingTime: reqData.weddingTime || "", venue: reqData.venue || "" };
         }
         if (p.id === senderProfile.id) {
-          return { ...p, isMarried: true, maritalStatus: "Getting Married", previousMaritalStatus: senderProfile.maritalStatus || "Never Married", partnerId: myProfile.id, partnerName: myProfile.name, partnerPhoto: myProfile.photos?.[0] || myProfile.photo || "", weddingDate: reqData.weddingDate || "" };
+          return { ...p, isMarried: true, maritalStatus: "Getting Married", previousMaritalStatus: senderProfile.maritalStatus || "Never Married", partnerId: myProfile.id, partnerName: myProfile.name, partnerPhoto: myProfile.photos?.[0] || myProfile.photo || "", weddingDate: reqData.weddingDate || "", weddingTime: reqData.weddingTime || "", venue: reqData.venue || "" };
         }
         return p;
       }));
@@ -623,7 +629,9 @@ export const Dashboard: React.FC = () => {
         partnerId: senderProfile.id,
         partnerName: senderProfile.name,
         partnerPhoto: senderProfile.photos?.[0] || senderProfile.photo || "",
-        weddingDate: reqData.weddingDate || ""
+        weddingDate: reqData.weddingDate || "",
+        weddingTime: reqData.weddingTime || "",
+        venue: reqData.venue || ""
       }));
       showToast(`Congratulations! You are engaged to ${senderProfile.name}!`);
       setShowCelebration(true);
