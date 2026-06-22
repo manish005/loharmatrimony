@@ -2,16 +2,20 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Eye, EyeOff, Save, Loader2, Layout, FileText, Image,
-  GitBranch, BarChart3, Users, CreditCard, HeartHandshake, HelpCircle
+  GitBranch, BarChart3, Users, CreditCard, HeartHandshake, HelpCircle,
+  Upload, X, Trash2
 } from "lucide-react";
-import { db } from "../../../config/firebase";
+import { db, storage } from "../../../config/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import toast from "react-hot-toast";
 
 interface SectionConfig {
   visible: boolean;
   title?: string;
   subtitle?: string;
+  backgroundImage?: string;
+  rightImage?: string;
 }
 
 interface UIConfig {
@@ -28,7 +32,7 @@ interface UIConfig {
 
 const DEFAULT_CONFIG: UIConfig = {
   sections: {
-    hero: { visible: true, title: "Find Your Perfect Life Partner Within Lohar Community", subtitle: "Welcome to the exclusive and most trusted matrimonial service for Lohar community." },
+    hero: { visible: true, title: "Find Your Perfect Life Partner Within Lohar Community", subtitle: "Welcome to the exclusive and most trusted matrimonial service for Lohar community.", backgroundImage: "", rightImage: "" },
     statistics: { visible: true },
     members: { visible: true, title: "Newly Joined Members", subtitle: "Fresh Profiles" },
     howItWorks: { visible: true, title: "How Lohar Matrimony Works", subtitle: "Six simple steps to find your life partner" },
@@ -52,6 +56,8 @@ export default function ManageUISettings() {
   const [config, setConfig] = useState<UIConfig>(DEFAULT_CONFIG);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingBg, setUploadingBg] = useState(false);
+  const [uploadingRight, setUploadingRight] = useState(false);
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -60,7 +66,6 @@ export default function ManageUISettings() {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const data = docSnap.data() as UIConfig;
-          // Merge with defaults so new fields are never missing
           const merged: UIConfig = { sections: { ...DEFAULT_CONFIG.sections } };
           for (const key of Object.keys(DEFAULT_CONFIG.sections) as (keyof UIConfig["sections"])[]) {
             merged.sections[key] = { ...DEFAULT_CONFIG.sections[key], ...data.sections?.[key] };
@@ -84,6 +89,31 @@ export default function ManageUISettings() {
         [key]: { ...prev.sections[key], [field]: value },
       },
     }));
+  };
+
+  const handleImageUpload = async (file: File, field: "backgroundImage" | "rightImage") => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+    const setter = field === "backgroundImage" ? setUploadingBg : setUploadingRight;
+    setter(true);
+    try {
+      const fileRef = ref(storage, `site/landing_${field}_${Date.now()}.jpg`);
+      await uploadBytes(fileRef, file);
+      const url = await getDownloadURL(fileRef);
+      updateSection("hero", field, url);
+      toast.success("Image uploaded successfully!");
+    } catch (err) {
+      console.error("Upload error:", err);
+      toast.error("Failed to upload image");
+    } finally {
+      setter(false);
+    }
+  };
+
+  const handleClearImage = (field: "backgroundImage" | "rightImage") => {
+    updateSection("hero", field, "");
   };
 
   const handleSave = async () => {
@@ -113,7 +143,7 @@ export default function ManageUISettings() {
         <div>
           <h2 className="font-serif text-2xl font-bold text-slate-900 dark:text-white">Manage Landing Page UI</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Toggle sections and edit headers/content displayed on the homepage
+            Toggle sections, edit headers, and manage images displayed on the homepage
           </p>
         </div>
         <button
@@ -164,6 +194,97 @@ export default function ManageUISettings() {
                   {section.visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                 </button>
               </div>
+
+              {/* Hero section gets image uploads */}
+              {key === "hero" && (
+                <div className="space-y-4 mb-4 pb-4 border-b border-slate-100 dark:border-dark-800">
+                  {/* Background image */}
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-2">
+                      Background Image
+                    </label>
+                    {section.backgroundImage ? (
+                      <div className="relative rounded-xl overflow-hidden border border-slate-200 dark:border-dark-800 mb-2">
+                        <img
+                          src={section.backgroundImage}
+                          alt="Hero background"
+                          className="w-full h-32 object-cover"
+                        />
+                        <button
+                          onClick={() => handleClearImage("backgroundImage")}
+                          className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 text-white rounded-lg transition-colors cursor-pointer"
+                          title="Remove image"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-slate-300 dark:border-dark-700 h-32 flex items-center justify-center text-xs text-slate-400 mb-2">
+                        <FileText className="h-5 w-5 mr-2" />
+                        No custom image set (uses default)
+                      </div>
+                    )}
+                    <label className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-dark-800 hover:bg-slate-200 dark:hover:bg-dark-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer transition-colors">
+                      <Upload className="h-4 w-4" />
+                      {uploadingBg ? "Uploading..." : "Upload Background"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={uploadingBg}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleImageUpload(file, "backgroundImage");
+                          e.target.value = "";
+                        }}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+
+                  {/* Right image */}
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-2">
+                      Right Frame Image (Wedding Illustration)
+                    </label>
+                    {section.rightImage ? (
+                      <div className="relative rounded-xl overflow-hidden border border-slate-200 dark:border-dark-800 mb-2">
+                        <img
+                          src={section.rightImage}
+                          alt="Hero right"
+                          className="w-full h-32 object-cover"
+                        />
+                        <button
+                          onClick={() => handleClearImage("rightImage")}
+                          className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 text-white rounded-lg transition-colors cursor-pointer"
+                          title="Remove image"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-slate-300 dark:border-dark-700 h-32 flex items-center justify-center text-xs text-slate-400 mb-2">
+                        <Image className="h-5 w-5 mr-2" />
+                        No custom image set (uses default SVG illustration)
+                      </div>
+                    )}
+                    <label className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-dark-800 hover:bg-slate-200 dark:hover:bg-dark-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer transition-colors">
+                      <Upload className="h-4 w-4" />
+                      {uploadingRight ? "Uploading..." : "Upload Image"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={uploadingRight}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleImageUpload(file, "rightImage");
+                          e.target.value = "";
+                        }}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
+              )}
 
               {(key === "hero" || key === "members" || key === "howItWorks" || key === "pricing" || key === "successStories" || key === "faq") && (
                 <div className="space-y-3">
