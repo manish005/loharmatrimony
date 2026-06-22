@@ -3,7 +3,7 @@ import { Clock, Check, X, MessageSquare, Heart } from "lucide-react";
 
 interface InterestsSentPanelProps {
   loading: boolean;
-  sentInterests: { id: string; receiverId: string; status: string }[];
+  sentInterests: any[];
   profiles: any[];
   onViewProfile: (id: string) => void;
   onMessage: (profile: any) => void;
@@ -56,7 +56,7 @@ const InterestsSentPanel: React.FC<InterestsSentPanelProps> = ({
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {sentInterests.map((interest) => {
-          const profile = profiles.find((p) => p.id === interest.receiverId);
+          const profile = profiles.find((p) => p.id === (interest.otherUserId || interest.receiverId));
           if (!profile) return null;
 
           return (

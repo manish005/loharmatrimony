@@ -41,6 +41,7 @@ interface ViewProfileProps {
   onSetActiveDetailPhoto: (val: number) => void;
   onOpenMarriageModal: (profile: any) => void;
   showToast: (msg: string, type?: string) => void;
+  onEditMarriageDetails?: () => void;
 }
 
 const ViewProfile: React.FC<ViewProfileProps> = ({
@@ -61,6 +62,7 @@ const ViewProfile: React.FC<ViewProfileProps> = ({
   onSetActiveDetailPhoto,
   onOpenMarriageModal,
   showToast,
+  onEditMarriageDetails,
 }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [modalImgIdx, setModalImgIdx] = useState(0);
@@ -205,6 +207,15 @@ const ViewProfile: React.FC<ViewProfileProps> = ({
                           </p>
                         </div>
                       </div>
+                    )}
+                    {onEditMarriageDetails && myProfile?.id === partnerId && (
+                      <button
+                        onClick={onEditMarriageDetails}
+                        className="mt-2 py-1.5 px-3 rounded-xl bg-amber-100 hover:bg-amber-200 dark:bg-amber-800/30 dark:hover:bg-amber-800/50 text-amber-700 dark:text-amber-400 font-bold text-[10px] flex items-center gap-1.5 mx-auto border border-amber-300/50 dark:border-amber-700/30 shadow-sm cursor-pointer transition-all"
+                      >
+                        <Heart className="h-3 w-3 fill-amber-500 text-amber-500" />
+                        Edit Wedding Details
+                      </button>
                     )}
                   </div>
                 );

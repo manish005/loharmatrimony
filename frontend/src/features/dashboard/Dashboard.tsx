@@ -41,6 +41,7 @@ import { useChat } from "../chat/ChatContext";
 import ChatList from "../chat/components/ChatList";
 import ChatThread from "../chat/components/ChatThread";
 import MarriageProposalModal from "./components/MarriageProposalModal";
+import { EditMarriageModal } from "./components/EditMarriageModal";
 
 export const Dashboard: React.FC = () => {
   const { language, setLanguage, t } = useLanguage();
@@ -64,10 +65,13 @@ export const Dashboard: React.FC = () => {
   const [pendingInterestsReceived, setPendingInterestsReceived] = useState<any[]>([]);
   const [sentInterests, setSentInterests] = useState<any[]>([]);
   const [approvedReceivedIds, setApprovedReceivedIds] = useState<string[]>([]);
+  const [approvedReceivedInterests, setApprovedReceivedInterests] = useState<any[]>([]);
   const [marriageRequests, setMarriageRequests] = useState<any[]>([]);
   const [isMarriageModalOpen, setIsMarriageModalOpen] = useState(false);
+  const [isEditMarriageModalOpen, setIsEditMarriageModalOpen] = useState(false);
   const [selectedMarriageProfile, setSelectedMarriageProfile] = useState<any | null>(null);
   const [isSubmittingProposal, setIsSubmittingProposal] = useState(false);
+  const [isSubmittingMarriageUpdate, setIsSubmittingMarriageUpdate] = useState(false);
   const [interestsLoading, setInterestsLoading] = useState(true);
   const initialInterestLoadDone = useRef(false);
 
@@ -151,11 +155,26 @@ export const Dashboard: React.FC = () => {
 
   const handleStartEdit = () => {
     const nameParts = (myProfile.name || "").split(" ");
+    let heightFt = myProfile.heightFt || "";
+    let heightInches = myProfile.heightInches || "";
+
+    // Parse height string if ft/inches are not explicitly set
+    if (!heightFt && myProfile.height) {
+      const match = myProfile.height.match(/(\d+)'\s*(\d+)?"?/);
+      if (match) {
+        heightFt = match[1] || "";
+        heightInches = match[2] || "";
+      }
+    }
+
     setProfileFormState({
       ...myProfile,
       firstName: nameParts[0] || "",
       middleName: nameParts.length > 2 ? nameParts.slice(1, -1).join(" ") : "",
       lastName: nameParts.length > 1 ? nameParts[nameParts.length - 1] : "",
+      heightFt: heightFt || "5",
+      heightInches: heightInches || "0",
+      country: myProfile.country || (myProfile.state ? "India" : ""),
     });
     setIsEditingProfile(true);
   };
@@ -324,19 +343,6 @@ export const Dashboard: React.FC = () => {
       const sentData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       const sentIds = sentData.map((d: any) => d.receiverId);
 
-      if (initialInterestLoadDone.current) {
-        snapshot.docChanges().forEach((change) => {
-          if (change.type === "modified") {
-            const data = change.doc.data();
-            if (data.status === "approved") {
-              const receiverProfile = profiles.find(p => p.id === data.receiverId);
-              showToast(`${receiverProfile?.name || 'Someone'} accepted your interest! Click to chat.`, "success");
-              setActiveTab("messages");
-            }
-          }
-        });
-      }
-
       setSentInterests(sentData);
       setInterestSentIds(sentIds);
     });
@@ -350,15 +356,7 @@ export const Dashboard: React.FC = () => {
     const unsubReceived = onSnapshot(qReceived, (snapshot) => {
       const receivedData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      if (initialInterestLoadDone.current) {
-        snapshot.docChanges().forEach((change) => {
-          if (change.type === "added") {
-            const data = change.doc.data();
-            const senderProfile = profiles.find(p => p.id === data.senderId);
-            showToast(`${senderProfile?.name || 'Someone'} sent you an interest! Check your Interests Received tab.`, "info");
-          }
-        });
-      } else {
+      if (!initialInterestLoadDone.current) {
         initialInterestLoadDone.current = true;
       }
 
@@ -372,55 +370,28 @@ export const Dashboard: React.FC = () => {
       where("status", "==", "approved")
     );
     const unsubApprovedReceived = onSnapshot(qApprovedReceived, (snapshot) => {
-      const approvedData = snapshot.docs.map(d => d.data());
-      setApprovedReceivedIds(approvedData.map(d => d.senderId));
+      const approvedData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      setApprovedReceivedInterests(approvedData);
+      setApprovedReceivedIds(approvedData.map((d: any) => d.senderId));
     });
 
     // Listen for Marriage Requests
     const unsubMarriageRequests = onSnapshot(collection(db, "marriageRequests"), (snapshot) => {
       const requests = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       const myRequests = requests.filter((r: any) => r.senderId === myProfile.id || r.receiverId === myProfile.id);
-      
-      if (initialInterestLoadDone.current) {
-        snapshot.docChanges().forEach((change) => {
-          if (change.type === "added") {
-            const data = change.doc.data();
-            if (data.receiverId === myProfile.id && data.status === "pending") {
-              showToast(`You received a marriage proposal!`, "info");
-            }
-          } else if (change.type === "modified") {
-            const data = change.doc.data();
-            if (data.senderId === myProfile.id && data.status === "accepted") {
-              showToast(`Your marriage proposal was accepted! Congratulations!`, "success");
-              setShowCelebration(true);
-              setTimeout(() => setShowCelebration(false), 5000);
-            }
-          }
-        });
-      }
-
       setMarriageRequests(myRequests);
     });
 
-    // Listen for Notifications to show Toast
+    // Listen for Notifications (no toasts, only visible on dropdown)
     const qNotifs = query(collection(db, "notifications"), where("receiverId", "==", myProfile.id));
     const unsubNotifications = onSnapshot(qNotifs, (snapshot) => {
-      if (initialInterestLoadDone.current) {
-        snapshot.docChanges().forEach((change) => {
-          if (change.type === "added") {
-            const data = change.doc.data();
-            // Don't show toast if it's already handled by other listeners, though it's safe to show
-            if (data.type !== "marriage_proposal") {
-               showToast(data.text, "info");
-            }
-          }
-        });
-      }
+      // Background notifications show up on dropdown, not via background toasts
     });
 
     return () => {
       unsubSent();
       unsubReceived();
+      unsubApprovedReceived();
       unsubMarriageRequests();
       unsubNotifications();
     };
@@ -593,6 +564,7 @@ export const Dashboard: React.FC = () => {
       await updateDoc(myProfileRef, { 
         isMarried: true, 
         maritalStatus: "Getting Married",
+        previousMaritalStatus: myProfile.maritalStatus || "Never Married",
         partnerId: senderProfile.id,
         partnerName: senderProfile.name,
         partnerPhoto: senderProfile.photos?.[0] || senderProfile.photo || "",
@@ -602,6 +574,7 @@ export const Dashboard: React.FC = () => {
       await updateDoc(senderProfileRef, { 
         isMarried: true, 
         maritalStatus: "Getting Married",
+        previousMaritalStatus: senderProfile.maritalStatus || "Never Married",
         partnerId: myProfile.id,
         partnerName: myProfile.name,
         partnerPhoto: myProfile.photos?.[0] || myProfile.photo || "",
@@ -635,10 +608,10 @@ export const Dashboard: React.FC = () => {
       // Update local profiles state so profile cards and ViewProfile reflect the change immediately
       setProfiles(prev => prev.map(p => {
         if (p.id === myProfile.id) {
-          return { ...p, isMarried: true, maritalStatus: "Getting Married", partnerId: senderProfile.id, partnerName: senderProfile.name, partnerPhoto: senderProfile.photos?.[0] || senderProfile.photo || "", weddingDate: reqData.weddingDate || "" };
+          return { ...p, isMarried: true, maritalStatus: "Getting Married", previousMaritalStatus: myProfile.maritalStatus || "Never Married", partnerId: senderProfile.id, partnerName: senderProfile.name, partnerPhoto: senderProfile.photos?.[0] || senderProfile.photo || "", weddingDate: reqData.weddingDate || "" };
         }
         if (p.id === senderProfile.id) {
-          return { ...p, isMarried: true, maritalStatus: "Getting Married", partnerId: myProfile.id, partnerName: myProfile.name, partnerPhoto: myProfile.photos?.[0] || myProfile.photo || "", weddingDate: reqData.weddingDate || "" };
+          return { ...p, isMarried: true, maritalStatus: "Getting Married", previousMaritalStatus: senderProfile.maritalStatus || "Never Married", partnerId: myProfile.id, partnerName: myProfile.name, partnerPhoto: myProfile.photos?.[0] || myProfile.photo || "", weddingDate: reqData.weddingDate || "" };
         }
         return p;
       }));
@@ -646,6 +619,7 @@ export const Dashboard: React.FC = () => {
         ...prev, 
         isMarried: true, 
         maritalStatus: "Getting Married",
+        previousMaritalStatus: myProfile.maritalStatus || "Never Married",
         partnerId: senderProfile.id,
         partnerName: senderProfile.name,
         partnerPhoto: senderProfile.photos?.[0] || senderProfile.photo || "",
@@ -703,6 +677,240 @@ export const Dashboard: React.FC = () => {
     } catch (err) {
       console.error("Error rejecting marriage request", err);
       showToast("Failed to decline marriage request", "error");
+    }
+  };
+
+  const handleOpenEditMarriageModal = () => {
+    setIsEditMarriageModalOpen(true);
+  };
+
+  const handleUpdateMarriageDetails = async (data: { date: string; time: string; venue: string }) => {
+    setIsSubmittingMarriageUpdate(true);
+    try {
+      const partnerId = myProfile.partnerId;
+      if (!myProfile.id || !partnerId) {
+        throw new Error("Could not find partner details.");
+      }
+
+      // 1. Find the accepted marriage request
+      const req = marriageRequests.find(
+        (r: any) =>
+          (r.senderId === myProfile.id || r.receiverId === myProfile.id) &&
+          (r.senderId === partnerId || r.receiverId === partnerId) &&
+          r.status === "accepted"
+      );
+
+      if (req) {
+        const reqRef = doc(db, "marriageRequests", req.id);
+        await updateDoc(reqRef, {
+          weddingDate: data.date,
+          weddingTime: data.time,
+          venue: data.venue
+        });
+      }
+
+      // 2. Update both profiles' weddingDate, weddingTime, venue in Firestore
+      const myProfileRef = doc(db, "profiles", myProfile.id);
+      const partnerProfileRef = doc(db, "profiles", partnerId);
+      await updateDoc(myProfileRef, { weddingDate: data.date, weddingTime: data.time, venue: data.venue });
+      await updateDoc(partnerProfileRef, { weddingDate: data.date, weddingTime: data.time, venue: data.venue });
+
+      // 3. Find and update the successStory document
+      const ssQuery = query(collection(db, "successStories"));
+      const ssSnap = await getDocs(ssQuery);
+      ssSnap.forEach(async (docSnap) => {
+        const ssData = docSnap.data();
+        if (
+          (ssData.partner1Id === myProfile.id && ssData.partner2Id === partnerId) ||
+          (ssData.partner2Id === myProfile.id && ssData.partner1Id === partnerId)
+        ) {
+          await updateDoc(docSnap.ref, {
+            weddingDate: data.date,
+            venue: data.venue
+          });
+        }
+      });
+
+      // 4. Update local states
+      setProfiles((prev) =>
+        prev.map((p) => {
+          if (p.id === myProfile.id || p.id === partnerId) {
+            return { ...p, weddingDate: data.date, weddingTime: data.time, venue: data.venue };
+          }
+          return p;
+        })
+      );
+      setMyProfile((prev: any) => ({ ...prev, weddingDate: data.date, weddingTime: data.time, venue: data.venue }));
+
+      // 5. Send notification to the partner about the update
+      const myName = myProfile.name || myProfile.firstName || "Someone";
+      await addDoc(collection(db, "notifications"), {
+        receiverId: partnerId,
+        senderId: myProfile.id,
+        text: `${myName} updated your wedding program details.`,
+        type: "marriage_details_updated",
+        read: false,
+        createdAt: serverTimestamp()
+      });
+
+      showToast("Wedding program details updated successfully!");
+    } catch (err: any) {
+      console.error("Error updating wedding details:", err);
+      showToast("Failed to update wedding details: " + err.message, "error");
+    } finally {
+      setIsSubmittingMarriageUpdate(false);
+    }
+  };
+
+  const handleCancelMarriage = async () => {
+    setIsSubmittingMarriageUpdate(true);
+    try {
+      const partnerId = myProfile.partnerId;
+      if (!myProfile.id || !partnerId) {
+        throw new Error("Could not find partner details.");
+      }
+
+      // 1. Delete the marriageRequests document
+      const req = marriageRequests.find(
+        (r: any) =>
+          (r.senderId === myProfile.id || r.receiverId === myProfile.id) &&
+          (r.senderId === partnerId || r.receiverId === partnerId) &&
+          r.status === "accepted"
+      );
+      if (req) {
+        await deleteDoc(doc(db, "marriageRequests", req.id));
+      }
+
+      // 2. Find and delete the successStory document
+      const ssQuery = query(collection(db, "successStories"));
+      const ssSnap = await getDocs(ssQuery);
+      ssSnap.forEach(async (docSnap) => {
+        const ssData = docSnap.data();
+        if (
+          (ssData.partner1Id === myProfile.id && ssData.partner2Id === partnerId) ||
+          (ssData.partner2Id === myProfile.id && ssData.partner1Id === partnerId)
+        ) {
+          await deleteDoc(docSnap.ref);
+        }
+      });
+
+      // 3. Delete the interests document between them (completely resets matching)
+      const q1 = query(
+        collection(db, "interests"),
+        where("senderId", "==", myProfile.id),
+        where("receiverId", "==", partnerId)
+      );
+      const q2 = query(
+        collection(db, "interests"),
+        where("senderId", "==", partnerId),
+        where("receiverId", "==", myProfile.id)
+      );
+      const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+      snap1.forEach(async (d) => await deleteDoc(d.ref));
+      snap2.forEach(async (d) => await deleteDoc(d.ref));
+
+      // 4. Delete the conversations document and all its messages
+      const convId = [myProfile.id, partnerId].sort().join("_");
+      try {
+        const msgsSnap = await getDocs(collection(db, "conversations", convId, "messages"));
+        msgsSnap.forEach(async (d) => await deleteDoc(d.ref));
+        await deleteDoc(doc(db, "conversations", convId));
+      } catch (chatErr) {
+        console.error("Failed to delete chat logs, continuing reset:", chatErr);
+      }
+
+      // 5. Fetch partner's profile to retrieve their previousMaritalStatus
+      let partnerPrevStatus = "Never Married";
+      const partnerDoc = await getDoc(doc(db, "profiles", partnerId));
+      if (partnerDoc.exists()) {
+        partnerPrevStatus = partnerDoc.data().previousMaritalStatus || "Never Married";
+      }
+
+      // 6. Reset both profiles in Firestore
+      const myPrevStatus = myProfile.previousMaritalStatus || "Never Married";
+      const myProfileRef = doc(db, "profiles", myProfile.id);
+      const partnerProfileRef = doc(db, "profiles", partnerId);
+
+      await updateDoc(myProfileRef, {
+        isMarried: false,
+        maritalStatus: myPrevStatus,
+        previousMaritalStatus: null,
+        partnerId: null,
+        partnerName: null,
+        partnerPhoto: null,
+        weddingDate: null
+      });
+
+      await updateDoc(partnerProfileRef, {
+        isMarried: false,
+        maritalStatus: partnerPrevStatus,
+        previousMaritalStatus: null,
+        partnerId: null,
+        partnerName: null,
+        partnerPhoto: null,
+        weddingDate: null
+      });
+
+      // 7. Send notification to the partner about the cancellation
+      const myName = myProfile.name || myProfile.firstName || "Someone";
+      await addDoc(collection(db, "notifications"), {
+        receiverId: partnerId,
+        senderId: myProfile.id,
+        text: `${myName} cancelled the marriage connection. Your profiles have been reset.`,
+        type: "marriage_cancelled",
+        read: false,
+        createdAt: serverTimestamp()
+      });
+
+      // 8. Update local states
+      setProfiles((prev) =>
+        prev.map((p) => {
+          if (p.id === myProfile.id) {
+            return {
+              ...p,
+              isMarried: false,
+              maritalStatus: myPrevStatus,
+              previousMaritalStatus: null,
+              partnerId: null,
+              partnerName: null,
+              partnerPhoto: null,
+              weddingDate: null
+            };
+          }
+          if (p.id === partnerId) {
+            return {
+              ...p,
+              isMarried: false,
+              maritalStatus: partnerPrevStatus,
+              previousMaritalStatus: null,
+              partnerId: null,
+              partnerName: null,
+              partnerPhoto: null,
+              weddingDate: null
+            };
+          }
+          return p;
+        })
+      );
+
+      setMyProfile((prev: any) => ({
+        ...prev,
+        isMarried: false,
+        maritalStatus: myPrevStatus,
+        previousMaritalStatus: null,
+        partnerId: null,
+        partnerName: null,
+        partnerPhoto: null,
+        weddingDate: null
+      }));
+
+      showToast("Marriage connection cancelled and marital statuses reset successfully!");
+      setActiveTab("matches");
+    } catch (err: any) {
+      console.error("Error cancelling marriage connection:", err);
+      showToast("Failed to cancel marriage connection: " + err.message, "error");
+    } finally {
+      setIsSubmittingMarriageUpdate(false);
     }
   };
 
@@ -889,6 +1097,21 @@ export const Dashboard: React.FC = () => {
         };
         const { id, photo, isVerified, isPremium, isOnline, registeredAt, compatibility, onboardingCompleted, ...saveData } = savePayload;
         
+        // Construct height string if heightFt is set
+        if (saveData.heightFt) {
+          const ft = saveData.heightFt;
+          const inches = saveData.heightInches || "0";
+          saveData.height = `${ft}'${inches}"`;
+          updatedProfile.height = `${ft}'${inches}"`;
+        }
+
+        // Filter out undefined values to prevent Firestore from throwing "Unsupported field value: undefined"
+        Object.keys(saveData).forEach(key => {
+          if (saveData[key] === undefined) {
+            delete saveData[key];
+          }
+        });
+
         // Marital Status & Marriage / Divorce Logic
         const newStatus = saveData.maritalStatus;
         if (newStatus === "Getting Married" || newStatus === "Married") {
@@ -1075,6 +1298,20 @@ export const Dashboard: React.FC = () => {
     searchQuery, searchSubCaste, searchCountry, searchState, searchDistrict, searchTaluka, searchAgeMin, searchAgeMax,
     searchVerifiedOnly, searchOnlineOnly, searchMatchingOnly, searchMaritalStatus
   ]);
+  const normalizedSentInterests = useMemo(() => {
+    const sent = sentInterests.map(i => ({
+      ...i,
+      otherUserId: i.receiverId,
+      isIncoming: false
+    }));
+    const receivedApproved = approvedReceivedInterests.map(i => ({
+      ...i,
+      otherUserId: i.senderId,
+      isIncoming: true
+    }));
+    return [...sent, ...receivedApproved];
+  }, [sentInterests, approvedReceivedInterests]);
+
   const menuItems = [
     { id: "matches" as TabType, name: t("Recommended Profiles"), icon: Users, badge: profiles.length },
     { id: "search" as TabType, name: t("Advanced Search"), icon: Search },
@@ -1291,7 +1528,7 @@ export const Dashboard: React.FC = () => {
           {activeTab === "interests" && (
             <InterestsPanel
               loading={interestsLoading}
-              sentInterests={sentInterests}
+              sentInterests={normalizedSentInterests}
               pendingInterestsReceived={pendingInterestsReceived}
               profiles={profiles}
               currentUserId={myProfile?.id || ""}
@@ -1326,6 +1563,7 @@ export const Dashboard: React.FC = () => {
               uploadingPhoto={uploadingPhoto}
               onPhotoUpload={handlePhotoUpload}
               onDeletePhoto={handleDeletePhoto}
+              onEditMarriageDetails={handleOpenEditMarriageModal}
             />
           )}
 
@@ -1403,6 +1641,7 @@ export const Dashboard: React.FC = () => {
               onSetActiveDetailPhoto={setActiveDetailPhoto}
               onOpenMarriageModal={setSelectedMarriageProfile}
               showToast={showToast as (msg: string, type?: string) => void}
+              onEditMarriageDetails={handleOpenEditMarriageModal}
             />
           )}
 
@@ -1437,6 +1676,19 @@ export const Dashboard: React.FC = () => {
           setIsMarriageModalOpen(false);
           setSelectedMarriageProfile(null);
         }}
+      />
+
+      {/* Edit / Cancel Marriage Modal */}
+      <EditMarriageModal
+        isOpen={isEditMarriageModalOpen}
+        onClose={() => setIsEditMarriageModalOpen(false)}
+        onUpdate={handleUpdateMarriageDetails}
+        onCancelMarriage={handleCancelMarriage}
+        initialDate={myProfile.weddingDate || ""}
+        initialTime={myProfile.weddingTime || ""}
+        initialVenue={myProfile.venue || ""}
+        isSubmitting={isSubmittingMarriageUpdate}
+        partnerName={myProfile.partnerName || "Partner"}
       />
     </div>
   );

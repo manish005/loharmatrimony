@@ -59,6 +59,7 @@ interface MyProfileSectionProps {
   uploadingPhoto?: boolean;
   onPhotoUpload?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onDeletePhoto?: (index: number) => void;
+  onEditMarriageDetails?: () => void;
 }
 
 const MyProfileSection: React.FC<MyProfileSectionProps> = ({
@@ -75,6 +76,7 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
   uploadingPhoto = false,
   onPhotoUpload,
   onDeletePhoto,
+  onEditMarriageDetails,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [galleryIdx, setGalleryIdx] = React.useState(0);
@@ -156,11 +158,12 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
                     </div>
                   )}
                   <button
-                    disabled
-                    className="py-1.5 px-3 md:px-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 font-bold text-[10px] md:text-xs flex items-center gap-1.5 border border-amber-200/60 dark:border-amber-800/30 shadow-sm"
+                    onClick={onEditMarriageDetails}
+                    className="py-1.5 px-3 md:px-4 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/40 text-amber-600 dark:text-amber-400 font-bold text-[10px] md:text-xs flex items-center gap-1.5 border border-amber-200/60 dark:border-amber-800/30 shadow-sm cursor-pointer hover:scale-[1.02] transition-all"
+                    title="Click to edit wedding details or cancel connection"
                   >
-                    <Heart className="h-3 w-3 md:h-4 md:w-4 fill-amber-500 text-amber-500" />
-                    {myProfile.maritalStatus === "Married" || (myProfile.weddingDate && new Date(myProfile.weddingDate) < new Date()) ? "Married" : "Getting Married"}
+                    <Heart className="h-3 w-3 md:h-4 md:w-4 fill-amber-500 text-amber-500 animate-pulse" />
+                    {myProfile.maritalStatus === "Married" || (myProfile.weddingDate && new Date(myProfile.weddingDate) < new Date()) ? "Married (Click to edit)" : "Getting Married (Click to edit)"}
                   </button>
                 </div>
               )}

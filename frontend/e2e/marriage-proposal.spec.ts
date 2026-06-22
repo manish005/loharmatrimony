@@ -178,7 +178,7 @@ test.describe("Marriage Proposal E2E Flow", () => {
       const partnerNameLabel = pageManish.locator(`text=${femaleName}`);
       await expect(partnerNameLabel).toBeVisible({ timeout: 5000 });
 
-      const bannerStatus = pageManish.locator('button:has-text("Marriage Fixed")');
+      const bannerStatus = pageManish.locator('button:has-text("Getting Married")');
       await expect(bannerStatus).toBeVisible({ timeout: 5000 });
 
       // Go to Manisha's dashboard to fetch updated profile state with banner
