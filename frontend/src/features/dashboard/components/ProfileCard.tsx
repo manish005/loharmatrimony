@@ -11,7 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { isMarriageFixed } from "../dashboardHelpers";
+
 import { useLanguage } from "../../../context/LanguageContext";
 
 interface Profile {
@@ -57,7 +57,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
   onSetSelectedInvitationProfile,
 }) => {
   const { t } = useLanguage();
-  const marriageFixed = isMarriageFixed(profile.name);
+  const marriageFixed = profile.isMarried;
   const profilePhotos = profile.photos?.length > 0 ? profile.photos : (profile.photo ? [profile.photo] : []);
   const hasCarousel = profilePhotos.length > 1;
   const [carouselIdx, setCarouselIdx] = useState(0);
@@ -151,7 +151,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
 
         {!marriageFixed && (
           <div className="absolute bottom-3 left-3 bg-slate-950/85 backdrop-blur border border-white/10 px-2 py-0.5 md:px-2.5 md:py-1 rounded-lg md:rounded-xl text-[9px] md:text-[10px] font-bold text-white flex items-center gap-1">
-            <Sparkles className="h-2.5 w-2.5 md:h-3 md:w-3 text-gold-450 fill-gold-450" /> {profile.compatibility}% Match
+            <Sparkles className="h-2.5 w-2.5 md:h-3 md:w-3 text-gold-450 fill-gold-450" /> {profile.compatibility ?? "—"}% Match
           </div>
         )}
         {marriageFixed && (
@@ -179,7 +179,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
           </div>
 
           <div className="flex flex-wrap gap-1.5 pt-1 pb-1">
-            {[`${profile.age || 25} yrs`, profile.height, profile.subCaste, profile.maritalStatus].filter(Boolean).map((item, idx) => (
+            {[profile.age ? `${profile.age} yrs` : null, profile.height, profile.subCaste, profile.maritalStatus].filter(Boolean).map((item, idx) => (
               <span key={`attr1-${idx}`} className="bg-slate-100 dark:bg-dark-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] md:text-[11px] font-medium border border-slate-200 dark:border-dark-700">
                 {item}
               </span>
@@ -219,7 +219,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
           <div className="mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-slate-100 dark:border-dark-800 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <img 
-                src={profile.partnerPhoto || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop"} 
+                src={profile.partnerPhoto || ""} 
                 alt={profile.partnerName || "Partner"} 
                 className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-dark-700" 
               />

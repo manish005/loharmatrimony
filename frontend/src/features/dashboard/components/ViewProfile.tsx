@@ -119,7 +119,7 @@ const ViewProfile: React.FC<ViewProfileProps> = ({
                 )}
               </div>
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-455 mt-1">
-                Profile created by family • Last active 1 hour ago
+                {profile.isOnline ? "Online" : profile.city ? `From ${profile.city}` : "Profile Created"}
               </p>
             </div>
 
@@ -160,14 +160,56 @@ const ViewProfile: React.FC<ViewProfileProps> = ({
               </button>
             </div>
 
-            {approvedConnectionIds.includes(profile.id) && !myProfile?.isMarried && !marriageRequests.some((r: any) => (r.receiverId === profile.id || r.senderId === profile.id) && r.status !== 'rejected') && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onOpenMarriageModal(profile); }}
-                className="w-full mt-3 py-3 px-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white text-xs font-bold rounded-xl shadow-md shadow-red-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <Heart className="h-4.5 w-4.5 fill-white" /> Let's Get Married!
-              </button>
-            )}
+            {(() => {
+              const acceptedReq = marriageRequests.find((r: any) => (r.receiverId === profile.id || r.senderId === profile.id) && r.status === 'accepted');
+              const pendingReq = marriageRequests.find((r: any) => (r.receiverId === profile.id || r.senderId === profile.id) && r.status === 'pending');
+              const canPropose = approvedConnectionIds.includes(profile.id) && !myProfile?.isMarried && !acceptedReq && !pendingReq;
+
+              if (acceptedReq || profile.isMarried || myProfile?.isMarried) {
+                return (
+                  <div className="w-full mt-3 py-4 px-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl text-center">
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      <Heart className="h-4 w-4 text-amber-600 dark:text-amber-400 fill-amber-500" />
+                      <span className="text-xs font-bold text-amber-800 dark:text-amber-400">Marriage Fixed! 💍</span>
+                    </div>
+                    {(profile.weddingDate || acceptedReq?.weddingDate) && (
+                      <p className="text-[10px] text-amber-700 dark:text-amber-500 font-semibold">
+                        Wedding: {profile.weddingDate || acceptedReq.weddingDate}
+                      </p>
+                    )}
+                    {profile.partnerName && (
+                      <p className="text-[10px] text-amber-700 dark:text-amber-500 font-semibold">
+                        Partner: {profile.partnerName}
+                      </p>
+                    )}
+                  </div>
+                );
+              }
+
+              if (pendingReq) {
+                return (
+                  <div className="w-full mt-3 py-3 px-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <Heart className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <span className="text-xs font-bold text-blue-800 dark:text-blue-400">Proposal Pending</span>
+                    </div>
+                  </div>
+                );
+              }
+
+              if (canPropose) {
+                return (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onOpenMarriageModal(profile); }}
+                    className="w-full mt-3 py-3 px-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white text-xs font-bold rounded-xl shadow-md shadow-red-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Heart className="h-4.5 w-4.5 fill-white" /> Let's Get Married!
+                  </button>
+                );
+              }
+
+              return null;
+            })()}
           </div>
 
           <div className="bg-white dark:bg-dark-900 border border-slate-100 dark:border-dark-800 rounded-3xl p-6 shadow-sm">
@@ -175,10 +217,10 @@ const ViewProfile: React.FC<ViewProfileProps> = ({
             {showContactPremium ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-semibold">
                 <div className="flex items-center gap-2 text-slate-700 dark:text-slate-200">
-                  <Phone className="h-4 w-4 text-maroon-650" /> +91 91584 74210
+                  <Phone className="h-4 w-4 text-maroon-650" /> {profile.mobile || "Not specified"}
                 </div>
                 <div className="flex items-center gap-2 text-slate-700 dark:text-slate-200">
-                  <Mail className="h-4 w-4 text-maroon-650" /> {profile.name.toLowerCase().replace(" ", "")}@gmail.com
+                  <Mail className="h-4 w-4 text-maroon-650" /> {profile.email || "Not specified"}
                 </div>
                 <div className="col-span-2 flex items-center gap-2 text-slate-700 dark:text-slate-200">
                   <MapPin className="h-4 w-4 text-maroon-650" /> {profile.city}, {profile.state}
@@ -235,7 +277,7 @@ const ViewProfile: React.FC<ViewProfileProps> = ({
             </div>
             <div>
               <span className="text-slate-450 font-medium">Dietary Prefs</span>
-              <p className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{profile.foodPreference || "Vegetarian"}</p>
+              <p className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{profile.foodPreference || "Not specified"}</p>
             </div>
             <div>
               <span className="text-slate-450 font-medium">Drinking</span>
@@ -257,7 +299,7 @@ const ViewProfile: React.FC<ViewProfileProps> = ({
             </div>
             <div>
               <span className="text-slate-450 font-medium">Manglik Status</span>
-              <p className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{profile.manglik || "No"}</p>
+              <p className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{profile.manglik || "Not specified"}</p>
             </div>
             <div>
               <span className="text-slate-450 font-medium">Birth Time</span>
@@ -285,7 +327,7 @@ const ViewProfile: React.FC<ViewProfileProps> = ({
               <div className="flex items-center justify-between p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 rounded-xl mt-4">
                 <div className="text-xs font-bold text-emerald-800 dark:text-emerald-400">
                   <Sparkles className="inline-block h-3.5 w-3.5 mr-1" />
-                  You match {(profile.compatibility || 50)}% of their preferences
+                  You match {(profile.compatibility ?? 0)}% of their preferences
                 </div>
               </div>
             )}

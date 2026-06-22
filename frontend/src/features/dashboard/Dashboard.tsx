@@ -13,7 +13,7 @@ import {
   Activity, Sparkles, BookOpen, Star, Compass, User, Award, CheckCircle, 
   Smartphone, Users, Settings, Info
 } from "lucide-react";
-import { calculateAge, getSpouseName, getWeddingDate, isMarriageFixed, calculateCompatibility } from "./dashboardHelpers";
+import { calculateAge, calculateCompatibility } from "./dashboardHelpers";
 import type { TabType } from "./dashboardHelpers";
 import DashboardSidebar from "./components/DashboardSidebar";
 import MobileBottomNav from "./components/MobileBottomNav";
@@ -129,43 +129,7 @@ export const Dashboard: React.FC = () => {
   const [showContactPremium, setShowContactPremium] = useState(false);
   const [isBillingYearly, setIsBillingYearly] = useState(false);
 
-  const [myProfile, setMyProfile] = useState<any>({
-    id: "LM-2026-9852",
-    firstName: "Amit",
-    middleName: "",
-    lastName: "Lohar",
-    name: "Amit Lohar",
-    gender: "Male",
-    dob: "1998-05-15",
-    mobile: "+91 98214 74210",
-    email: "amit.lohar@gmail.com",
-    religion: "Hinduism",
-    caste: "Lohar",
-    subCaste: "Panchal",
-    motherTongue: "Marathi",
-    height: "5'9\"",
-    weight: "72 kg",
-    maritalStatus: "Never Married",
-    education: "B.E. Computer Science",
-    occupation: "Senior Web Developer",
-    income: "₹12 Lakh - ₹15 Lakh",
-    address: "402, Shiv Shakti Apartments",
-    state: "Maharashtra",
-    district: "Mumbai City",
-    city: "Mumbai",
-    familyDetails: "Joint family with 4 members.",
-    fatherOccupation: "Retired Officer",
-    motherOccupation: "Homemaker",
-    siblings: "1 Sister (unmarried)",
-    lifestyle: "Moderate",
-    foodPreference: "Vegetarian",
-    smoking: "No",
-    drinking: "No",
-    hobbies: "Reading, trekking",
-    photo: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&h=200&fit=crop",
-    isVerified: true,
-    isPremium: false
-  });
+  const [myProfile, setMyProfile] = useState<any>({});
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileFormState, setProfileFormState] = useState<any>({});
   const [profileLoading, setProfileLoading] = useState(true);
@@ -214,17 +178,17 @@ export const Dashboard: React.FC = () => {
             firstName: data.firstName || "",
             middleName: data.middleName || "",
             lastName: data.lastName || "",
-            age: data.age ? parseInt(data.age) : 25,
-            dob: data.dob || "1998-05-15",
+            age: data.age ? parseInt(data.age) : null,
+            dob: data.dob || "",
             mobile: data.mobile || "",
             email: data.email || "",
             height: data.height || "",
             weight: data.weight || "",
             gender: data.gender || "",
-            caste: data.caste || "Lohar",
-            subCaste: data.subCaste || "Panchal",
-            motherTongue: data.motherTongue || "Marathi",
-            maritalStatus: data.maritalStatus || "Never Married",
+            caste: data.caste || "",
+            subCaste: data.subCaste || "",
+            motherTongue: data.motherTongue || "",
+            maritalStatus: data.maritalStatus || "",
             education: data.education || "",
             occupation: data.occupation || "",
             income: data.income || "",
@@ -237,16 +201,16 @@ export const Dashboard: React.FC = () => {
             motherOccupation: data.motherOccupation || "",
             siblings: data.siblings || "",
             lifestyle: data.lifestyle || "",
-            foodPreference: data.foodPreference || "Vegetarian",
-            smoking: data.smoking || "No",
-            drinking: data.drinking || "No",
+            foodPreference: data.foodPreference || "",
+            smoking: data.smoking || "",
+            drinking: data.drinking || "",
             hobbies: data.hobbies || "",
             photos: data.photos || [],
             photo: data.photos && data.photos.length > 0 ? data.photos[0] : "",
-            compatibility: data.compatibility || 85,
-            isOnline: data.isOnline !== undefined ? data.isOnline : true,
-            isVerified: data.isVerified !== undefined ? data.isVerified : false,
-            isPremium: data.isPremium !== undefined ? data.isPremium : false,
+            compatibility: data.compatibility || null,
+            isOnline: data.isOnline || false,
+            isVerified: data.isVerified || false,
+            isPremium: data.isPremium || false,
             subscriptionPlan: data.subscriptionPlan || "free",
             bio: data.bio || "",
             onboardingCompleted: data.onboardingCompleted || false,
@@ -262,7 +226,7 @@ export const Dashboard: React.FC = () => {
             // Horoscope
             rashi: data.rashi || "",
             nakshatra: data.nakshatra || "",
-            manglik: data.manglik || "No",
+            manglik: data.manglik || "",
             birthTime: data.birthTime || "",
             birthPlace: data.birthPlace || "",
             kycStatus: data.kycStatus || "",
@@ -1051,7 +1015,7 @@ export const Dashboard: React.FC = () => {
     list = list.filter(p => p.gender === oppositeGender);
 
     if (activeTab === "matches" || activeTab === "search") {
-      list = list.filter(p => !isMarriageFixed(p.name) && !p.isMarried);
+      list = list.filter(p => !p.isMarried);
     }
 
     if (activeTab === "shortlisted") {

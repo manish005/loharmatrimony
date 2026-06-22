@@ -38,21 +38,21 @@ export const SearchProfiles: React.FC = () => {
           return {
             id: doc.id,
             name: data.name || "Anonymous",
-            age: data.age ? parseInt(data.age) : 25,
-            height: data.height || "5'5\"",
-            caste: data.caste || "Lohar",
-            subCaste: data.subCaste || "Panchal",
-            education: data.education || "Graduate",
-            occupation: data.occupation || "Employee",
-            income: data.income || "₹5 Lakh",
-            city: data.city || "Mumbai",
-            state: data.state || "Maharashtra",
-            photo: data.photos && data.photos.length > 0 ? data.photos[0] : "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop",
-            compatibility: data.compatibility || 85,
-            isOnline: data.isOnline !== undefined ? data.isOnline : true,
-            isVerified: data.isVerified !== undefined ? data.isVerified : false,
-            isPremium: data.isPremium !== undefined ? data.isPremium : false,
-            bio: data.bio || "No bio added."
+            age: data.age ? parseInt(data.age) : null,
+            height: data.height || "",
+            caste: data.caste || "",
+            subCaste: data.subCaste || "",
+            education: data.education || "",
+            occupation: data.occupation || "",
+            income: data.income || "",
+            city: data.city || "",
+            state: data.state || "",
+            photo: data.photos && data.photos.length > 0 ? data.photos[0] : "",
+            compatibility: data.compatibility || null,
+            isOnline: data.isOnline || false,
+            isVerified: data.isVerified || false,
+            isPremium: data.isPremium || false,
+            bio: data.bio || ""
           };
         });
 

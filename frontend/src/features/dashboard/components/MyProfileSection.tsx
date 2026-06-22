@@ -113,7 +113,7 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
                 <div>
                   <h3 className="font-serif text-xl font-bold text-slate-900 dark:text-white">{myProfile.name}</h3>
                   <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">
-                    {myProfile.occupation || "Member"} &middot; {myProfile.subCaste || "Lohar"}
+                    {myProfile.occupation || "Member"} &middot; {myProfile.subCaste || "Choose sub-caste"}
                   </p>
                 </div>
                 {myProfile.isVerified && (
@@ -777,7 +777,7 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
               </div>
               <div className="flex justify-between items-center py-1.5 border-b border-slate-50 dark:border-dark-850">
                 <span className="text-slate-500">Marital Status</span>
-                <strong className="text-slate-900 dark:text-white font-semibold">{myProfile.maritalStatus || "Never Married"}</strong>
+                <strong className="text-slate-900 dark:text-white font-semibold">{myProfile.maritalStatus || "Not specified"}</strong>
               </div>
               <div className="flex justify-between items-center py-1.5 border-b border-slate-50 dark:border-dark-850">
                 <span className="text-slate-500">Mother Tongue</span>
@@ -895,7 +895,7 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
               </div>
               <div className="py-1.5">
                 <span className="text-slate-500 block mb-0.5">Food</span>
-                <strong className="text-slate-900 dark:text-white font-semibold">{myProfile.foodPreference || "Vegetarian"}</strong>
+                <strong className="text-slate-900 dark:text-white font-semibold">{myProfile.foodPreference || "Not specified"}</strong>
               </div>
               <div className="py-1.5">
                 <span className="text-slate-500 block mb-0.5">Lifestyle</span>

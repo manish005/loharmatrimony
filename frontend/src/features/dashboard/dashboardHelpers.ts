@@ -33,37 +33,6 @@ export const calculateCompatibility = (myProfile: any, otherProfile: any) => {
   return Math.min(Math.max(score, 45), 100);
 };
 
-export const isMarriageFixed = (name: string) => {
-  if (!name) return false;
-  const firstName = name.split(" ")[0].toLowerCase();
-  const fixedNames = ["amit", "smita", "rajesh", "aarti", "neha", "suresh", "anjali", "manoj"];
-  return fixedNames.includes(firstName);
-};
-
-export const getWeddingDate = (name: string) => {
-  if (!name) return "";
-  const firstName = name.split(" ")[0].toLowerCase();
-  if (firstName === "amit" || firstName === "smita") return "November 12, 2025";
-  if (firstName === "rajesh" || firstName === "aarti") return "January 04, 2026";
-  if (firstName === "neha" || firstName === "suresh") return "February 18, 2026";
-  if (firstName === "anjali" || firstName === "manoj") return "March 10, 2026";
-  return "";
-};
-
-export const getSpouseName = (name: string) => {
-  if (!name) return "";
-  const firstName = name.split(" ")[0].toLowerCase();
-  if (firstName === "amit") return "Smita";
-  if (firstName === "smita") return "Amit";
-  if (firstName === "rajesh") return "Aarti";
-  if (firstName === "aarti") return "Rajesh";
-  if (firstName === "neha") return "Suresh";
-  if (firstName === "suresh") return "Neha";
-  if (firstName === "anjali") return "Manoj";
-  if (firstName === "manoj") return "Anjali";
-  return "";
-};
-
 export type TabType =
   | "matches"
   | "search"

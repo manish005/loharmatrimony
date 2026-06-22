@@ -1,7 +1,7 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, Calendar, X } from "lucide-react";
-import { getSpouseName, getWeddingDate } from "../dashboardHelpers";
+
 
 interface Profile {
   id: string;
@@ -73,10 +73,7 @@ const WeddingInvitationModal: React.FC<WeddingInvitationModalProps> = ({
 
                 <div className="space-y-2">
                   <h3 className="text-lg sm:text-xl font-extrabold text-red-900 dark:text-red-950 font-serif">
-                    {selectedInvitationProfile.gender === "Female"
-                      ? `${selectedInvitationProfile.name.split(" ")[0]} & ${getSpouseName(selectedInvitationProfile.name)}`
-                      : `${getSpouseName(selectedInvitationProfile.name)} & ${selectedInvitationProfile.name.split(" ")[0]}`
-                    }
+                    {selectedInvitationProfile.name.split(" ")[0]} & {selectedInvitationProfile.partnerName || "Partner"}
                   </h3>
                   <p className="text-[10px] uppercase font-bold text-[#d4af37]">Tie the Knot</p>
                 </div>
@@ -84,7 +81,7 @@ const WeddingInvitationModal: React.FC<WeddingInvitationModalProps> = ({
                 <div className="pt-2 space-y-1.5">
                   <div className="flex items-center justify-center gap-1 text-slate-800 font-bold text-xs sm:text-sm">
                     <Calendar className="h-4 w-4 text-red-700" />
-                    <span>{getWeddingDate(selectedInvitationProfile.name) || "November 2025"}</span>
+                    <span>{selectedInvitationProfile.weddingDate || "Wedding Date TBD"}</span>
                   </div>
                   <p className="text-[10px] text-slate-500 font-medium">Grand Palace Resort, Maharashtra</p>
                 </div>
