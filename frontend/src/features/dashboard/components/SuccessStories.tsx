@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { Heart, Calendar, PartyPopper, ChevronDown } from "lucide-react";
+import { Heart, Calendar, PartyPopper, ChevronDown, Filter } from "lucide-react";
 import { collection, onSnapshot, query, where, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../../config/firebase";
 
@@ -25,7 +25,8 @@ interface SuccessStoriesProps {
 }
 
 const SuccessStories: React.FC<SuccessStoriesProps> = ({ onSelectStory, myProfile, showToast }) => {
-  const [couples, setCouples] = useState<CoupleEntry[]>([]);
+  const [profilesData, setProfilesData] = useState<any[]>([]);
+  const [storiesData, setStoriesData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "today" | "upcoming" | "married">("all");
 
@@ -34,49 +35,7 @@ const SuccessStories: React.FC<SuccessStoriesProps> = ({ onSelectStory, myProfil
       query(collection(db, "profiles"), where("isMarried", "==", true)),
       (snapshot) => {
         const marriedData = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as any));
-        const paired = new Set<string>();
-        const result: CoupleEntry[] = [];
-
-        marriedData.forEach((p: any) => {
-          if (paired.has(p.id)) return;
-          const partner = marriedData.find((pp: any) => pp.id === p.partnerId);
-          if (partner) {
-            paired.add(p.id);
-            paired.add(partner.id);
-            result.push({
-              coupleId: [p.id, partner.id].sort().join("_"),
-              partner1Id: p.id,
-              partner2Id: partner.id,
-              partner1Name: p.name || "User",
-              partner2Name: partner.name || "User",
-              partner1Photo: p.photos?.[0] || p.photo || "",
-              partner2Photo: partner.photos?.[0] || partner.photo || "",
-              partner1Gender: p.gender || "",
-              partner2Gender: partner.gender || "",
-              weddingDate: p.weddingDate || "",
-              venue: "",
-              story: ""
-            });
-          } else {
-            paired.add(p.id);
-            result.push({
-              coupleId: p.id + "_single",
-              partner1Id: p.id,
-              partner2Id: p.partnerId || "",
-              partner1Name: p.name || "User",
-              partner2Name: p.partnerName || "Partner",
-              partner1Photo: p.photos?.[0] || p.photo || "",
-              partner2Photo: p.partnerPhoto || "",
-              partner1Gender: p.gender || "",
-              partner2Gender: "",
-              weddingDate: p.weddingDate || "",
-              venue: "",
-              story: ""
-            });
-          }
-        });
-
-        setCouples(result);
+        setProfilesData(marriedData);
         setLoading(false);
       },
       (err) => {
@@ -86,17 +45,8 @@ const SuccessStories: React.FC<SuccessStoriesProps> = ({ onSelectStory, myProfil
     );
 
     const unsubStories = onSnapshot(collection(db, "successStories"), (snapshot) => {
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === "added" || change.type === "modified") {
-          const data = change.doc.data();
-          const storyCoupleId = [data.partner1Id, data.partner2Id].sort().join("_");
-          setCouples(prev => prev.map(c =>
-            c.coupleId === storyCoupleId
-              ? { ...c, story: data.story || c.story, venue: data.venue || c.venue }
-              : c
-          ));
-        }
-      });
+      const stories = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as any));
+      setStoriesData(stories);
     });
 
     return () => {
@@ -104,6 +54,69 @@ const SuccessStories: React.FC<SuccessStoriesProps> = ({ onSelectStory, myProfil
       unsubStories();
     };
   }, []);
+
+  const couples = useMemo(() => {
+    const paired = new Set<string>();
+    const result: CoupleEntry[] = [];
+
+    profilesData.forEach((p: any) => {
+      if (paired.has(p.id)) return;
+      const partner = profilesData.find((pp: any) => pp.id === p.partnerId);
+      
+      let entry: CoupleEntry;
+      if (partner) {
+        paired.add(p.id);
+        paired.add(partner.id);
+        entry = {
+          coupleId: [p.id, partner.id].sort().join("_"),
+          partner1Id: p.id,
+          partner2Id: partner.id,
+          partner1Name: p.name || "User",
+          partner2Name: partner.name || "User",
+          partner1Photo: p.photos?.[0] || p.photo || "",
+          partner2Photo: partner.photos?.[0] || partner.photo || "",
+          partner1Gender: p.gender || "",
+          partner2Gender: partner.gender || "",
+          weddingDate: p.weddingDate || "",
+          venue: "",
+          story: ""
+        };
+      } else {
+        paired.add(p.id);
+        entry = {
+          coupleId: p.id + "_single",
+          partner1Id: p.id,
+          partner2Id: p.partnerId || "",
+          partner1Name: p.name || "User",
+          partner2Name: p.partnerName || "Partner",
+          partner1Photo: p.photos?.[0] || p.photo || "",
+          partner2Photo: p.partnerPhoto || "",
+          partner1Gender: p.gender || "",
+          partner2Gender: "",
+          weddingDate: p.weddingDate || "",
+          venue: "",
+          story: ""
+        };
+      }
+
+      // Merge with success story
+      const story = storiesData.find(s => 
+        (s.partner1Id === entry.partner1Id && s.partner2Id === entry.partner2Id) ||
+        (s.partner1Id === entry.partner2Id && s.partner2Id === entry.partner1Id)
+      );
+      if (story) {
+        entry.story = story.story || entry.story;
+        entry.venue = story.venue || entry.venue;
+        if (story.weddingDate) {
+          entry.weddingDate = story.weddingDate;
+        }
+      }
+
+      result.push(entry);
+    });
+
+    return result;
+  }, [profilesData, storiesData]);
 
   const todayStr = new Date().toISOString().split("T")[0];
 
@@ -119,7 +132,7 @@ const SuccessStories: React.FC<SuccessStoriesProps> = ({ onSelectStory, myProfil
     return list;
   }, [couples, filter]);
 
-  const todayCouples = couples.filter(c => isToday(c.weddingDate));
+  const todayCouples = useMemo(() => couples.filter(c => isToday(c.weddingDate)), [couples]);
 
   const handleCongratulate = async (couple: CoupleEntry) => {
     try {
@@ -171,32 +184,27 @@ const SuccessStories: React.FC<SuccessStoriesProps> = ({ onSelectStory, myProfil
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="font-serif text-xl font-bold text-slate-900 dark:text-white mt-1">Success Stories</h2>
-        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold mt-0.5">
-          Celebrate couples who found their match through Lohar Matrimony
-        </p>
-      </div>
-
-      {/* Filter */}
-      <div className="flex items-center gap-2">
-        <div className="relative">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/40 dark:border-dark-800/40 pb-4">
+        <div>
+          <h2 className="font-serif text-xl font-bold text-slate-900 dark:text-white">Success Stories</h2>
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold mt-0.5">
+            Celebrate couples who found their match through Lohar Matrimony
+          </p>
+        </div>
+        <div className="relative shrink-0 self-end sm:self-auto">
+          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value as any)}
-            className="appearance-none text-xs font-bold border border-slate-200 dark:border-dark-800 rounded-xl px-3 py-2 pr-8 bg-white dark:bg-dark-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-maroon-700/20 cursor-pointer"
+            className="appearance-none text-xs font-bold border border-slate-200 dark:border-dark-800 rounded-xl pl-8 pr-8 py-2 bg-white dark:bg-dark-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-maroon-700/20 cursor-pointer min-w-[140px]"
           >
-            <option value="all">All</option>
+            <option value="all">All Stories</option>
             <option value="today">Today's Marriages</option>
             <option value="upcoming">Upcoming Marriages</option>
-            <option value="married">Married</option>
+            <option value="married">Married Couples</option>
           </select>
-          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
         </div>
-        <span className="text-[10px] text-slate-400 font-semibold">
-          {couples.length} couple{couples.length !== 1 ? "s" : ""}
-          {filter !== "all" && ` • ${filtered.length} shown`}
-        </span>
       </div>
 
       {loading ? (

@@ -263,50 +263,24 @@ export const Dashboard: React.FC = () => {
               .replace(/(^\w|\_\w)/g, (m: string) => m.toUpperCase().replace("_", " "))
               || "User";
             const guessedGender = isFemale ? "Female" : "Male";
-            try {
-              const docRef = await addDoc(collection(db, "profiles"), {
-                uid: currentUser.uid,
-                name: guessedName,
-                firstName: guessedName,
-                middleName: "",
-                lastName: "",
-                email: userEmail,
-                gender: guessedGender,
-                age: 25,
-                dob: "1999-06-15",
-                mobile: "",
-                height: guessedGender === "Female" ? "5'3\"" : "5'9\"",
-                weight: "",
-                religion: "Hinduism",
-                caste: "Lohar",
-                subCaste: "Panchal",
-                motherTongue: "Marathi",
-                maritalStatus: "Never Married",
-                education: "",
-                occupation: "",
-                income: "",
-                city: "",
-                state: "Maharashtra",
-                district: "",
-                address: "",
-                familyDetails: "",
-                fatherOccupation: "",
-                motherOccupation: "",
-                siblings: "",
-                lifestyle: "",
-                foodPreference: "Vegetarian",
-                smoking: "No",
-                drinking: "No",
-                hobbies: "",
-                photos: [],
-                isOnline: true,
-                isVerified: false,
-                isPremium: false,
-                subscriptionPlan: "free",
-                bio: "",
-                registeredAt: new Date().toISOString(),
-                onboardingCompleted: false
-              });
+              try {
+                const docRef = await addDoc(collection(db, "profiles"), {
+                  uid: currentUser.uid,
+                  name: guessedName,
+                  firstName: guessedName,
+                  middleName: "",
+                  lastName: "",
+                  email: userEmail,
+                  gender: guessedGender,
+                  mobile: "",
+                  photos: [],
+                  isOnline: true,
+                  isVerified: false,
+                  isPremium: false,
+                  subscriptionPlan: "free",
+                  registeredAt: new Date().toISOString(),
+                  onboardingCompleted: false
+                });
               setMyProfile({
                 id: docRef.id,
                 firstName: guessedName,
@@ -915,49 +889,59 @@ export const Dashboard: React.FC = () => {
         };
         const { id, photo, isVerified, isPremium, isOnline, registeredAt, compatibility, onboardingCompleted, ...saveData } = savePayload;
         
-        // Divorce Logic: If user is changing to Divorced/Awaiting Divorce/Widowed
+        // Marital Status & Marriage / Divorce Logic
         const newStatus = saveData.maritalStatus;
-        if ((newStatus === "Divorced" || newStatus === "Awaiting Divorce" || newStatus === "Widowed") && myProfile.isMarried) {
+        if (newStatus === "Getting Married" || newStatus === "Married") {
+          saveData.isMarried = true;
+          updatedProfile.isMarried = true;
+        } else if (
+          newStatus === "Divorced" || 
+          newStatus === "Awaiting Divorce" || 
+          newStatus === "Widowed" || 
+          newStatus === "Never Married" || 
+          newStatus === "Awaiting Divorced"
+        ) {
           saveData.isMarried = false;
+          updatedProfile.isMarried = false;
           
-          // Find the success story where this user is a partner
-          const ssQuery = query(collection(db, "successStories"));
-          const ssSnap = await getDocs(ssQuery);
-          
-          let partnerId = null;
-          let storyDocId = null;
-          
-          ssSnap.forEach(doc => {
-            const data = doc.data();
-            if (data.partner1Id === myProfile.id) {
-              partnerId = data.partner2Id;
-              storyDocId = doc.id;
-            } else if (data.partner2Id === myProfile.id) {
-              partnerId = data.partner1Id;
-              storyDocId = doc.id;
-            }
-          });
-
-          // Un-marry the partner and delete the success story
-          if (partnerId) {
-            const partnerRef = doc(db, "profiles", partnerId);
-            await updateDoc(partnerRef, { 
-              isMarried: false,
-              maritalStatus: "Divorced"
+          if (myProfile.isMarried) {
+            // Find the success story where this user is a partner
+            const ssQuery = query(collection(db, "successStories"));
+            const ssSnap = await getDocs(ssQuery);
+            
+            let partnerId = null;
+            let storyDocId = null;
+            
+            ssSnap.forEach(doc => {
+              const data = doc.data();
+              if (data.partner1Id === myProfile.id) {
+                partnerId = data.partner2Id;
+                storyDocId = doc.id;
+              } else if (data.partner2Id === myProfile.id) {
+                partnerId = data.partner1Id;
+                storyDocId = doc.id;
+              }
             });
-          }
-          if (storyDocId) {
-            await deleteDoc(doc(db, "successStories", storyDocId));
+
+            // Un-marry the partner and delete the success story
+            if (partnerId) {
+              const partnerRef = doc(db, "profiles", partnerId);
+              await updateDoc(partnerRef, { 
+                isMarried: false,
+                maritalStatus: "Divorced"
+              });
+            }
+            if (storyDocId) {
+              await deleteDoc(doc(db, "successStories", storyDocId));
+            }
           }
         }
 
         await updateDoc(docRef, saveData);
         updatedProfile.id = myProfile.id;
-        if ((newStatus === "Divorced" || newStatus === "Awaiting Divorce" || newStatus === "Widowed") && myProfile.isMarried) {
-          updatedProfile.isMarried = false;
-        }
       }
       setMyProfile(updatedProfile);
+      setProfiles(prev => prev.map(p => p.id === myProfile.id ? updatedProfile : p));
       setIsEditingProfile(false);
       showToast("Profile updated successfully!");
     } catch (err: any) {

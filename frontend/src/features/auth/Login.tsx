@@ -125,6 +125,7 @@ export const Login: React.FC = () => {
               <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-450" />
               <input
                 type="email"
+                name="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -141,6 +142,7 @@ export const Login: React.FC = () => {
               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-450" />
               <input
                 type={showPassword ? "text" : "password"}
+                name="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

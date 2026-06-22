@@ -65,7 +65,7 @@ export const RegisterWizard: React.FC = () => {
     // Placeholders for secondary details (completed in dashboard)
     height: "",
     weight: "",
-    maritalStatus: "Never Married",
+    maritalStatus: "",
     education: "",
     occupation: "",
     income: "",
@@ -78,9 +78,9 @@ export const RegisterWizard: React.FC = () => {
     motherOccupation: "",
     siblings: "",
     lifestyle: "",
-    foodPreference: "Vegetarian",
-    smoking: "No",
-    drinking: "No",
+    foodPreference: "",
+    smoking: "",
+    drinking: "",
     hobbies: ""
   });
 

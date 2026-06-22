@@ -113,7 +113,7 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
                 <div>
                   <h3 className="font-serif text-xl font-bold text-slate-900 dark:text-white">{myProfile.name}</h3>
                   <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">
-                    {myProfile.occupation || "Member"} &middot; {myProfile.subCaste || "Choose sub-caste"}
+                    {myProfile.occupation || "Not specified"} &middot; {myProfile.subCaste || "Not specified"}
                   </p>
                 </div>
                 {myProfile.isVerified && (
@@ -135,30 +135,32 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
                 </button>
               )}
 
-              {myProfile.partnerId && !isEditingProfile && (
-                <div className="mt-4 pt-3 border-t border-slate-100 dark:border-dark-800 flex items-center justify-between sm:justify-start sm:gap-6">
-                  <div className="flex items-center gap-2">
-                    {myProfile.partnerPhoto ? (
-                      <img 
-                        src={myProfile.partnerPhoto} 
-                        alt={myProfile.partnerName || "Partner"} 
-                        className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover border border-slate-200 dark:border-dark-700 shadow-sm" 
-                      />
-                    ) : (
-                      <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-amber-200 dark:bg-amber-800 flex items-center justify-center text-amber-700 dark:text-amber-300 font-bold text-xs md:text-sm border border-slate-200 dark:border-dark-700">
-                        {(myProfile.partnerName || "P").charAt(0)}
-                      </div>
-                    )}
-                    <span className="text-xs md:text-sm font-bold text-slate-700 dark:text-slate-300">
-                      {myProfile.partnerName}
-                    </span>
-                  </div>
+              {(myProfile.isMarried || myProfile.partnerId || myProfile.maritalStatus === "Getting Married" || myProfile.maritalStatus === "Married") && !isEditingProfile && (
+                <div className="mt-4 pt-3 border-t border-slate-100 dark:border-dark-800 flex flex-wrap items-center justify-between sm:justify-start sm:gap-6">
+                  {myProfile.partnerId && (
+                    <div className="flex items-center gap-2">
+                      {myProfile.partnerPhoto ? (
+                        <img 
+                          src={myProfile.partnerPhoto} 
+                          alt={myProfile.partnerName || "Partner"} 
+                          className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover border border-slate-200 dark:border-dark-700 shadow-sm" 
+                        />
+                      ) : (
+                        <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-amber-200 dark:bg-amber-800 flex items-center justify-center text-amber-700 dark:text-amber-300 font-bold text-xs md:text-sm border border-slate-200 dark:border-dark-700">
+                          {(myProfile.partnerName || "P").charAt(0)}
+                        </div>
+                      )}
+                      <span className="text-xs md:text-sm font-bold text-slate-700 dark:text-slate-300">
+                        {myProfile.partnerName}
+                      </span>
+                    </div>
+                  )}
                   <button
                     disabled
                     className="py-1.5 px-3 md:px-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 font-bold text-[10px] md:text-xs flex items-center gap-1.5 border border-amber-200/60 dark:border-amber-800/30 shadow-sm"
                   >
                     <Heart className="h-3 w-3 md:h-4 md:w-4 fill-amber-500 text-amber-500" />
-                    {myProfile.weddingDate && new Date(myProfile.weddingDate) < new Date() ? "Married" : "Getting Married"}
+                    {myProfile.maritalStatus === "Married" || (myProfile.weddingDate && new Date(myProfile.weddingDate) < new Date()) ? "Married" : "Getting Married"}
                   </button>
                 </div>
               )}
@@ -326,7 +328,7 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
                     <option value="Married">Married</option>
                     <option value="Divorced">Divorced</option>
                     <option value="Widowed">Widowed</option>
-                    <option value="Awaiting Divorced">Awaiting Divorced</option>
+                    <option value="Awaiting Divorce">Awaiting Divorce</option>
                   </select>
               </div>
               <div>
@@ -907,7 +909,7 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
               </div>
               <div className="py-1.5">
                 <span className="text-slate-500 block mb-0.5">Lifestyle</span>
-                <strong className="text-slate-900 dark:text-white font-semibold">{myProfile.lifestyle || "Moderate"}</strong>
+                <strong className="text-slate-900 dark:text-white font-semibold">{myProfile.lifestyle || "Not specified"}</strong>
               </div>
               <div className="py-1.5">
                 <span className="text-slate-500 block mb-0.5">Family</span>
@@ -957,7 +959,7 @@ const MyProfileSection: React.FC<MyProfileSectionProps> = ({
             </div>
             <div className="bg-slate-50 dark:bg-dark-950 border border-slate-100 dark:border-dark-850 p-3 rounded-xl">
               <span className="text-[10px] text-slate-400 block mb-0.5">Manglik</span>
-              <strong className="text-slate-800 dark:text-slate-200">{myProfile.manglik || "No"}</strong>
+              <strong className="text-slate-800 dark:text-slate-200">{myProfile.manglik || "Not specified"}</strong>
             </div>
             <div className="bg-slate-50 dark:bg-dark-950 border border-slate-100 dark:border-dark-850 p-3 rounded-xl">
               <span className="text-[10px] text-slate-400 block mb-0.5">Birth Time & Place</span>

@@ -31,11 +31,11 @@ const HoroscopePanel: React.FC<HoroscopePanelProps> = ({ profile }) => {
         </div>
         <div className="bg-white/50 dark:bg-dark-900/50 border border-slate-100 p-3 rounded-xl">
           <span className="text-[10px] text-slate-400 block mb-0.5">Nakshatra</span>
-          <strong className="text-slate-800 dark:text-slate-200">{profile?.nakshatra || "Ashwini (Charan 3)"}</strong>
+          <strong className="text-slate-800 dark:text-slate-200">{profile?.nakshatra || "Not specified"}</strong>
         </div>
         <div className="bg-white/50 dark:bg-dark-900/50 border border-slate-100 p-3 rounded-xl">
           <span className="text-[10px] text-slate-400 block mb-0.5">Manglik</span>
-          <strong className="text-slate-800 dark:text-slate-200">{profile?.manglik || "No"}</strong>
+          <strong className="text-slate-800 dark:text-slate-200">{profile?.manglik || "Not specified"}</strong>
         </div>
         <div className="bg-white/50 dark:bg-dark-900/50 border border-slate-100 p-3 rounded-xl">
           <span className="text-[10px] text-slate-400 block mb-0.5">Birth Time & Place</span>

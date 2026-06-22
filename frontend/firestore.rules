@@ -16,9 +16,11 @@ service cloud.firestore {
       // Anyone can read profiles (directory listing)
       allow read: if request.auth != null;
 
-      // User can create their own profile (email must match)
-      allow create: if request.auth != null
-        && request.auth.token.email == request.resource.data.email;
+      // User can create their own profile (email must match), or any profile if they are admin
+      allow create: if request.auth != null && (
+        request.auth.token.email == request.resource.data.email ||
+        request.auth.token.email.matches(".*admin.*")
+      );
 
       // User can update their own profile, or any profile if they are admin
       allow update: if request.auth != null && (
@@ -27,8 +29,8 @@ service cloud.firestore {
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isMarried', 'maritalStatus', 'partnerId', 'partnerName', 'partnerPhoto', 'weddingDate'])
       );
 
-      // No deletion allowed (profiles are permanent)
-      allow delete: if false;
+      // Admin can delete profiles for DB resets
+      allow delete: if request.auth != null && request.auth.token.email.matches(".*admin.*");
     }
 
     // ========================
@@ -40,7 +42,7 @@ service cloud.firestore {
     // Auth is enforced at the application level (buttons, navigation).
     match /conversations/{conversationId} {
       allow read, create, update: if request.auth != null;
-      allow delete: if false;
+      allow delete: if request.auth != null && request.auth.token.email.matches(".*admin.*");
 
       // ========================
       // MESSAGES SUBCOLLECTION
@@ -50,7 +52,7 @@ service cloud.firestore {
       // senderId is a Firestore profile doc ID (not auth UID)
       match /messages/{messageId} {
         allow read, create, update: if request.auth != null;
-        allow delete: if false;
+        allow delete: if request.auth != null && request.auth.token.email.matches(".*admin.*");
       }
     }
 
@@ -81,6 +83,7 @@ service cloud.firestore {
     // ========================
     match /supportTickets/{ticketId} {
       allow read, create, update: if request.auth != null;
+      allow delete: if request.auth != null && request.auth.token.email.matches(".*admin.*");
     }
 
     // ========================
@@ -95,6 +98,7 @@ service cloud.firestore {
     // ========================
     match /subscriptions/{subId} {
       allow read, create, update: if request.auth != null;
+      allow delete: if request.auth != null && request.auth.token.email.matches(".*admin.*");
     }
   }
 }

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../../config/firebase";
+import { auth, db } from "../../config/firebase";
+import { collection, query, where, getDocs, getCountFromServer } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Check, 
@@ -18,8 +19,21 @@ import {
 import heroBg from "../../assets/hero.png";
 import { useTheme } from "../../context/ThemeContext";
 
-// Mock profiles for newly joined members
-const NEW_MEMBERS = [
+// Age helper
+const calculateAge = (dobString: string) => {
+  if (!dobString) return 25;
+  const today = new Date();
+  const birthDate = new Date(dobString);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+};
+
+// Mock profiles for newly joined members fallback
+const MOCK_NEW_MEMBERS = [
   {
     id: 1,
     name: "Sunita Lohar",
@@ -92,8 +106,8 @@ const NEW_MEMBERS = [
   }
 ];
 
-// Success stories
-const SUCCESS_STORIES = [
+// Success stories fallback
+const MOCK_SUCCESS_STORIES = [
   {
     id: 1,
     couple: "Amit & Smita",
@@ -210,36 +224,127 @@ export const LandingPage: React.FC = () => {
     return () => unsubscribe();
   }, [navigate, setTheme]);
 
-  // Statistics counters animated mockup state
+  // Statistics counters and lists from Firebase
   const [stats, setStats] = useState({
-    members: 14000,
-    active: 7800,
-    verified: 11000,
-    success: 1500
+    members: 0,
+    active: 0,
+    verified: 0,
+    success: 0
   });
+  const [newMembersList, setNewMembersList] = useState<any[]>([]);
+  const [successStoriesList, setSuccessStoriesList] = useState<any[]>([]);
 
   useEffect(() => {
-    // Quick count-up mockup
-    const interval = setInterval(() => {
-      setStats(prev => {
-        const nextMembers = prev.members < 15240 ? prev.members + 120 : 15240;
-        const nextActive = prev.active < 8420 ? prev.active + 60 : 8420;
-        const nextVerified = prev.verified < 12100 ? prev.verified + 100 : 12100;
-        const nextSuccess = prev.success < 1840 ? prev.success + 30 : 1840;
-        
-        if (nextMembers === 15240 && nextActive === 8420 && nextVerified === 12100 && nextSuccess === 1840) {
-          clearInterval(interval);
-        }
-        return {
-          members: nextMembers,
-          active: nextActive,
-          verified: nextVerified,
-          success: nextSuccess
-        };
-      });
-    }, 40);
-    return () => clearInterval(interval);
+    const fetchRealData = async () => {
+      try {
+        const [totalSnap, activeSnap, verifiedSnap, successSnap] = await Promise.all([
+          getCountFromServer(collection(db, "profiles")),
+          getCountFromServer(query(collection(db, "profiles"), where("isOnline", "==", true))),
+          getCountFromServer(query(collection(db, "profiles"), where("isVerified", "==", true))),
+          getCountFromServer(collection(db, "successStories"))
+        ]);
+
+        const totalCount = totalSnap.data().count;
+        const activeCount = activeSnap.data().count;
+        const verifiedCount = verifiedSnap.data().count;
+        const successCount = successSnap.data().count;
+
+        let currentMembers = 0;
+        let currentActive = 0;
+        let currentVerified = 0;
+        let currentSuccess = 0;
+
+        const interval = setInterval(() => {
+          let done = true;
+          if (currentMembers < totalCount) {
+            currentMembers = Math.min(currentMembers + Math.ceil(totalCount / 20), totalCount);
+            done = false;
+          }
+          if (currentActive < activeCount) {
+            currentActive = Math.min(currentActive + Math.ceil(activeCount / 20), activeCount);
+            done = false;
+          }
+          if (currentVerified < verifiedCount) {
+            currentVerified = Math.min(currentVerified + Math.ceil(verifiedCount / 20), verifiedCount);
+            done = false;
+          }
+          if (currentSuccess < successCount) {
+            currentSuccess = Math.min(currentSuccess + Math.ceil(successCount / 20), successCount);
+            done = false;
+          }
+
+          setStats({
+            members: currentMembers,
+            active: currentActive,
+            verified: currentVerified,
+            success: currentSuccess
+          });
+
+          if (done) {
+            clearInterval(interval);
+          }
+        }, 50);
+      } catch (err) {
+        console.error("Failed to load dashboard statistics:", err);
+      }
+    };
+
+    const fetchNewMembers = async () => {
+      try {
+        const q = query(
+          collection(db, "profiles"),
+          where("onboardingCompleted", "==", true)
+        );
+        const snap = await getDocs(q);
+        let members = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+        members.sort((a, b) => {
+          const dateA = a.registeredAt ? new Date(a.registeredAt).getTime() : 0;
+          const dateB = b.registeredAt ? new Date(b.registeredAt).getTime() : 0;
+          return dateB - dateA;
+        });
+        setNewMembersList(members.slice(0, 5));
+      } catch (err) {
+        console.error("Failed to load new members:", err);
+      }
+    };
+
+    const fetchStories = async () => {
+      try {
+        const snap = await getDocs(collection(db, "successStories"));
+        const stories = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+        setSuccessStoriesList(stories);
+      } catch (err) {
+        console.error("Failed to load success stories:", err);
+      }
+    };
+
+    fetchRealData();
+    fetchNewMembers();
+    fetchStories();
   }, []);
+
+  const NEW_MEMBERS = newMembersList.length > 0 ? newMembersList.map(m => ({
+    id: m.id,
+    name: m.name || `${m.firstName} ${m.lastName}`,
+    age: m.age || (m.dob ? calculateAge(m.dob) : 25),
+    height: m.height || "5'5\"",
+    education: m.education || "Graduate",
+    occupation: m.occupation || "Professional",
+    city: m.city || "Mumbai",
+    isOnline: m.isOnline || false,
+    isVerified: m.isVerified || false,
+    isPremium: m.isPremium || false,
+    photo: m.photos?.[0] || m.photo || "",
+    bio: m.bio || "Looking for a progressive partner who values tradition."
+  })) : MOCK_NEW_MEMBERS;
+
+  const SUCCESS_STORIES = successStoriesList.length > 0 ? successStoriesList.map((s, idx) => ({
+    id: s.id,
+    couple: s.partner1Name && s.partner2Name ? `${s.partner1Name.split(" ")[0]} & ${s.partner2Name.split(" ")[0]}` : s.couple || "Happy Couple",
+    weddingDate: s.weddingDate || "TBD",
+    photo: s.photo || s.partner1Photo || s.partner2Photo || "",
+    story: s.story || "We found our perfect life partner on Lohar Matrimony. Truly grateful!"
+  })) : MOCK_SUCCESS_STORIES;
 
   return (
     <div className="overflow-x-hidden pb-16 md:pb-0">
@@ -410,12 +515,18 @@ export const LandingPage: React.FC = () => {
                 className="w-[290px] flex-shrink-0 bg-white dark:bg-dark-900 border border-slate-100 dark:border-dark-800 rounded-3xl overflow-hidden shadow-md hover:shadow-xl hover:scale-[1.01] transition-all snap-start flex flex-col group relative"
               >
                 {/* Photo & Badge Overlays */}
-                <div className="relative h-64 overflow-hidden bg-slate-100 dark:bg-dark-800">
-                  <img 
-                    src={member.photo} 
-                    alt={member.name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
+                <div className="relative h-64 overflow-hidden bg-slate-100 dark:bg-dark-800 flex items-center justify-center">
+                  {member.photo ? (
+                    <img 
+                      src={member.photo} 
+                      alt={member.name}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-maroon-700/10 to-maroon-600/5 dark:from-dark-800 dark:to-dark-850 flex items-center justify-center text-maroon-700 dark:text-gold-450 font-bold text-4xl">
+                      {member.name.charAt(0)}
+                    </div>
+                  )}
                   {/* Glass indicator overlays */}
                   <div className="absolute top-4 left-4 flex flex-col gap-1.5">
                     {member.isVerified && (
@@ -620,12 +731,18 @@ export const LandingPage: React.FC = () => {
                 key={story.id}
                 className="bg-slate-50 dark:bg-dark-950 border border-slate-100 dark:border-dark-850 rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-shadow grid grid-cols-1 sm:grid-cols-5"
               >
-                <div className="sm:col-span-2 relative h-48 sm:h-full min-h-[180px]">
-                  <img 
-                    src={story.photo} 
-                    alt={story.couple}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
+                <div className="sm:col-span-2 relative h-48 sm:h-full min-h-[180px] flex items-center justify-center bg-slate-100 dark:bg-dark-850">
+                  {story.photo ? (
+                    <img 
+                      src={story.photo} 
+                      alt={story.couple}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-rose-100 to-amber-100 dark:from-maroon-900/20 dark:to-gold-950/10 flex items-center justify-center text-maroon-700 dark:text-gold-450 text-4xl">
+                      💝
+                    </div>
+                  )}
                 </div>
                 <div className="p-6 sm:col-span-3 flex flex-col justify-between">
                   <div className="space-y-2">
