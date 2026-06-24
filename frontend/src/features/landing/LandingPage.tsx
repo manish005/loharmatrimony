@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../../config/firebase";
-import { collection, query, where, getDocs, getCountFromServer, doc, getDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, getCountFromServer, doc, onSnapshot } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Check, 
@@ -250,18 +250,16 @@ export const LandingPage: React.FC = () => {
   };
 
   useEffect(() => {
-    const fetchUiConfig = async () => {
-      try {
-        const docRef = doc(db, "siteConfig", "landingPage");
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setUiConfig(docSnap.data());
-        }
-      } catch (err) {
-        console.error("Failed to load UI config:", err);
+    // Real-time listener — landing page reflects admin changes instantly without refresh
+    const docRef = doc(db, "siteConfig", "landingPage");
+    const unsub = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setUiConfig(docSnap.data());
       }
-    };
-    fetchUiConfig();
+    }, (err) => {
+      console.error("Failed to load UI config:", err);
+    });
+    return () => unsub();
   }, []);
 
   useEffect(() => {
@@ -417,15 +415,11 @@ export const LandingPage: React.FC = () => {
             </div>
 
             <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-slate-900 dark:text-white leading-[1.1]">
-              Find Your Perfect <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-maroon-700 to-maroon-500 dark:from-gold-400 dark:to-gold-500">
-                Life Partner
-              </span> Within <br />
-              Lohar Community
+              {sectionTitle("hero", "Find Your Perfect Life Partner Within Lohar Community")}
             </h1>
 
             <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 max-w-xl mx-auto lg:mx-0">
-              Welcome to the exclusive and most trusted matrimonial service for Lohar community. Connect with eligible candidates from your caste and sub-castes with complete privacy control.
+              {sectionSubtitle("hero", "Welcome to the exclusive and most trusted matrimonial service for Lohar community. Connect with eligible candidates from your caste and sub-castes with complete privacy control.")}
             </p>
 
             {/* CTAs */}
