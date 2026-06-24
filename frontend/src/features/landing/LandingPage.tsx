@@ -22,7 +22,15 @@ import { useTheme } from "../../context/ThemeContext";
 // Age helper
 const calculateAge = (dobString: string) => {
   if (!dobString) return 25;
-  const birthDate = new Date(dobString);
+  
+  // Convert dob if in DD/MM/YYYY format
+  let dob = dobString;
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dob)) {
+    const [d, m, y] = dob.split("/");
+    dob = `${y}-${m}-${d}`;
+  }
+  
+  const birthDate = new Date(dob);
   const today = new Date();
   let age = today.getFullYear() - birthDate.getFullYear();
   const m = today.getMonth() - birthDate.getMonth();

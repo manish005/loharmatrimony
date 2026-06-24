@@ -13,7 +13,15 @@ export const decodeId = (encoded: string): string => {
 
 export const calculateAge = (dobString: string) => {
   if (!dobString) return null;
-  const birthDate = new Date(dobString);
+  
+  // Convert dob if in DD/MM/YYYY format
+  let dob = dobString;
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dob)) {
+    const [d, m, y] = dob.split("/");
+    dob = `${y}-${m}-${d}`;
+  }
+  
+  const birthDate = new Date(dob);
   const today = new Date();
   if (isNaN(birthDate.getTime())) return null;
   let age = today.getFullYear() - birthDate.getFullYear();
