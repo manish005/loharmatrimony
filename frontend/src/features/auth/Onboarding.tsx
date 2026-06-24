@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, Home, Users, Check, MapPin, ArrowRight, ChevronDown } from "lucide-react";
-import { db, auth } from "../../config/firebase";
-import { doc, updateDoc } from "firebase/firestore";
+import { database, realtimeHelpers } from "../../config/firebase";
 import toast from "react-hot-toast";
 import { locationData } from "../../data/locationData";
 
@@ -101,8 +100,8 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, myProfileId 
     }
     setIsSubmitting(true);
     try {
-      const docRef = doc(db, "profiles", myProfileId);
-      await updateDoc(docRef, {
+      const profileRef = realtimeHelpers.ref(database, `profiles/${myProfileId}`);
+      await realtimeHelpers.update(profileRef, {
         currentAddress: formData.currentAddress,
         permanentAddress: formData.permanentAddress,
         city: formData.city,

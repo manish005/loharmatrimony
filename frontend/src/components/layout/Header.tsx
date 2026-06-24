@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { collection, query, where, orderBy, onSnapshot, updateDoc, deleteDoc, doc, writeBatch, getDocs } from "firebase/firestore";
-import { auth, db } from "../../config/firebase";
+import { realtimeHelpers } from "../../config/firebase";
+import { auth, database } from "../../config/firebase";
 import { Sun, Moon, Menu, Bell, Check, X, LogOut, User, Settings, Globe } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 import { useLanguage } from "../../context/LanguageContext";
@@ -30,32 +30,32 @@ export const Header: React.FC = () => {
     let unsubNotis: () => void;
     let unsubProfile: () => void;
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) {
         try {
-          const qProfile = query(
-            collection(db, "profiles"),
-            where("email", "==", user.email?.toLowerCase() || "")
-          );
-          unsubProfile = onSnapshot(qProfile, (profileSnap) => {
+          const profilesRef = realtimeHelpers.ref(database, "profiles");
+          unsubProfile = realtimeHelpers.onValue(profilesRef, (snapshot) => {
             let profileId = "";
-            if (!profileSnap.empty) {
-              profileId = profileSnap.docs[0].id;
+            const data = snapshot.val();
+            if (data) {
+              const profiles = Object.values(data);
+              const userProfile = profiles.find((p: any) => p.email?.toLowerCase() === user.email?.toLowerCase());
+              if (userProfile) {
+                profileId = Object.keys(data).find(k => data[k] === userProfile) || "";
+              }
             }
 
             const targetReceiverId = profileId || user.uid;
             if (unsubNotis) unsubNotis();
 
-            const q = query(
-              collection(db, "notifications"),
-              where("receiverId", "==", targetReceiverId)
-            );
-            unsubNotis = onSnapshot(q, (snapshot) => {
-              const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            const notificationsRef = realtimeHelpers.ref(database, `notifications/${targetReceiverId}`);
+            unsubNotis = realtimeHelpers.onValue(notificationsRef, (snapshot) => {
+                const data = snapshot.val();
+                const list = data ? Object.values(data) : [];
               list.sort((a: any, b: any) => {
-                const dateA = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate() : new Date(a.createdAt)) : new Date();
-                const dateB = b.createdAt ? (b.createdAt.toDate ? b.createdAt.toDate() : new Date(b.createdAt)) : new Date();
+                const dateA = a.createdAt ? new Date(a.createdAt) : new Date();
+                const dateB = b.createdAt ? new Date(b.createdAt) : new Date();
                 return dateB.getTime() - dateA.getTime();
               });
               setNotifications(list);
@@ -105,7 +105,7 @@ export const Header: React.FC = () => {
   const handleMarkAsRead = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      await updateDoc(doc(db, "notifications", id), { read: true });
+      await realtimeHelpers.update(realtimeHelpers.ref(database, `notifications/${id}`), { read: true });
     } catch (err) {
       console.error(err);
     }
@@ -114,7 +114,7 @@ export const Header: React.FC = () => {
   const handleRemoveNoti = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      await deleteDoc(doc(db, "notifications", id));
+      await realtimeHelpers.remove(realtimeHelpers.ref(database, `notifications/${id}`));
     } catch (err) {
       console.error(err);
     }
@@ -123,11 +123,11 @@ export const Header: React.FC = () => {
   const handleMarkAllRead = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      const batch = writeBatch(db);
+      const updates: Record<string, any> = {};
       notifications.filter(n => !n.read).forEach(n => {
-        batch.update(doc(db, "notifications", n.id), { read: true });
+        updates[`notifications/${n.id}/read`] = true;
       });
-      await batch.commit();
+      await realtimeHelpers.update(realtimeHelpers.ref(database), updates);
     } catch (err) {
       console.error(err);
     }
@@ -135,7 +135,7 @@ export const Header: React.FC = () => {
 
   const handleNotificationClick = (n: any) => {
     if (!n.read) {
-      updateDoc(doc(db, "notifications", n.id), { read: true }).catch(console.error);
+      realtimeHelpers.update(realtimeHelpers.ref(database, `notifications/${n.id}`), { read: true }).catch(console.error);
     }
     setNotiOpen(false);
     

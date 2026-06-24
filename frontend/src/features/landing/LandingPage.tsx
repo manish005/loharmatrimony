@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth, db } from "../../config/firebase";
-import { collection, query, where, getDocs, getCountFromServer, doc, onSnapshot } from "firebase/firestore";
+import { auth, database } from "../../config/firebase";
+import { realtimeHelpers } from "../../config/firebase";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Check, 
@@ -259,10 +259,10 @@ export const LandingPage: React.FC = () => {
 
   useEffect(() => {
     // Real-time listener — landing page reflects admin changes instantly without refresh
-    const docRef = doc(db, "siteConfig", "landingPage");
-    const unsub = onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists()) {
-        setUiConfig(docSnap.data());
+    const docRef = realtimeHelpers.ref(database, "siteConfig/landingPage");
+    const unsub = realtimeHelpers.onValue(docRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setUiConfig(snapshot.val());
       }
     }, (err) => {
       console.error("Failed to load UI config:", err);
@@ -273,17 +273,14 @@ export const LandingPage: React.FC = () => {
   useEffect(() => {
     const fetchRealData = async () => {
       try {
-        const [totalSnap, activeSnap, verifiedSnap, successSnap] = await Promise.all([
-          getCountFromServer(collection(db, "profiles")),
-          getCountFromServer(query(collection(db, "profiles"), where("isOnline", "==", true))),
-          getCountFromServer(query(collection(db, "profiles"), where("isVerified", "==", true))),
-          getCountFromServer(collection(db, "successStories"))
-        ]);
+        const profilesRef = realtimeHelpers.ref(database, "profiles");
+        const profilesSnap = await realtimeHelpers.get(profilesRef);
+        const profiles = profilesSnap ? Object.values(profilesSnap) : [];
+        const totalCount = profiles.length;
 
-        const totalCount = totalSnap.data().count;
-        const activeCount = activeSnap.data().count;
-        const verifiedCount = verifiedSnap.data().count;
-        const successCount = successSnap.data().count;
+        const activeCount = profiles.filter((p: any) => p.isOnline).length;
+        const verifiedCount = profiles.filter((p: any) => p.isVerified).length;
+        const successCount = profiles.filter((p: any) => p.isMarried).length;
 
         let currentMembers = 0;
         let currentActive = 0;
@@ -327,13 +324,10 @@ export const LandingPage: React.FC = () => {
 
     const fetchNewMembers = async () => {
       try {
-        const q = query(
-          collection(db, "profiles"),
-          where("onboardingCompleted", "==", true)
-        );
-        const snap = await getDocs(q);
-        let members = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-        members.sort((a, b) => {
+        const profilesRef = realtimeHelpers.ref(database, "profiles");
+        const profilesSnap = await realtimeHelpers.get(profilesRef);
+        let members = profilesSnap ? Object.values(profilesSnap) : [];
+        members.sort((a: any, b: any) => {
           const dateA = a.registeredAt ? new Date(a.registeredAt).getTime() : 0;
           const dateB = b.registeredAt ? new Date(b.registeredAt).getTime() : 0;
           return dateB - dateA;
@@ -345,14 +339,15 @@ export const LandingPage: React.FC = () => {
     };
 
     const fetchStories = async () => {
-      try {
-        const snap = await getDocs(collection(db, "successStories"));
-        const stories = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-        setSuccessStoriesList(stories);
-      } catch (err) {
-        console.error("Failed to load success stories:", err);
-      }
-    };
+       try {
+         const storiesRef = realtimeHelpers.ref(database, "successStories");
+         const storiesSnap = await realtimeHelpers.get(storiesRef);
+         const stories = storiesSnap ? Object.values(storiesSnap) : [];
+         setSuccessStoriesList(stories);
+       } catch (err) {
+         console.error("Failed to load success stories:", err);
+       }
+     };
 
     fetchRealData();
     fetchNewMembers();

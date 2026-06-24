@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { db } from "../../config/firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { database, realtimeHelpers } from "../../config/firebase";
 import { 
   Filter, 
   Grid, 
@@ -32,11 +31,11 @@ export const SearchProfiles: React.FC = () => {
   useEffect(() => {
     const fetchProfiles = async () => {
       try {
-        const querySnapshot = await getDocs(collection(db, "profiles"));
-        const dbProfiles = querySnapshot.docs.map(doc => {
-          const data = doc.data();
+        const snapshot = await realtimeHelpers.get(realtimeHelpers.ref(database, "profiles"));
+        const rawData = snapshot.val() || {};
+        const dbProfiles = Object.entries(rawData).map(([id, data]: [string, any]) => {
           return {
-            id: doc.id,
+            id,
             name: data.name || "Anonymous",
             age: data.age ? parseInt(data.age) : null,
             height: data.height || "",

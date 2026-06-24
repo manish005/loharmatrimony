@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { signOut, onAuthStateChanged } from "firebase/auth";
-import { db, auth, storage } from "../../config/firebase";
-import { collection, getDocs, doc, updateDoc, addDoc, where, query, getDoc, onSnapshot, serverTimestamp, deleteDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { database, auth, storage, realtimeHelpers } from "../../config/firebase";
 import { uploadToCloudinary, deleteFromCloudinary } from "../../utils/cloudinary";
 import { useLanguage } from "../../context/LanguageContext";
 import { useToast } from "../../context/ToastContext";
@@ -189,11 +187,12 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     const fetchProfiles = async (currentUser: any) => {
       try {
-        const querySnapshot = await getDocs(collection(db, "profiles"));
-        const dbProfiles = querySnapshot.docs.map(doc => {
-          const data = doc.data();
+        const snapshot = await realtimeHelpers.get(realtimeHelpers.ref(database, "profiles"));
+        const rawProfiles = snapshot.val() || {};
+        const dbProfiles = Object.entries(rawProfiles).map(([id, val]: [string, any]) => {
+          const data = val || {};
           return {
-            id: doc.id,
+            id: id,
             uid: data.uid || "",
             name: data.name || "Anonymous",
             firstName: data.firstName || "",
@@ -275,8 +274,8 @@ export const Dashboard: React.FC = () => {
             setUserSubscription(userProfile.subscriptionPlan || "free");
             setPhotos(userProfile.photos || []);
             if (!userProfile.uid) {
-              const profileRef = doc(db, "profiles", userProfile.id);
-              updateDoc(profileRef, { uid: currentUser.uid }).catch(() => { });
+              const profileRef = realtimeHelpers.ref(database, `profiles/${userProfile.id}`);
+              realtimeHelpers.update(profileRef, { uid: currentUser.uid }).catch(() => { });
               userProfile.uid = currentUser.uid;
             }
           } else {
@@ -287,26 +286,28 @@ export const Dashboard: React.FC = () => {
               .replace(/(^\w|\_\w)/g, (m: string) => m.toUpperCase().replace("_", " "))
               || "User";
             const guessedGender = isFemale ? "Female" : "Male";
-              try {
-                const docRef = await addDoc(collection(db, "profiles"), {
-                  uid: currentUser.uid,
-                  name: guessedName,
-                  firstName: guessedName,
-                  middleName: "",
-                  lastName: "",
-                  email: userEmail,
-                  gender: guessedGender,
-                  mobile: "",
-                  photos: [],
-                  isOnline: true,
-                  isVerified: false,
-                  isPremium: false,
-                  subscriptionPlan: "free",
-                  registeredAt: new Date().toISOString(),
-                  onboardingCompleted: false
-                });
+            try {
+              const newProfileRef = realtimeHelpers.push(realtimeHelpers.ref(database, "profiles"));
+              const docId = newProfileRef.key!;
+              await realtimeHelpers.set(newProfileRef, {
+                uid: currentUser.uid,
+                name: guessedName,
+                firstName: guessedName,
+                middleName: "",
+                lastName: "",
+                email: userEmail,
+                gender: guessedGender,
+                mobile: "",
+                photos: [],
+                isOnline: true,
+                isVerified: false,
+                isPremium: false,
+                subscriptionPlan: "free",
+                registeredAt: new Date().toISOString(),
+                onboardingCompleted: false
+              });
               setMyProfile({
-                id: docRef.id,
+                id: docId,
                 firstName: guessedName,
                 middleName: "",
                 lastName: "",
@@ -342,61 +343,49 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     if (!myProfile?.id || profiles.length === 0) return;
 
-    // Listen for interests sent BY me
-    const qSent = query(collection(db, "interests"), where("senderId", "==", myProfile.id));
-    const unsubSent = onSnapshot(qSent, (snapshot) => {
-      const sentData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      const sentIds = sentData.map((d: any) => d.receiverId);
+    // Listen for interests
+    const interestsRef = realtimeHelpers.ref(database, "interests");
+    const unsubInterests = realtimeHelpers.onValue(interestsRef, (snapshot) => {
+      const raw = snapshot.val() || {};
+      const allInterests = Object.entries(raw).map(([id, data]: [string, any]) => ({ id, ...data }));
 
+      // sent BY me
+      const sentData = allInterests.filter((i: any) => i.senderId === myProfile.id);
+      const sentIds = sentData.map((d: any) => d.receiverId);
       setSentInterests(sentData);
       setInterestSentIds(sentIds);
-    });
 
-    // Listen for interests received BY me
-    const qReceived = query(
-      collection(db, "interests"),
-      where("receiverId", "==", myProfile.id),
-      where("status", "==", "pending")
-    );
-    const unsubReceived = onSnapshot(qReceived, (snapshot) => {
-      const receivedData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-
+      // received BY me (pending)
+      const receivedData = allInterests.filter((i: any) => i.receiverId === myProfile.id && i.status === "pending");
       if (!initialInterestLoadDone.current) {
         initialInterestLoadDone.current = true;
       }
-
       setPendingInterestsReceived(receivedData);
       setInterestsLoading(false);
-    });
 
-    const qApprovedReceived = query(
-      collection(db, "interests"),
-      where("receiverId", "==", myProfile.id),
-      where("status", "==", "approved")
-    );
-    const unsubApprovedReceived = onSnapshot(qApprovedReceived, (snapshot) => {
-      const approvedData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      // approved received BY me
+      const approvedData = allInterests.filter((i: any) => i.receiverId === myProfile.id && i.status === "approved");
       setApprovedReceivedInterests(approvedData);
       setApprovedReceivedIds(approvedData.map((d: any) => d.senderId));
     });
 
     // Listen for Marriage Requests
-    const unsubMarriageRequests = onSnapshot(collection(db, "marriageRequests"), (snapshot) => {
-      const requests = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    const marriageRequestsRef = realtimeHelpers.ref(database, "marriageRequests");
+    const unsubMarriageRequests = realtimeHelpers.onValue(marriageRequestsRef, (snapshot) => {
+      const raw = snapshot.val() || {};
+      const requests = Object.entries(raw).map(([id, data]: [string, any]) => ({ id, ...data }));
       const myRequests = requests.filter((r: any) => r.senderId === myProfile.id || r.receiverId === myProfile.id);
       setMarriageRequests(myRequests);
     });
 
     // Listen for Notifications (no toasts, only visible on dropdown)
-    const qNotifs = query(collection(db, "notifications"), where("receiverId", "==", myProfile.id));
-    const unsubNotifications = onSnapshot(qNotifs, (snapshot) => {
-      // Background notifications show up on dropdown, not via background toasts
+    const notificationsRef = realtimeHelpers.ref(database, "notifications");
+    const unsubNotifications = realtimeHelpers.onValue(notificationsRef, (snapshot) => {
+      // Background notifications show up on dropdown
     });
 
     return () => {
-      unsubSent();
-      unsubReceived();
-      unsubApprovedReceived();
+      unsubInterests();
       unsubMarriageRequests();
       unsubNotifications();
     };
@@ -405,11 +394,11 @@ export const Dashboard: React.FC = () => {
   // Heartbeat: keep isOnline true and update lastActive every 30s
   useEffect(() => {
     if (!myProfile?.id) return;
-    const profileRef = doc(db, "profiles", myProfile.id);
+    const profileRef = realtimeHelpers.ref(database, `profiles/${myProfile.id}`);
 
     const heartbeat = async () => {
       try {
-        await updateDoc(profileRef, { isOnline: true, lastActive: serverTimestamp() });
+        await realtimeHelpers.update(profileRef, { isOnline: true, lastActive: Date.now() });
       } catch { /* ignore */ }
     };
 
@@ -417,14 +406,14 @@ export const Dashboard: React.FC = () => {
     const interval = setInterval(heartbeat, 30000);
 
     const handleBeforeUnload = () => {
-      updateDoc(profileRef, { isOnline: false, lastActive: serverTimestamp() }).catch(() => {});
+      realtimeHelpers.update(profileRef, { isOnline: false, lastActive: Date.now() }).catch(() => {});
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener("beforeunload", handleBeforeUnload);
-      updateDoc(profileRef, { isOnline: false, lastActive: serverTimestamp() }).catch(() => {});
+      realtimeHelpers.update(profileRef, { isOnline: false, lastActive: Date.now() }).catch(() => {});
     };
   }, [myProfile?.id]);
 
@@ -440,31 +429,32 @@ export const Dashboard: React.FC = () => {
     try {
       if (interestSentIds.includes(id)) {
         // Find and delete the sent interest
-        const q = query(
-          collection(db, "interests"),
-          where("senderId", "==", myProfile.id),
-          where("receiverId", "==", id)
-        );
-        const snap = await getDocs(q);
-        snap.forEach(d => deleteDoc(d.ref));
+        const snap = await realtimeHelpers.get(realtimeHelpers.ref(database, "interests"));
+        const raw = snap.val() || {};
+        const match = Object.entries(raw).find(([, data]: [string, any]) => data.senderId === myProfile.id && data.receiverId === id);
+        if (match) {
+          await realtimeHelpers.remove(realtimeHelpers.ref(database, `interests/${match[0]}`));
+        }
         showToast("Interest removed.");
       } else {
-        await addDoc(collection(db, "interests"), {
+        const newInterestRef = realtimeHelpers.push(realtimeHelpers.ref(database, "interests"));
+        await realtimeHelpers.set(newInterestRef, {
           senderId: myProfile.id,
           receiverId: id,
           status: "pending",
-          timestamp: serverTimestamp()
+          timestamp: Date.now()
         });
 
         // Add Notification
         const senderName = myProfile.name || myProfile.firstName || "Someone";
-        await addDoc(collection(db, "notifications"), {
+        const newNotifRef = realtimeHelpers.push(realtimeHelpers.ref(database, "notifications"));
+        await realtimeHelpers.set(newNotifRef, {
           receiverId: id,
           senderId: myProfile.id,
           text: `${senderName} sent you an interest request.`,
           type: "interest_received",
           read: false,
-          createdAt: serverTimestamp()
+          createdAt: Date.now()
         });
 
         showToast("Interest sent successfully! They have been notified.");
@@ -477,26 +467,23 @@ export const Dashboard: React.FC = () => {
 
   const handleApproveInterest = async (senderId: string, senderName: string, senderPhoto: string) => {
     try {
-      const q = query(
-        collection(db, "interests"),
-        where("receiverId", "==", myProfile.id),
-        where("senderId", "==", senderId),
-        where("status", "==", "pending")
-      );
-      const snap = await getDocs(q);
-      if (!snap.empty) {
-        await updateDoc(snap.docs[0].ref, { status: "approved" });
+      const snap = await realtimeHelpers.get(realtimeHelpers.ref(database, "interests"));
+      const raw = snap.val() || {};
+      const match = Object.entries(raw).find(([, data]: [string, any]) => data.receiverId === myProfile.id && data.senderId === senderId && data.status === "pending");
+      if (match) {
+        await realtimeHelpers.update(realtimeHelpers.ref(database, `interests/${match[0]}`), { status: "approved" });
         showToast(`You approved ${senderName}'s interest!`);
 
         // Add Notification
         const myName = myProfile.name || myProfile.firstName || "Someone";
-        await addDoc(collection(db, "notifications"), {
+        const newNotifRef = realtimeHelpers.push(realtimeHelpers.ref(database, "notifications"));
+        await realtimeHelpers.set(newNotifRef, {
           receiverId: senderId,
           senderId: myProfile.id,
           text: `${myName} accepted your interest request!`,
           type: "interest_approved",
           read: false,
-          createdAt: serverTimestamp()
+          createdAt: Date.now()
         });
 
         const initialMessage = "Our stars aligned and so did our vibes! 💖 Let's start this beautiful journey together.";
@@ -512,26 +499,23 @@ export const Dashboard: React.FC = () => {
 
   const handleRejectInterest = async (senderId: string) => {
     try {
-      const q = query(
-        collection(db, "interests"),
-        where("receiverId", "==", myProfile.id),
-        where("senderId", "==", senderId),
-        where("status", "==", "pending")
-      );
-      const snap = await getDocs(q);
-      if (!snap.empty) {
-        await deleteDoc(snap.docs[0].ref);
+      const snap = await realtimeHelpers.get(realtimeHelpers.ref(database, "interests"));
+      const raw = snap.val() || {};
+      const match = Object.entries(raw).find(([, data]: [string, any]) => data.receiverId === myProfile.id && data.senderId === senderId && data.status === "pending");
+      if (match) {
+        await realtimeHelpers.remove(realtimeHelpers.ref(database, `interests/${match[0]}`));
         showToast("Interest declined.");
 
         // Add Notification
         const myName = myProfile.name || myProfile.firstName || "Someone";
-        await addDoc(collection(db, "notifications"), {
+        const newNotifRef = realtimeHelpers.push(realtimeHelpers.ref(database, "notifications"));
+        await realtimeHelpers.set(newNotifRef, {
           receiverId: senderId,
           senderId: myProfile.id,
           text: `${myName} respectfully declined your interest.`,
           type: "interest_rejected",
           read: false,
-          createdAt: serverTimestamp()
+          createdAt: Date.now()
         });
       }
     } catch (err) {
@@ -544,24 +528,26 @@ export const Dashboard: React.FC = () => {
     if (!selectedMarriageProfile) return;
     setIsSubmittingProposal(true);
     try {
-      await addDoc(collection(db, "marriageRequests"), {
+      const proposalRef = realtimeHelpers.push(realtimeHelpers.ref(database, "marriageRequests"));
+      await realtimeHelpers.set(proposalRef, {
         senderId: myProfile.id,
         receiverId: selectedMarriageProfile.id,
         weddingDate: proposalData.date,
         weddingTime: proposalData.time,
         venue: proposalData.venue,
         status: "pending",
-        timestamp: serverTimestamp()
+        timestamp: Date.now()
       });
 
       const senderName = myProfile.name || myProfile.firstName || "Someone";
-      await addDoc(collection(db, "notifications"), {
+      const newNotifRef = realtimeHelpers.push(realtimeHelpers.ref(database, "notifications"));
+      await realtimeHelpers.set(newNotifRef, {
         receiverId: selectedMarriageProfile.id,
         senderId: myProfile.id,
         text: `${senderName} proposed a marriage setup!`,
         type: "marriage_proposal",
         read: false,
-        createdAt: serverTimestamp()
+        createdAt: Date.now()
       });
 
       showToast("Marriage Request sent successfully!");
@@ -577,22 +563,22 @@ export const Dashboard: React.FC = () => {
 
   const handleAcceptMarriageRequest = async (requestId: string, senderProfile: any) => {
     try {
-      const requestRef = doc(db, "marriageRequests", requestId);
-      const requestDoc = await getDoc(requestRef);
+      const requestRef = realtimeHelpers.ref(database, `marriageRequests/${requestId}`);
+      const requestDoc = await realtimeHelpers.get(requestRef);
       if (!requestDoc.exists()) return;
 
-      const reqData = requestDoc.data();
+      const reqData = requestDoc.val();
 
       // 1. Update request status
-      await updateDoc(requestRef, { status: "accepted" });
+      await realtimeHelpers.update(requestRef, { status: "accepted" });
 
       // 2. Set both profiles to isMarried = true, maritalStatus = "Married", and save partner info
-      const myProfileRef = doc(db, "profiles", myProfile.id);
-      const senderProfileRef = doc(db, "profiles", senderProfile.id);
+      const myProfileRef = realtimeHelpers.ref(database, `profiles/${myProfile.id}`);
+      const senderProfileRef = realtimeHelpers.ref(database, `profiles/${senderProfile.id}`);
       
       const weddingDate = reqData.weddingDate || "";
       
-      await updateDoc(myProfileRef, { 
+      await realtimeHelpers.update(myProfileRef, { 
         isMarried: true, 
         maritalStatus: "Getting Married",
         previousMaritalStatus: myProfile.maritalStatus || "Never Married",
@@ -604,7 +590,7 @@ export const Dashboard: React.FC = () => {
         venue: reqData.venue || ""
       });
       
-      await updateDoc(senderProfileRef, { 
+      await realtimeHelpers.update(senderProfileRef, { 
         isMarried: true, 
         maritalStatus: "Getting Married",
         previousMaritalStatus: senderProfile.maritalStatus || "Never Married",
@@ -618,17 +604,19 @@ export const Dashboard: React.FC = () => {
 
       // Add Notification
       const myName = myProfile.name || myProfile.firstName || "Someone";
-      await addDoc(collection(db, "notifications"), {
+      const newNotifRef = realtimeHelpers.push(realtimeHelpers.ref(database, "notifications"));
+      await realtimeHelpers.set(newNotifRef, {
         receiverId: senderProfile.id,
         senderId: myProfile.id,
         text: `${myName} accepted your marriage proposal! Congratulations!`,
         type: "marriage_proposal_accepted",
         read: false,
-        createdAt: serverTimestamp()
+        createdAt: Date.now()
       });
 
       // 3. Create Success Story
-      await addDoc(collection(db, "successStories"), {
+      const successStoryRef = realtimeHelpers.push(realtimeHelpers.ref(database, "successStories"));
+      await realtimeHelpers.set(successStoryRef, {
         coupleId: `${senderProfile.id}_${myProfile.id}`,
         partner1Id: senderProfile.id,
         partner2Id: myProfile.id,
@@ -637,7 +625,7 @@ export const Dashboard: React.FC = () => {
         weddingDate: reqData.weddingDate,
         venue: reqData.venue,
         photo: senderProfile.photos?.[0] || myProfile.photos?.[0] || "",
-        timestamp: serverTimestamp()
+        timestamp: Date.now()
       });
 
       // Update local profiles state so profile cards and ViewProfile reflect the change immediately
@@ -674,39 +662,38 @@ export const Dashboard: React.FC = () => {
 
   const handleRejectMarriageRequest = async (requestId: string) => {
     try {
-      const requestRef = doc(db, "marriageRequests", requestId);
-      const reqSnap = await getDoc(requestRef);
+      const requestRef = realtimeHelpers.ref(database, `marriageRequests/${requestId}`);
+      const reqSnap = await realtimeHelpers.get(requestRef);
       if (reqSnap.exists()) {
-        const reqData = reqSnap.data();
+        const reqData = reqSnap.val();
         const otherUserId = reqData.senderId === myProfile.id ? reqData.receiverId : reqData.senderId;
 
         // 1. Delete marriage request document
-        await deleteDoc(requestRef);
+        await realtimeHelpers.remove(requestRef);
 
         // 2. Delete interest document(s) between them
-        const qInterest1 = query(
-          collection(db, "interests"),
-          where("senderId", "==", myProfile.id),
-          where("receiverId", "==", otherUserId)
-        );
-        const qInterest2 = query(
-          collection(db, "interests"),
-          where("senderId", "==", otherUserId),
-          where("receiverId", "==", myProfile.id)
-        );
-        const [snap1, snap2] = await Promise.all([getDocs(qInterest1), getDocs(qInterest2)]);
-        snap1.forEach(d => deleteDoc(d.ref));
-        snap2.forEach(d => deleteDoc(d.ref));
+        const interestsSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "interests"));
+        const rawInterests = interestsSnap.val() || {};
+        for (const [id, data] of Object.entries(rawInterests)) {
+          const item = data as any;
+          if (
+            (item.senderId === myProfile.id && item.receiverId === otherUserId) ||
+            (item.senderId === otherUserId && item.receiverId === myProfile.id)
+          ) {
+            await realtimeHelpers.remove(realtimeHelpers.ref(database, `interests/${id}`));
+          }
+        }
 
         // 3. Send Notification to the other user
         const myName = myProfile.name || myProfile.firstName || "Someone";
-        await addDoc(collection(db, "notifications"), {
+        const newNotifRef = realtimeHelpers.push(realtimeHelpers.ref(database, "notifications"));
+        await realtimeHelpers.set(newNotifRef, {
           receiverId: otherUserId,
           senderId: myProfile.id,
           text: `${myName} declined your marriage proposal.`,
           type: "marriage_proposal_rejected",
           read: false,
-          createdAt: serverTimestamp()
+          createdAt: Date.now()
         });
 
         showToast("Marriage Request declined and connection reset.");
@@ -738,35 +725,36 @@ export const Dashboard: React.FC = () => {
       );
 
       if (req) {
-        const reqRef = doc(db, "marriageRequests", req.id);
-        await updateDoc(reqRef, {
+        const reqRef = realtimeHelpers.ref(database, `marriageRequests/${req.id}`);
+        await realtimeHelpers.update(reqRef, {
           weddingDate: data.date,
           weddingTime: data.time,
           venue: data.venue
         });
       }
 
-      // 2. Update both profiles' weddingDate, weddingTime, venue in Firestore
-      const myProfileRef = doc(db, "profiles", myProfile.id);
-      const partnerProfileRef = doc(db, "profiles", partnerId);
-      await updateDoc(myProfileRef, { weddingDate: data.date, weddingTime: data.time, venue: data.venue });
-      await updateDoc(partnerProfileRef, { weddingDate: data.date, weddingTime: data.time, venue: data.venue });
+      // 2. Update both profiles' weddingDate, weddingTime, venue in RTDB
+      const myProfileRef = realtimeHelpers.ref(database, `profiles/${myProfile.id}`);
+      const partnerProfileRef = realtimeHelpers.ref(database, `profiles/${partnerId}`);
+      await realtimeHelpers.update(myProfileRef, { weddingDate: data.date, weddingTime: data.time, venue: data.venue });
+      await realtimeHelpers.update(partnerProfileRef, { weddingDate: data.date, weddingTime: data.time, venue: data.venue });
 
       // 3. Find and update the successStory document
-      const ssQuery = query(collection(db, "successStories"));
-      const ssSnap = await getDocs(ssQuery);
-      ssSnap.forEach(async (docSnap) => {
-        const ssData = docSnap.data();
+      const ssSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "successStories"));
+      const rawStories = ssSnap.val() || {};
+      for (const [id, storyData] of Object.entries(rawStories)) {
+        const ssData = storyData as any;
         if (
           (ssData.partner1Id === myProfile.id && ssData.partner2Id === partnerId) ||
           (ssData.partner2Id === myProfile.id && ssData.partner1Id === partnerId)
         ) {
-          await updateDoc(docSnap.ref, {
+          const ssRef = realtimeHelpers.ref(database, `successStories/${id}`);
+          await realtimeHelpers.update(ssRef, {
             weddingDate: data.date,
             venue: data.venue
           });
         }
-      });
+      }
 
       // 4. Update local states
       setProfiles((prev) =>
@@ -781,13 +769,14 @@ export const Dashboard: React.FC = () => {
 
       // 5. Send notification to the partner about the update
       const myName = myProfile.name || myProfile.firstName || "Someone";
-      await addDoc(collection(db, "notifications"), {
+      const newNotifRef = realtimeHelpers.push(realtimeHelpers.ref(database, "notifications"));
+      await realtimeHelpers.set(newNotifRef, {
         receiverId: partnerId,
         senderId: myProfile.id,
         text: `${myName} updated your wedding program details.`,
         type: "marriage_details_updated",
         read: false,
-        createdAt: serverTimestamp()
+        createdAt: Date.now()
       });
 
       showToast("Wedding program details updated successfully!");
@@ -815,60 +804,57 @@ export const Dashboard: React.FC = () => {
           r.status === "accepted"
       );
       if (req) {
-        await deleteDoc(doc(db, "marriageRequests", req.id));
+        await realtimeHelpers.remove(realtimeHelpers.ref(database, `marriageRequests/${req.id}`));
       }
 
       // 2. Find and delete the successStory document
-      const ssQuery = query(collection(db, "successStories"));
-      const ssSnap = await getDocs(ssQuery);
-      ssSnap.forEach(async (docSnap) => {
-        const ssData = docSnap.data();
+      const ssSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "successStories"));
+      const rawStories = ssSnap.val() || {};
+      for (const [id, storyData] of Object.entries(rawStories)) {
+        const ssData = storyData as any;
         if (
           (ssData.partner1Id === myProfile.id && ssData.partner2Id === partnerId) ||
           (ssData.partner2Id === myProfile.id && ssData.partner1Id === partnerId)
         ) {
-          await deleteDoc(docSnap.ref);
+          await realtimeHelpers.remove(realtimeHelpers.ref(database, `successStories/${id}`));
         }
-      });
+      }
 
       // 3. Delete the interests document between them (completely resets matching)
-      const q1 = query(
-        collection(db, "interests"),
-        where("senderId", "==", myProfile.id),
-        where("receiverId", "==", partnerId)
-      );
-      const q2 = query(
-        collection(db, "interests"),
-        where("senderId", "==", partnerId),
-        where("receiverId", "==", myProfile.id)
-      );
-      const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
-      snap1.forEach(async (d) => await deleteDoc(d.ref));
-      snap2.forEach(async (d) => await deleteDoc(d.ref));
+      const interestsSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "interests"));
+      const rawInterests = interestsSnap.val() || {};
+      for (const [id, data] of Object.entries(rawInterests)) {
+        const item = data as any;
+        if (
+          (item.senderId === myProfile.id && item.receiverId === partnerId) ||
+          (item.senderId === partnerId && item.receiverId === myProfile.id)
+        ) {
+          await realtimeHelpers.remove(realtimeHelpers.ref(database, `interests/${id}`));
+        }
+      }
 
       // 4. Delete the conversations document and all its messages
       const convId = [myProfile.id, partnerId].sort().join("_");
       try {
-        const msgsSnap = await getDocs(collection(db, "conversations", convId, "messages"));
-        msgsSnap.forEach(async (d) => await deleteDoc(d.ref));
-        await deleteDoc(doc(db, "conversations", convId));
+        await realtimeHelpers.remove(realtimeHelpers.ref(database, `messages/${convId}`));
+        await realtimeHelpers.remove(realtimeHelpers.ref(database, `conversations/${convId}`));
       } catch (chatErr) {
         console.error("Failed to delete chat logs, continuing reset:", chatErr);
       }
 
       // 5. Fetch partner's profile to retrieve their previousMaritalStatus
       let partnerPrevStatus = "Never Married";
-      const partnerDoc = await getDoc(doc(db, "profiles", partnerId));
-      if (partnerDoc.exists()) {
-        partnerPrevStatus = partnerDoc.data().previousMaritalStatus || "Never Married";
+      const partnerSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, `profiles/${partnerId}`));
+      if (partnerSnap.exists()) {
+        partnerPrevStatus = partnerSnap.val().previousMaritalStatus || "Never Married";
       }
 
-      // 6. Reset both profiles in Firestore
+      // 6. Reset both profiles in RTDB
       const myPrevStatus = myProfile.previousMaritalStatus || "Never Married";
-      const myProfileRef = doc(db, "profiles", myProfile.id);
-      const partnerProfileRef = doc(db, "profiles", partnerId);
+      const myProfileRef = realtimeHelpers.ref(database, `profiles/${myProfile.id}`);
+      const partnerProfileRef = realtimeHelpers.ref(database, `profiles/${partnerId}`);
 
-      await updateDoc(myProfileRef, {
+      await realtimeHelpers.update(myProfileRef, {
         isMarried: false,
         maritalStatus: myPrevStatus,
         previousMaritalStatus: null,
@@ -878,7 +864,7 @@ export const Dashboard: React.FC = () => {
         weddingDate: null
       });
 
-      await updateDoc(partnerProfileRef, {
+      await realtimeHelpers.update(partnerProfileRef, {
         isMarried: false,
         maritalStatus: partnerPrevStatus,
         previousMaritalStatus: null,
@@ -890,13 +876,14 @@ export const Dashboard: React.FC = () => {
 
       // 7. Send notification to the partner about the cancellation
       const myName = myProfile.name || myProfile.firstName || "Someone";
-      await addDoc(collection(db, "notifications"), {
+      const newNotifRef = realtimeHelpers.push(realtimeHelpers.ref(database, "notifications"));
+      await realtimeHelpers.set(newNotifRef, {
         receiverId: partnerId,
         senderId: myProfile.id,
         text: `${myName} cancelled the marriage connection. Your profiles have been reset.`,
         type: "marriage_cancelled",
         read: false,
-        createdAt: serverTimestamp()
+        createdAt: Date.now()
       });
 
       // 8. Update local states
@@ -981,11 +968,11 @@ export const Dashboard: React.FC = () => {
       setKycStatus("pending");
       setKycRejectReason("");
 
-      // Save to Firestore so admin can review
-      const profileRef = doc(db, "profiles", myProfile.id);
+      // Save to RTDB so admin can review
+      const profileRef = realtimeHelpers.ref(database, `profiles/${myProfile.id}`);
       const key = typeLower === "front" ? "front" : "back";
-      await updateDoc(profileRef, {
-        [`kycDocuments.${key}`]: uploadUrl,
+      await realtimeHelpers.update(profileRef, {
+        [`kycDocuments/${key}`]: uploadUrl,
         kycStatus: "pending",
         kycRejectReason: null,
       });
@@ -1033,7 +1020,8 @@ export const Dashboard: React.FC = () => {
     const description = formData.get("description") as string;
 
     try {
-      await addDoc(collection(db, "supportTickets"), {
+      const ticketRef = realtimeHelpers.push(realtimeHelpers.ref(database, "supportTickets"));
+      await realtimeHelpers.set(ticketRef, {
         userId: myProfile?.id || "LM-GUEST",
         name: myProfile?.name || "Guest User",
         email: myProfile?.email || "Unknown",
@@ -1041,7 +1029,7 @@ export const Dashboard: React.FC = () => {
         desc: description,
         status: "Open",
         date: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
-        timestamp: serverTimestamp()
+        timestamp: Date.now()
       });
       showToast("Support request submitted! We will email you back shortly.", "success");
       e.currentTarget.reset();
@@ -1086,8 +1074,8 @@ export const Dashboard: React.FC = () => {
         uploadedUrls.push(downloadUrl);
       }
       const updatedPhotos = [...photos, ...uploadedUrls].slice(0, 4);
-      const docRef = doc(db, "profiles", myProfile.id);
-      await updateDoc(docRef, { photos: updatedPhotos });
+      const profileRef = realtimeHelpers.ref(database, `profiles/${myProfile.id}`);
+      await realtimeHelpers.update(profileRef, { photos: updatedPhotos });
       setPhotos(updatedPhotos);
       setMyProfile((prev: any) => ({ ...prev, photos: updatedPhotos, photo: updatedPhotos[0] || prev.photo }));
       showToast(`${uploadedUrls.length} photo(s) uploaded successfully!`);
@@ -1104,8 +1092,8 @@ export const Dashboard: React.FC = () => {
       const updatedPhotos = photos.filter((_, i) => i !== index);
       if (!myProfile?.id) return;
 
-      const docRef = doc(db, "profiles", myProfile.id);
-      await updateDoc(docRef, { photos: updatedPhotos });
+      const profileRef = realtimeHelpers.ref(database, `profiles/${myProfile.id}`);
+      await realtimeHelpers.update(profileRef, { photos: updatedPhotos });
 
       setPhotos(updatedPhotos);
       setMyProfile((prev: any) => ({ ...prev, photos: updatedPhotos, photo: updatedPhotos[0] || prev.photo }));
@@ -1122,7 +1110,7 @@ export const Dashboard: React.FC = () => {
       let updatedProfile = { ...myProfile, ...profileFormState };
 
       if (myProfile?.id) {
-        const docRef = doc(db, "profiles", myProfile.id);
+        const profileRef = realtimeHelpers.ref(database, `profiles/${myProfile.id}`);
         const parts = [
           profileFormState.firstName || "",
           profileFormState.middleName || "",
@@ -1166,38 +1154,38 @@ export const Dashboard: React.FC = () => {
           
           if (myProfile.isMarried) {
             // Find the success story where this user is a partner
-            const ssQuery = query(collection(db, "successStories"));
-            const ssSnap = await getDocs(ssQuery);
+            const ssSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "successStories"));
+            const rawStories = ssSnap.val() || {};
             
             let partnerId = null;
             let storyDocId = null;
             
-            ssSnap.forEach(doc => {
-              const data = doc.data();
+            for (const [storyId, storyData] of Object.entries(rawStories)) {
+              const data = storyData as any;
               if (data.partner1Id === myProfile.id) {
                 partnerId = data.partner2Id;
-                storyDocId = doc.id;
+                storyDocId = storyId;
               } else if (data.partner2Id === myProfile.id) {
                 partnerId = data.partner1Id;
-                storyDocId = doc.id;
+                storyDocId = storyId;
               }
-            });
+            }
 
             // Un-marry the partner and delete the success story
             if (partnerId) {
-              const partnerRef = doc(db, "profiles", partnerId);
-              await updateDoc(partnerRef, { 
+              const partnerRef = realtimeHelpers.ref(database, `profiles/${partnerId}`);
+              await realtimeHelpers.update(partnerRef, { 
                 isMarried: false,
                 maritalStatus: "Divorced"
               });
             }
             if (storyDocId) {
-              await deleteDoc(doc(db, "successStories", storyDocId));
+              await realtimeHelpers.remove(realtimeHelpers.ref(database, `successStories/${storyDocId}`));
             }
           }
         }
 
-        await updateDoc(docRef, saveData);
+        await realtimeHelpers.update(profileRef, saveData);
         updatedProfile.id = myProfile.id;
       }
       setMyProfile(updatedProfile);
@@ -1213,8 +1201,8 @@ export const Dashboard: React.FC = () => {
   const handlePlanSelect = async (planKey: string, planName: string, amount: number, billing: string) => {
     try {
       if (myProfile?.id) {
-        const docRef = doc(db, "profiles", myProfile.id);
-        await updateDoc(docRef, {
+        const profileRef = realtimeHelpers.ref(database, `profiles/${myProfile.id}`);
+        await realtimeHelpers.update(profileRef, {
           subscriptionPlan: planKey,
           isPremium: planKey !== "free"
         });
@@ -1227,7 +1215,8 @@ export const Dashboard: React.FC = () => {
           expiryDate.setMonth(expiryDate.getMonth() + 1);
         }
 
-        await addDoc(collection(db, "subscriptions"), {
+        const subscriptionRef = realtimeHelpers.push(realtimeHelpers.ref(database, "subscriptions"));
+        await realtimeHelpers.set(subscriptionRef, {
           userId: myProfile.id,
           name: myProfile.name || "Unknown",
           email: myProfile.email || "Unknown",
@@ -1235,7 +1224,7 @@ export const Dashboard: React.FC = () => {
           amount: amount,
           billing: billing,
           expiry: expiryDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
-          timestamp: serverTimestamp()
+          timestamp: Date.now()
         });
       }
       setUserSubscription(planKey as "silver" | "gold" | "platinum");

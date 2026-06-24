@@ -1,14 +1,14 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getDatabase, ref, set, get, update, remove, onValue, query, push, orderByChild, equalTo, serverTimestamp, child, off } from "firebase/database";
 import { getStorage } from "firebase/storage";
 import { getFunctions } from "firebase/functions";
-import { doc, updateDoc, setDoc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 
 // Lohar Matrimony Firebase credentials
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
@@ -22,20 +22,20 @@ const app = initializeApp(firebaseConfig);
 // Initialize & Export Services
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
-export const db = getFirestore(app);
+export const database = getDatabase(app);
 export const storage = getStorage(app);
 export const functions = getFunctions(app, "asia-south1");
 
-const firestoreHelpers = { doc, updateDoc, setDoc, getDoc, collection, query, where, getDocs };
+// Realtime Database helpers — re-exported for convenience
+export const realtimeHelpers = { ref, set, get, update, remove, onValue, query, push, orderByChild, equalTo, serverTimestamp, child, off };
+
+// Backward-compatible alias so existing imports of `db` still resolve
+export const db = database;
 
 if (typeof window !== "undefined") {
   (window as any).firebaseAuth = auth;
-  (window as any).firebaseDb = db;
-  (window as any).firestoreHelpers = firestoreHelpers;
+  (window as any).firebaseDatabase = database;
+  (window as any).realtimeHelpers = realtimeHelpers;
 }
 
-export { firestoreHelpers };
 export default app;
-
-
-

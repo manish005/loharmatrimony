@@ -39,8 +39,8 @@ const statusIcons: Record<string, React.ReactNode> = {
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onDelete, onEdit, isMine, canEdit, otherPhoto, otherName }) => {
   const [showMenu, setShowMenu] = useState(false);
 
-  const timeStr = message.timestamp?.toDate
-    ? message.timestamp.toDate().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  const timeStr = message.timestamp
+    ? new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     : "";
 
   if (message.deleted || message.deletedForEveryone) {

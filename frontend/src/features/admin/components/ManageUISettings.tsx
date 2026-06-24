@@ -5,8 +5,7 @@ import {
   GitBranch, BarChart3, Users, CreditCard, HeartHandshake, HelpCircle,
   Upload, X, Trash2
 } from "lucide-react";
-import { db } from "../../../config/firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { database, realtimeHelpers } from "../../../config/firebase";
 import { uploadToCloudinary } from "../../../utils/cloudinary";
 import toast from "react-hot-toast";
 
@@ -62,10 +61,10 @@ export default function ManageUISettings() {
   useEffect(() => {
     const fetchConfig = async () => {
       try {
-        const docRef = doc(db, "siteConfig", "landingPage");
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data() as UIConfig;
+        const configRef = realtimeHelpers.ref(database, "siteConfig/landingPage");
+        const snapshot = await realtimeHelpers.get(configRef);
+        if (snapshot.exists()) {
+          const data = snapshot.val() as UIConfig;
           const merged: UIConfig = { sections: { ...DEFAULT_CONFIG.sections } };
           for (const key of Object.keys(DEFAULT_CONFIG.sections) as (keyof UIConfig["sections"])[]) {
             merged.sections[key] = { ...DEFAULT_CONFIG.sections[key], ...data.sections?.[key] };
@@ -120,7 +119,7 @@ export default function ManageUISettings() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await setDoc(doc(db, "siteConfig", "landingPage"), config);
+      await realtimeHelpers.set(realtimeHelpers.ref(database, "siteConfig/landingPage"), config);
       toast.success("Landing page UI saved successfully!");
     } catch (err) {
       console.error("Error saving UI config:", err);

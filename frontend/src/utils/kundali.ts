@@ -1,10 +1,9 @@
 // Client-side Vedic Astrology Engine using astronomy-engine (pure JS)
-// No backend required — runs in browser and saves directly to Firestore
+// No backend required — runs in browser and saves to Realtime Database
 // Uses Lahiri Ayanamsa for Vedic sidereal conversion
 
 import * as Astronomy from "astronomy-engine";
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "../config/firebase";
+import { database, realtimeHelpers } from "../config/firebase";
 import { calculateKundali } from "../utils/astrologyShared";
 
 // ===========================
@@ -315,9 +314,10 @@ export function computeKundali(
   };
 }
 
-// Save Kundali to Firestore (called after computation)
+// Save Kundali to Realtime Database (called after computation)
 export async function saveKundali(uid: string, kundali: KundaliData): Promise<void> {
-  await updateDoc(doc(db, "profiles", uid), { kundali });
+  const profileRef = realtimeHelpers.ref(database, `profiles/${uid}`);
+  await realtimeHelpers.update(profileRef, { kundali });
 }
 
 // ===========================

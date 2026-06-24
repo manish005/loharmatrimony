@@ -22,8 +22,7 @@ import {
   Trash2,
   Layout,
 } from "lucide-react";
-import { db, auth } from "../../config/firebase";
-import { collection, getDocs, updateDoc, doc, setDoc, onSnapshot, query, where, getDoc, addDoc, serverTimestamp, deleteDoc, writeBatch } from "firebase/firestore";
+import { auth, database, realtimeHelpers } from "../../config/firebase";
 import { signOut } from "firebase/auth";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
@@ -108,35 +107,46 @@ export const AdminDashboard: React.FC = () => {
   useEffect(() => {
     const fetchAdminRole = async () => {
       if (auth.currentUser) {
-        const docSnap = await getDoc(doc(db, "profiles", auth.currentUser.uid));
-        if (docSnap.exists() && docSnap.data().role) {
-          setAdminRole(docSnap.data().role);
+        const profileSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, `profiles/${auth.currentUser.uid}`));
+        if (profileSnap.exists()) {
+          const profileData = profileSnap.val();
+          if (profileData && profileData.role) {
+            setAdminRole(profileData.role);
+          }
         }
       }
     };
     fetchAdminRole();
   }, []);
 
-  // Fetch Data from Firestore
+  // Fetch Data from Realtime Database
   useEffect(() => {
     setLoading(true);
 
     // Profiles for Directory & KYC
-    const unsubProfiles = onSnapshot(collection(db, "profiles"), (snapshot) => {
-      const profilesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const profilesRef = realtimeHelpers.ref(database, "profiles");
+    const unsubProfiles = realtimeHelpers.onValue(profilesRef, (snapshot) => {
+      const raw = snapshot.val() || {};
+      const profilesData = Object.entries(raw).map(([id, doc]: [string, any]) => ({ id, ...doc }));
       setOnlineMembers(profilesData);
       // KYC list: not verified AND not rejected
       setKycProfiles(profilesData.filter((p: any) => !p.isVerified && p.kycStatus !== "rejected"));
     });
 
     // Subscriptions
-    const unsubSubs = onSnapshot(collection(db, "subscriptions"), (snapshot) => {
-      setMemberSubscriptions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    const subsRef = realtimeHelpers.ref(database, "subscriptions");
+    const unsubSubs = realtimeHelpers.onValue(subsRef, (snapshot) => {
+      const raw = snapshot.val() || {};
+      const subsData = Object.entries(raw).map(([id, doc]: [string, any]) => ({ id, ...doc }));
+      setMemberSubscriptions(subsData);
     });
 
     // Support Tickets
-    const unsubTickets = onSnapshot(collection(db, "supportTickets"), (snapshot) => {
-      setTickets(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    const ticketsRef = realtimeHelpers.ref(database, "supportTickets");
+    const unsubTickets = realtimeHelpers.onValue(ticketsRef, (snapshot) => {
+      const raw = snapshot.val() || {};
+      const ticketsData = Object.entries(raw).map(([id, doc]: [string, any]) => ({ id, ...doc }));
+      setTickets(ticketsData);
     });
 
     setLoading(false);
@@ -154,14 +164,14 @@ export const AdminDashboard: React.FC = () => {
 
   const handleApproveKYC = async (id: string) => {
     try {
-      await updateDoc(doc(db, "profiles", id), { isVerified: true });
-      await addDoc(collection(db, "notifications"), {
+      await realtimeHelpers.update(realtimeHelpers.ref(database, `profiles/${id}`), { isVerified: true });
+      await realtimeHelpers.set(realtimeHelpers.ref(database, `notifications/${id}_kyc_approved`), {
         userId: id,
         title: "KYC Approved",
         message: "Your KYC documents have been approved. Your profile is now verified!",
         type: "success",
         read: false,
-        timestamp: serverTimestamp()
+        timestamp: new Date().toISOString()
       });
       toast.success(`KYC Document approved! Verification badge has been issued.`);
       setSelectedKyc(null);
@@ -176,7 +186,7 @@ export const AdminDashboard: React.FC = () => {
       return;
     }
     try {
-      await updateDoc(doc(db, "profiles", id), { role: newRole });
+      await realtimeHelpers.update(realtimeHelpers.ref(database, `profiles/${id}`), { role: newRole });
       toast.success("User role updated successfully.");
     } catch (err: any) {
       toast.error(err.message || "Failed to update role.");
@@ -196,18 +206,19 @@ export const AdminDashboard: React.FC = () => {
       return;
     }
     try {
-      await updateDoc(doc(db, "profiles", id), {
+      await realtimeHelpers.update(realtimeHelpers.ref(database, `profiles/${id}`), {
         kycRejectReason: reason,
         kycStatus: "rejected",
         kycDocuments: null,
       });
-      await addDoc(collection(db, "notifications"), {
+      const newNotifRef = realtimeHelpers.push(realtimeHelpers.ref(database, "notifications"));
+      await realtimeHelpers.set(newNotifRef, {
         userId: id,
         title: "KYC Rejected",
         message: `Your KYC documents were rejected. Reason: ${reason}`,
         type: "error",
         read: false,
-        timestamp: serverTimestamp()
+        timestamp: Date.now()
       });
       toast.success(`KYC Document rejected. User notified.`);
       setSelectedKyc(null);
@@ -221,7 +232,7 @@ export const AdminDashboard: React.FC = () => {
     e.preventDefault();
     if (!selectedTicket) return;
     try {
-      await updateDoc(doc(db, "supportTickets", selectedTicket.id), {
+      await realtimeHelpers.update(realtimeHelpers.ref(database, `supportTickets/${selectedTicket.id}`), {
         status: selectedTicket.status,
         adminReply: selectedTicket.adminReply || ""
       });
@@ -240,7 +251,7 @@ export const AdminDashboard: React.FC = () => {
       return;
     }
     try {
-      await updateDoc(doc(db, "subscriptions", editingSub.id), {
+      await realtimeHelpers.update(realtimeHelpers.ref(database, `subscriptions/${editingSub.id}`), {
         plan: editingSub.plan,
         billing: editingSub.billing,
         expiry: editingSub.expiry
@@ -260,78 +271,92 @@ export const AdminDashboard: React.FC = () => {
       const uid = profile.uid;
 
       // Delete profile document
-      await deleteDoc(doc(db, "profiles", profileId)).catch(() => {});
+      await realtimeHelpers.remove(realtimeHelpers.ref(database, `profiles/${profileId}`)).catch(() => {});
 
       // Delete conversations and their messages
-      const convQuery = query(collection(db, "conversations"), where("participants", "array-contains", profileId));
-      const convSnap = await getDocs(convQuery);
-      const batch = writeBatch(db);
-      for (const convDoc of convSnap.docs) {
-        const msgSnap = await getDocs(collection(db, "conversations", convDoc.id, "messages"));
-        msgSnap.docs.forEach(m => batch.delete(m.ref));
-        batch.delete(convDoc.ref);
+      const convSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "conversations"));
+      const rawConvs = convSnap.val() || {};
+      const convPromises: Promise<any>[] = [];
+      for (const [convId, data] of Object.entries(rawConvs)) {
+        const item = data as any;
+        if (item.participants?.includes(profileId)) {
+          convPromises.push(realtimeHelpers.remove(realtimeHelpers.ref(database, `messages/${convId}`)));
+          convPromises.push(realtimeHelpers.remove(realtimeHelpers.ref(database, `conversations/${convId}`)));
+        }
       }
-      await batch.commit();
+      await Promise.all(convPromises);
 
       // Delete interests (sent/received)
-      const interestQuery = query(
-        collection(db, "interests"),
-        where("senderId", "==", profileId)
-      );
-      const interestSnap = await getDocs(interestQuery);
-      const interestBatch = writeBatch(db);
-      interestSnap.docs.forEach(d => interestBatch.delete(d.ref));
-      const interestReceivedQuery = query(
-        collection(db, "interests"),
-        where("receiverId", "==", profileId)
-      );
-      const interestReceivedSnap = await getDocs(interestReceivedQuery);
-      interestReceivedSnap.docs.forEach(d => interestBatch.delete(d.ref));
-      await interestBatch.commit();
+      const interestsSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "interests"));
+      const rawInterests = interestsSnap.val() || {};
+      const interestPromises: Promise<any>[] = [];
+      for (const [interestId, data] of Object.entries(rawInterests)) {
+        const item = data as any;
+        if (item.senderId === profileId || item.receiverId === profileId) {
+          interestPromises.push(realtimeHelpers.remove(realtimeHelpers.ref(database, `interests/${interestId}`)));
+        }
+      }
+      await Promise.all(interestPromises);
 
       // Delete marriage requests
-      const mrQuery = query(
-        collection(db, "marriageRequests"),
-        where("senderId", "==", profileId)
-      );
-      const mrSnap = await getDocs(mrQuery);
-      const mrBatch = writeBatch(db);
-      mrSnap.docs.forEach(d => mrBatch.delete(d.ref));
-      const mrReceivedQuery = query(
-        collection(db, "marriageRequests"),
-        where("receiverId", "==", profileId)
-      );
-      const mrReceivedSnap = await getDocs(mrReceivedQuery);
-      mrReceivedSnap.docs.forEach(d => mrBatch.delete(d.ref));
-      await mrBatch.commit();
+      const mrSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "marriageRequests"));
+      const rawRequests = mrSnap.val() || {};
+      const mrPromises: Promise<any>[] = [];
+      for (const [mrId, data] of Object.entries(rawRequests)) {
+        const item = data as any;
+        if (item.senderId === profileId || item.receiverId === profileId) {
+          mrPromises.push(realtimeHelpers.remove(realtimeHelpers.ref(database, `marriageRequests/${mrId}`)));
+        }
+      }
+      await Promise.all(mrPromises);
 
       // Delete notifications
-      const notifQuery = query(collection(db, "notifications"), where("receiverId", "==", profileId));
-      const notifSnap = await getDocs(notifQuery);
-      const notifBatch = writeBatch(db);
-      notifSnap.docs.forEach(d => notifBatch.delete(d.ref));
-      await notifBatch.commit();
+      const notificationsSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "notifications"));
+      const rawNotifs = notificationsSnap.val() || {};
+      const notifPromises: Promise<any>[] = [];
+      for (const [notifId, data] of Object.entries(rawNotifs)) {
+        const item = data as any;
+        if (item.receiverId === profileId || item.userId === profileId) {
+          notifPromises.push(realtimeHelpers.remove(realtimeHelpers.ref(database, `notifications/${notifId}`)));
+        }
+      }
+      await Promise.all(notifPromises);
 
-      // Delete support tickets
-      const ticketQuery = query(collection(db, "supportTickets"), where("uid", "==", uid));
-      const ticketSnap = await getDocs(ticketQuery);
-      const ticketBatch = writeBatch(db);
-      ticketSnap.docs.forEach(d => ticketBatch.delete(d.ref));
-      await ticketBatch.commit();
+      // Delete support tickets, subscriptions, success stories
+      if (uid) {
+        const ticketsSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "supportTickets"));
+        const rawTickets = ticketsSnap.val() || {};
+        const ticketPromises: Promise<any>[] = [];
+        for (const [ticketId, data] of Object.entries(rawTickets)) {
+          const item = data as any;
+          if (item.uid === uid || item.userId === profileId) {
+            ticketPromises.push(realtimeHelpers.remove(realtimeHelpers.ref(database, `supportTickets/${ticketId}`)));
+          }
+        }
+        await Promise.all(ticketPromises);
 
-      // Delete subscription records
-      const subQuery = query(collection(db, "subscriptions"), where("uid", "==", uid));
-      const subSnap = await getDocs(subQuery);
-      const subBatch = writeBatch(db);
-      subSnap.docs.forEach(d => subBatch.delete(d.ref));
-      await subBatch.commit();
+        const subsSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "subscriptions"));
+        const rawSubs = subsSnap.val() || {};
+        const subPromises: Promise<any>[] = [];
+        for (const [subId, data] of Object.entries(rawSubs)) {
+          const item = data as any;
+          if (item.uid === uid || item.userId === profileId) {
+            subPromises.push(realtimeHelpers.remove(realtimeHelpers.ref(database, `subscriptions/${subId}`)));
+          }
+        }
+        await Promise.all(subPromises);
 
-      // Delete success stories
-      const storyQuery = query(collection(db, "successStories"), where("uid", "==", uid));
-      const storySnap = await getDocs(storyQuery);
-      const storyBatch = writeBatch(db);
-      storySnap.docs.forEach(d => storyBatch.delete(d.ref));
-      await storyBatch.commit();
+        const storiesSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "successStories"));
+        const rawStories = storiesSnap.val() || {};
+        const storyPromises: Promise<any>[] = [];
+        for (const [storyId, data] of Object.entries(rawStories)) {
+          const item = data as any;
+          if (item.uid === uid || item.partner1Id === profileId || item.partner2Id === profileId) {
+            storyPromises.push(realtimeHelpers.remove(realtimeHelpers.ref(database, `successStories/${storyId}`)));
+          }
+        }
+        await Promise.all(storyPromises);
+      }
 
       // Try to delete Firebase Auth user (requires callable cloud function)
       try {
@@ -366,59 +391,89 @@ export const AdminDashboard: React.FC = () => {
     let failCount = 0;
     for (const profile of profilesToDelete) {
       try {
-        await deleteDoc(doc(db, "profiles", profile.id)).catch(() => {});
-
+        const profileId = profile.id;
         const uid = profile.uid;
-        const convQuery = query(collection(db, "conversations"), where("participants", "array-contains", profile.id));
-        const convSnap = await getDocs(convQuery);
-        const batch = writeBatch(db);
-        for (const convDoc of convSnap.docs) {
-          const msgSnap = await getDocs(collection(db, "conversations", convDoc.id, "messages"));
-          msgSnap.docs.forEach(m => batch.delete(m.ref));
-          batch.delete(convDoc.ref);
+
+        await realtimeHelpers.remove(realtimeHelpers.ref(database, `profiles/${profileId}`)).catch(() => {});
+
+        const convSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "conversations"));
+        const rawConvs = convSnap.val() || {};
+        const convPromises: Promise<any>[] = [];
+        for (const [convId, data] of Object.entries(rawConvs)) {
+          const item = data as any;
+          if (item.participants?.includes(profileId)) {
+            convPromises.push(realtimeHelpers.remove(realtimeHelpers.ref(database, `messages/${convId}`)));
+            convPromises.push(realtimeHelpers.remove(realtimeHelpers.ref(database, `conversations/${convId}`)));
+          }
         }
-        await batch.commit();
+        await Promise.all(convPromises);
 
-        const interestQ1 = query(collection(db, "interests"), where("senderId", "==", profile.id));
-        const interestQ2 = query(collection(db, "interests"), where("receiverId", "==", profile.id));
-        const [i1, i2] = await Promise.all([getDocs(interestQ1), getDocs(interestQ2)]);
-        const ib = writeBatch(db);
-        i1.docs.forEach(d => ib.delete(d.ref));
-        i2.docs.forEach(d => ib.delete(d.ref));
-        await ib.commit();
+        const interestsSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "interests"));
+        const rawInterests = interestsSnap.val() || {};
+        const interestPromises: Promise<any>[] = [];
+        for (const [interestId, data] of Object.entries(rawInterests)) {
+          const item = data as any;
+          if (item.senderId === profileId || item.receiverId === profileId) {
+            interestPromises.push(realtimeHelpers.remove(realtimeHelpers.ref(database, `interests/${interestId}`)));
+          }
+        }
+        await Promise.all(interestPromises);
 
-        const mrQ1 = query(collection(db, "marriageRequests"), where("senderId", "==", profile.id));
-        const mrQ2 = query(collection(db, "marriageRequests"), where("receiverId", "==", profile.id));
-        const [m1, m2] = await Promise.all([getDocs(mrQ1), getDocs(mrQ2)]);
-        const mb = writeBatch(db);
-        m1.docs.forEach(d => mb.delete(d.ref));
-        m2.docs.forEach(d => mb.delete(d.ref));
-        await mb.commit();
+        const mrSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "marriageRequests"));
+        const rawRequests = mrSnap.val() || {};
+        const mrPromises: Promise<any>[] = [];
+        for (const [mrId, data] of Object.entries(rawRequests)) {
+          const item = data as any;
+          if (item.senderId === profileId || item.receiverId === profileId) {
+            mrPromises.push(realtimeHelpers.remove(realtimeHelpers.ref(database, `marriageRequests/${mrId}`)));
+          }
+        }
+        await Promise.all(mrPromises);
 
-        const nq = query(collection(db, "notifications"), where("receiverId", "==", profile.id));
-        const ns = await getDocs(nq);
-        const nb = writeBatch(db);
-        ns.docs.forEach(d => nb.delete(d.ref));
-        await nb.commit();
+        const notificationsSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "notifications"));
+        const rawNotifs = notificationsSnap.val() || {};
+        const notifPromises: Promise<any>[] = [];
+        for (const [notifId, data] of Object.entries(rawNotifs)) {
+          const item = data as any;
+          if (item.receiverId === profileId || item.userId === profileId) {
+            notifPromises.push(realtimeHelpers.remove(realtimeHelpers.ref(database, `notifications/${notifId}`)));
+          }
+        }
+        await Promise.all(notifPromises);
 
         if (uid) {
-          const tq = query(collection(db, "supportTickets"), where("uid", "==", uid));
-          const ts = await getDocs(tq);
-          const tb = writeBatch(db);
-          ts.docs.forEach(d => tb.delete(d.ref));
-          await tb.commit();
+          const ticketsSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "supportTickets"));
+          const rawTickets = ticketsSnap.val() || {};
+          const ticketPromises: Promise<any>[] = [];
+          for (const [ticketId, data] of Object.entries(rawTickets)) {
+            const item = data as any;
+            if (item.uid === uid || item.userId === profileId) {
+              ticketPromises.push(realtimeHelpers.remove(realtimeHelpers.ref(database, `supportTickets/${ticketId}`)));
+            }
+          }
+          await Promise.all(ticketPromises);
 
-          const sq = query(collection(db, "subscriptions"), where("uid", "==", uid));
-          const ss = await getDocs(sq);
-          const sb = writeBatch(db);
-          ss.docs.forEach(d => sb.delete(d.ref));
-          await sb.commit();
+          const subsSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "subscriptions"));
+          const rawSubs = subsSnap.val() || {};
+          const subPromises: Promise<any>[] = [];
+          for (const [subId, data] of Object.entries(rawSubs)) {
+            const item = data as any;
+            if (item.uid === uid || item.userId === profileId) {
+              subPromises.push(realtimeHelpers.remove(realtimeHelpers.ref(database, `subscriptions/${subId}`)));
+            }
+          }
+          await Promise.all(subPromises);
 
-          const stq = query(collection(db, "successStories"), where("uid", "==", uid));
-          const sts = await getDocs(stq);
-          const stb = writeBatch(db);
-          sts.docs.forEach(d => stb.delete(d.ref));
-          await stb.commit();
+          const storiesSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "successStories"));
+          const rawStories = storiesSnap.val() || {};
+          const storyPromises: Promise<any>[] = [];
+          for (const [storyId, data] of Object.entries(rawStories)) {
+            const item = data as any;
+            if (item.uid === uid || item.partner1Id === profileId || item.partner2Id === profileId) {
+              storyPromises.push(realtimeHelpers.remove(realtimeHelpers.ref(database, `successStories/${storyId}`)));
+            }
+          }
+          await Promise.all(storyPromises);
 
           try {
             const functions = await import("firebase/functions");

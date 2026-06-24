@@ -2,10 +2,9 @@
 // This service handles astro calculations for profiles
 // Can be called when profiles are saved or when astro fields are modified
 
-import { db } from "../config/firebase";
+import { database, realtimeHelpers } from "../config/firebase";
 import { calculateKundali, calculateCompatibility } from "../utils/astrologyShared";
 import { getCityCoords } from "./astrology/geocode";
-import { doc, updateDoc, getDoc, setDoc } from "firebase/firestore";
 
 export interface AstroCalculationResult {
   success: boolean;
@@ -83,8 +82,9 @@ export class AstroService {
         calculatedAt: new Date().toISOString(),
       };
 
-      // Store in Firestore
-      await updateDoc(doc(db, 'profiles', uid), { kundali: kundaliData });
+      // Store in Realtime Database
+      const profileRef = realtimeHelpers.ref(database, `profiles/${uid}`);
+      await realtimeHelpers.update(profileRef, { kundali: kundaliData });
 
       return { success: true, kundali: kundaliData };
     } catch (error: any) {
@@ -96,18 +96,18 @@ export class AstroService {
   // Calculate compatibility between two profiles
   static async calculateCompatibility(uid1: string, uid2: string): Promise<AstroCalculationResult> {
     try {
-      // Fetch both profiles from Firestore
+      // Fetch both profiles from Realtime Database
       const [snap1, snap2] = await Promise.all([
-        getDoc(doc(db, 'profiles', uid1)),
-        getDoc(doc(db, 'profiles', uid2)),
+        realtimeHelpers.get(realtimeHelpers.ref(database, `profiles/${uid1}`)),
+        realtimeHelpers.get(realtimeHelpers.ref(database, `profiles/${uid2}`)),
       ]);
 
-      if (!snap1.exists || !snap2.exists) {
+      if (!snap1.exists() || !snap2.exists()) {
         return { success: false, error: "One or both profiles not found" };
       }
 
-      const p1 = snap1.data()!;
-      const p2 = snap2.data()!;
+      const p1 = snap1.val();
+      const p2 = snap2.val();
 
       // Both must have kundali calculated
       if (!p1.kundali || !p2.kundali) {
@@ -118,7 +118,8 @@ export class AstroService {
 
       // Cache result
       const cacheKey = [uid1, uid2].sort().join("__");
-      await setDoc(doc(db, 'compatibilityCache', cacheKey), {
+      const cacheRef = realtimeHelpers.ref(database, `compatibilityCache/${cacheKey}`);
+      await realtimeHelpers.set(cacheRef, {
         uid1,
         uid2,
         ...result,
@@ -136,13 +137,13 @@ export class AstroService {
   static async autoCalculateKundali(profileUpdate: ProfileUpdate): Promise<AstroCalculationResult> {
     try {
       const uid = profileUpdate.uid;
-      const profileDoc = await getDoc(doc(db, 'profiles', uid));
+      const profileSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, `profiles/${uid}`));
 
-      if (!profileDoc.exists) {
+      if (!profileSnap.exists()) {
         return { success: false, error: "Profile not found" };
       }
 
-      const currentProfile = profileDoc.data()!;
+      const currentProfile = profileSnap.val();
 
       if (!this.hasAstroFieldsChanged(currentProfile, profileUpdate)) {
         return { success: true, error: "No astro fields changed, skipping calculation" };
@@ -159,13 +160,13 @@ export class AstroService {
   static async getCachedCompatibility(uid1: string, uid2: string): Promise<AstroCalculationResult> {
     try {
       const cacheKey = [uid1, uid2].sort().join("__");
-      const cacheDoc = await getDoc(doc(db, 'compatibilityCache', cacheKey));
+      const cacheSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, `compatibilityCache/${cacheKey}`));
 
-      if (!cacheDoc.exists) {
+      if (!cacheSnap.exists()) {
         return { success: false, error: "No cached compatibility found" };
       }
 
-      return { success: true, kundali: cacheDoc.data() };
+      return { success: true, kundali: cacheSnap.val() };
     } catch (error: any) {
       console.error("Get cached compatibility error:", error);
       return { success: false, error: error.message };

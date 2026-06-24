@@ -15,9 +15,9 @@ import {
   Eye,
   EyeOff
 } from "lucide-react";
-import { db, storage, auth } from "../../config/firebase";
+import { database, storage, auth } from "../../config/firebase";
 import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
-import { collection, addDoc } from "firebase/firestore";
+import { ref as dbRef, set as dbSet, push } from "firebase/database";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { compressImage, type CompressionResult } from "../../utils/imageCompressor";
 import toast from "react-hot-toast";
@@ -207,7 +207,7 @@ export const RegisterWizard: React.FC = () => {
         uploadedUrls.push(downloadUrl);
       }
 
-      // 3. Submit complete profile document payload to Firestore profiles collection
+      // 3. Submit complete profile document payload to Realtime Database profiles
       const { password, confirmPassword, ...payloadWithoutPassword } = formData;
       const profilePayload = {
         ...payloadWithoutPassword,
@@ -220,7 +220,7 @@ export const RegisterWizard: React.FC = () => {
         compatibility: Math.floor(Math.random() * 25) + 75
       };
 
-      await addDoc(collection(db, "profiles"), profilePayload);
+      await dbSet(dbRef(database, "profiles/" + auth.currentUser!.uid), profilePayload);
 
       toast.success("Profile Registered! A verification link has been sent to your email. Please verify your email.");
       sessionStorage.removeItem("registering");

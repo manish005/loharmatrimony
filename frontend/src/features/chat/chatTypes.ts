@@ -1,4 +1,4 @@
-import type { Timestamp } from "firebase/firestore";
+// Chat types — uses number timestamps (Unix ms) for Realtime Database compatibility
 
 export type MessageStatus = "sending" | "sent" | "delivered" | "read";
 
@@ -6,7 +6,7 @@ export interface ChatMessage {
   id: string;
   senderId: string;
   text: string;
-  timestamp: Timestamp | null;
+  timestamp: number | null;
   status: MessageStatus;
   deleted: boolean; // Keep for backward compatibility
   deletedForEveryone?: boolean;
@@ -21,13 +21,13 @@ export interface ConversationData {
   lastMessage: {
     text: string;
     senderId: string;
-    timestamp: Timestamp | null;
+    timestamp: number | null;
     status: MessageStatus;
   } | null;
-  createdAt: Timestamp | null;
-  updatedAt: Timestamp | null;
+  createdAt: number | null;
+  updatedAt: number | null;
   blockedBy?: string[];
-  clearedAt?: Record<string, Timestamp>;
+  clearedAt?: Record<string, number>;
   unmatchedBy?: string[];
 }
 

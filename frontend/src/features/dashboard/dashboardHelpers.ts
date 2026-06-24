@@ -1,3 +1,5 @@
+import { database, realtimeHelpers } from "../../config/firebase";
+
 export const encodeId = (id: string): string =>
   btoa(id).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 
@@ -9,6 +11,33 @@ export const decodeId = (encoded: string): string => {
   } catch {
     return encoded;
   }
+};
+
+export const getRealtimeDoc = async (path: string) => {
+  const docRef = realtimeHelpers.ref(database, path);
+  const snapshot = await realtimeHelpers.get(docRef);
+  return snapshot.val();
+};
+
+export const setRealtimeDoc = async (path: string, data: any) => {
+  const docRef = realtimeHelpers.ref(database, path);
+  await realtimeHelpers.set(docRef, data);
+};
+
+export const updateRealtimeDoc = async (path: string, data: any) => {
+  const docRef = realtimeHelpers.ref(database, path);
+  await realtimeHelpers.update(docRef, data);
+};
+
+export const deleteRealtimeDoc = async (path: string) => {
+  const docRef = realtimeHelpers.ref(database, path);
+  await realtimeHelpers.remove(docRef);
+};
+
+export const getRealtimeList = async (path: string) => {
+  const docRef = realtimeHelpers.ref(database, path);
+  const snapshot = await realtimeHelpers.get(docRef);
+  return snapshot.val() || {};
 };
 
 export const calculateAge = (dobString: string): number | null => {

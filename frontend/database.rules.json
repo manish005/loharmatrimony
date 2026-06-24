@@ -1,0 +1,15 @@
+{
+  "rules": {
+    ".read": "auth != null",
+    ".write": "auth != null",
+    "profiles": {
+      ".indexOn": ["email", "uid"]
+    },
+    "interests": {
+      ".indexOn": ["senderId", "receiverId"]
+    },
+    "marriageRequests": {
+      ".indexOn": ["senderId", "receiverId"]
+    }
+  }
+}
