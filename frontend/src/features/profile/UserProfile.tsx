@@ -16,6 +16,7 @@ import {
   Mail,
   Phone
 } from "lucide-react";
+import KundaliCard from "./components/KundaliCard";
 
 export const UserProfile: React.FC = () => {
   const [interestSent, setInterestSent] = useState(false);
@@ -291,7 +292,7 @@ export const UserProfile: React.FC = () => {
 
           </div>
 
-          {/* Right column: Partner Preferences */}
+          {/* Right column: Partner Preferences + Kundali */}
           <div className="space-y-6">
             <div className="bg-white dark:bg-dark-900 border border-slate-100 dark:border-dark-800 rounded-3xl p-6 shadow-sm space-y-4">
               <h3 className="font-serif text-base font-bold text-slate-900 dark:text-white border-b border-slate-50 dark:border-dark-850 pb-2 flex items-center gap-1.5">
@@ -325,6 +326,9 @@ export const UserProfile: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* Kundali Card */}
+            <KundaliCard profile={profile} isOwnProfile={true} />
           </div>
 
         </section>
