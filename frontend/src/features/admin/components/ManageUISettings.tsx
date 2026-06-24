@@ -5,9 +5,9 @@ import {
   GitBranch, BarChart3, Users, CreditCard, HeartHandshake, HelpCircle,
   Upload, X, Trash2
 } from "lucide-react";
-import { db, storage } from "../../../config/firebase";
+import { db } from "../../../config/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { uploadToCloudinary } from "../../../utils/cloudinary";
 import toast from "react-hot-toast";
 
 interface SectionConfig {
@@ -99,14 +99,15 @@ export default function ManageUISettings() {
     const setter = field === "backgroundImage" ? setUploadingBg : setUploadingRight;
     setter(true);
     try {
-      const fileRef = ref(storage, `site/landing_${field}_${Date.now()}.jpg`);
-      await uploadBytes(fileRef, file);
-      const url = await getDownloadURL(fileRef);
+      // Upload to Cloudinary under the 'admin' folder
+      // Cloudinary will automatically create the 'admin' folder if it doesn't exist
+      const publicId = `landing_${field}_${Date.now()}`;
+      const url = await uploadToCloudinary(file, "admin", publicId);
       updateSection("hero", field, url);
       toast.success("Image uploaded successfully!");
     } catch (err) {
       console.error("Upload error:", err);
-      toast.error("Failed to upload image");
+      toast.error("Failed to upload image. Please check Cloudinary configuration.");
     } finally {
       setter(false);
     }
