@@ -11,24 +11,41 @@ export const decodeId = (encoded: string): string => {
   }
 };
 
-export const calculateAge = (dobString: string) => {
+export const calculateAge = (dobString: string): number | null => {
   if (!dobString) return null;
-  
-  // Convert dob if in DD/MM/YYYY format
-  let dob = dobString;
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dob)) {
-    const [d, m, y] = dob.split("/");
-    dob = `${y}-${m}-${d}`;
+
+  let birthDate: Date;
+
+  // DD/MM/YYYY
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dobString)) {
+    const [day, month, year] = dobString.split('/').map(Number);
+    birthDate = new Date(year, month - 1, day);
   }
-  
-  const birthDate = new Date(dob);
-  const today = new Date();
+  // YYYY-MM-DD
+  else if (/^\d{4}-\d{2}-\d{2}$/.test(dobString)) {
+    const [year, month, day] = dobString.split('-').map(Number);
+    birthDate = new Date(year, month - 1, day);
+  }
+  else {
+    birthDate = new Date(dobString);
+  }
+
   if (isNaN(birthDate.getTime())) return null;
+
+  const today = new Date();
+
   let age = today.getFullYear() - birthDate.getFullYear();
-  const m = today.getMonth() - birthDate.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+
+  if (
+    today.getMonth() < birthDate.getMonth() ||
+    (
+      today.getMonth() === birthDate.getMonth() &&
+      today.getDate() < birthDate.getDate()
+    )
+  ) {
     age--;
   }
+
   return age;
 };
 
