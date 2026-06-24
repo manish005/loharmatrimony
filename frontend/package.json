@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@rolldown/binding-linux-x64-gnu": "^1.1.2",
+    "astronomy-engine": "^2.1.19",
     "firebase": "^12.15.0",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.21.0",
