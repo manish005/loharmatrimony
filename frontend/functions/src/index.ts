@@ -1,6 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { calculateKundali } from "./astrology/engine";
+import { calculateKundali } from "./astrologyShared";
 import { calculateCompatibility } from "./astrology/compatibility";
 import { getCityCoords } from "./astrology/geocode";
 
@@ -10,7 +10,7 @@ const db = admin.firestore();
 // ============================================================
 // FUNCTION 1: calculateKundali
 // Called when a user wants their birth chart calculated
-// ============================================================
+// ===========================================================
 export const calculateKundaliFn = onCall(
   { region: "asia-south1", timeoutSeconds: 30, memory: "256MiB" },
   async (request) => {

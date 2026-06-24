@@ -3,6 +3,7 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getFunctions } from "firebase/functions";
+import { doc, updateDoc, setDoc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 
 // Lohar Matrimony Firebase credentials
 const firebaseConfig = {
@@ -25,14 +26,15 @@ export const db = getFirestore(app);
 export const storage = getStorage(app);
 export const functions = getFunctions(app, "asia-south1");
 
-import { doc, updateDoc, setDoc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+const firestoreHelpers = { doc, updateDoc, setDoc, getDoc, collection, query, where, getDocs };
 
 if (typeof window !== "undefined") {
   (window as any).firebaseAuth = auth;
   (window as any).firebaseDb = db;
-  (window as any).firestoreHelpers = { doc, updateDoc, setDoc, getDoc, collection, query, where, getDocs };
+  (window as any).firestoreHelpers = firestoreHelpers;
 }
 
+export { firestoreHelpers };
 export default app;
 
 

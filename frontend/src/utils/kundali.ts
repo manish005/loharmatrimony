@@ -5,6 +5,7 @@
 import * as Astronomy from "astronomy-engine";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../config/firebase";
+import { calculateKundali } from "../utils/astrologyShared";
 
 // ===========================
 // Lahiri Ayanamsa calculation
@@ -277,48 +278,36 @@ export function computeKundali(
   birthPlace: string,
   timezoneOffset = 5.5
 ): KundaliData {
-  const [year, month, day] = dob.split("-").map(Number);
-  const [hour, minute] = birthTime.split(":").map(Number);
-  const utH = hour + minute / 60 - timezoneOffset;
-  const date = new Date(Date.UTC(year, month - 1, day, Math.floor(utH), Math.round((utH % 1) * 60)));
-
   const { lat, lng } = getCoords(birthPlace);
 
-  const planets: Record<string, PlanetPos> = {
-    Sun: makePlanet(Astronomy.Body.Sun, date),
-    Moon: makePlanet(Astronomy.Body.Moon, date),
-    Mars: makePlanet(Astronomy.Body.Mars, date),
-    Mercury: makePlanet(Astronomy.Body.Mercury, date),
-    Jupiter: makePlanet(Astronomy.Body.Jupiter, date),
-    Venus: makePlanet(Astronomy.Body.Venus, date),
-    Saturn: makePlanet(Astronomy.Body.Saturn, date),
-    Rahu: getRahu(date),
-  };
+  const kundaliResult = calculateKundali(dob, birthTime, lat, lng, timezoneOffset);
 
-  const ketuLon = (planets.Rahu.longitude + 180) % 360;
-  const ketuRi = Math.floor(ketuLon / 30) % 12;
-  planets.Ketu = { longitude: ketuLon, rashi: RASHIS[ketuRi], rashiIndex: ketuRi, degree: ketuLon % 30, retrograde: false };
-
-  const lagna = getLagna(date, lat, lng);
-  const moonRi = planets.Moon.rashiIndex;
-  const nakIdx = Math.min(Math.floor(planets.Moon.longitude / 13.333333), 26);
-  const pada = Math.min(Math.floor((planets.Moon.longitude % 13.333333) / 3.333333) + 1, 4);
+  const planets: Record<string, PlanetPos> = {};
+  Object.entries(kundaliResult.planets).forEach(([name, pos]) => {
+    planets[name] = {
+      longitude: pos.longitude,
+      rashi: pos.rashi,
+      rashiIndex: pos.rashiIndex,
+      degree: pos.degree,
+      retrograde: pos.retrograde,
+    };
+  });
 
   return {
-    moonSign: RASHIS[moonRi],
-    moonSignIndex: moonRi,
-    lagna: lagna.rashi,
-    lagnaIndex: lagna.rashiIndex,
-    sunSign: planets.Sun.rashi,
-    nakshatra: NAKSHATRAS[nakIdx],
-    nakshatraIndex: nakIdx,
-    nakshatraLord: NAKSHATRA_LORDS[nakIdx],
-    pada,
-    gana: GANA_TABLE[nakIdx],
-    nadi: NADI_TABLE[nakIdx],
-    yoni: YONI_TABLE[nakIdx],
-    varna: VARNA_TABLE[moonRi],
-    doshas: detectDoshas(planets, lagna.rashiIndex, moonRi),
+    moonSign: kundaliResult.moonSign,
+    moonSignIndex: kundaliResult.moonSignIndex,
+    lagna: kundaliResult.lagna,
+    lagnaIndex: kundaliResult.lagnaIndex,
+    sunSign: kundaliResult.sunSign,
+    nakshatra: kundaliResult.nakshatra,
+    nakshatraIndex: kundaliResult.nakshatraIndex,
+    nakshatraLord: kundaliResult.nakshatraLord,
+    pada: kundaliResult.pada,
+    gana: kundaliResult.gana,
+    nadi: kundaliResult.nadi,
+    yoni: kundaliResult.yoni,
+    varna: kundaliResult.varna,
+    doshas: kundaliResult.doshas,
     planets,
     dob,
     birthTime,
