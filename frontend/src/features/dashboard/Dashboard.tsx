@@ -379,6 +379,27 @@ export const Dashboard: React.FC = () => {
     };
   }, [myProfile?.id, profiles]);
 
+  // Clean up stale conversations where no approved connection exists
+  useEffect(() => {
+    if (!myProfile?.id || interestsLoading) return;
+    const approvedIds = new Set([
+      ...sentInterests.filter(i => i.status === "approved").map(i => i.receiverId),
+      ...approvedReceivedIds,
+    ]);
+    (async () => {
+      try {
+        const convSnap = await getDocs(query(collection(db, "conversations"), where("participants", "array-contains", myProfile.id)));
+        for (const d of convSnap.docs) {
+          const conv = d.data();
+          const otherId = conv.participants?.find((p: string) => p !== myProfile.id);
+          if (otherId && !approvedIds.has(otherId)) {
+            await deleteChatConversation(d.id);
+          }
+        }
+      } catch {}
+    })();
+  }, [myProfile?.id, sentInterests, approvedReceivedIds, interestsLoading]);
+
   // Heartbeat: keep isOnline true and update lastActive every 30s
   useEffect(() => {
     if (!myProfile?.id) return;
