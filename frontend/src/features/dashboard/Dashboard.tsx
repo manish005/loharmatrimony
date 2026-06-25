@@ -73,6 +73,7 @@ export const Dashboard: React.FC = () => {
   const [isSubmittingProposal, setIsSubmittingProposal] = useState(false);
   const [isSubmittingMarriageUpdate, setIsSubmittingMarriageUpdate] = useState(false);
   const [deletionStage, setDeletionStage] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
   const [interestsLoading, setInterestsLoading] = useState(true);
   const initialInterestLoadDone = useRef(false);
 
@@ -448,6 +449,7 @@ export const Dashboard: React.FC = () => {
   };
 
   const handleApproveInterest = async (senderId: string, senderName: string, senderPhoto: string) => {
+    setChatLoading(true);
     try {
       const q = query(collection(db, "interests"), where("receiverId", "==", myProfile.id), where("senderId", "==", senderId), where("status", "==", "pending"));
       const snap = await getDocs(q);
@@ -475,6 +477,8 @@ export const Dashboard: React.FC = () => {
     } catch (err) {
       console.error("Error approving interest:", err);
       showToast("Failed to approve interest.", "error");
+    } finally {
+      setChatLoading(false);
     }
   };
 
@@ -1272,6 +1276,14 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className={`min-h-screen bg-[#faf7f2] dark:bg-dark-950 transition-colors duration-300 ${activeTab === 'messages' ? 'pb-0' : 'pb-20 lg:pb-0'}`}>
+      {chatLoading && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white dark:bg-dark-900 rounded-3xl p-8 shadow-2xl flex flex-col items-center gap-4">
+            <div className="animate-spin h-10 w-10 border-4 border-maroon-500 border-t-transparent rounded-full" />
+            <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Setting up your chat...</p>
+          </div>
+        </div>
+      )}
 
       <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 relative items-start`}>
 
