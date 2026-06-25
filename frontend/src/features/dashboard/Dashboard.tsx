@@ -635,38 +635,53 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  const deleteFirestoreDocsInBatches = async (q: any) => {
+    const snap = await getDocs(q);
+    if (snap.empty) return;
+    const batch = writeBatch(db);
+    snap.docs.forEach(d => batch.delete(doc(db, q.collection?.id || "", d.id)));
+    await batch.commit();
+  };
+
   const handleRejectMarriageRequest = async (requestId: string) => {
     try {
       const requestRef = doc(db, "marriageRequests", requestId);
       const reqSnap = await getDoc(requestRef);
-      if (reqSnap.exists()) {
-        const reqData = reqSnap.data();
-        const otherUserId = reqData.senderId === myProfile.id ? reqData.receiverId : reqData.senderId;
+      if (!reqSnap.exists()) return;
+      const reqData = reqSnap.data();
+      const otherUserId = reqData.senderId === myProfile.id ? reqData.receiverId : reqData.senderId;
 
-        // 1. Delete marriage request document
-        await deleteDoc(requestRef);
+      // Run all queries in parallel
+      const [iSnap1, iSnap2, nSnap1, nSnap2] = await Promise.all([
+        getDocs(query(collection(db, "interests"), where("senderId", "==", myProfile.id), where("receiverId", "==", otherUserId))),
+        getDocs(query(collection(db, "interests"), where("senderId", "==", otherUserId), where("receiverId", "==", myProfile.id))),
+        getDocs(query(collection(db, "notifications"), where("senderId", "==", myProfile.id), where("receiverId", "==", otherUserId))),
+        getDocs(query(collection(db, "notifications"), where("senderId", "==", otherUserId), where("receiverId", "==", myProfile.id))),
+      ]);
 
-        // 2. Delete interest document(s) between them from Firestore
-        const iq1 = query(collection(db, "interests"), where("senderId", "==", myProfile.id), where("receiverId", "==", otherUserId));
-        const iSnap1 = await getDocs(iq1);
-        iSnap1.forEach(async (d) => { await deleteDoc(doc(db, "interests", d.id)); });
-        const iq2 = query(collection(db, "interests"), where("senderId", "==", otherUserId), where("receiverId", "==", myProfile.id));
-        const iSnap2 = await getDocs(iq2);
-        iSnap2.forEach(async (d) => { await deleteDoc(doc(db, "interests", d.id)); });
+      // Delete all docs + send notification + delete RTDB chat in parallel
+      const batch = writeBatch(db);
+      batch.delete(requestRef);
+      iSnap1.docs.forEach(d => batch.delete(doc(db, "interests", d.id)));
+      iSnap2.docs.forEach(d => batch.delete(doc(db, "interests", d.id)));
+      nSnap1.docs.forEach(d => batch.delete(doc(db, "notifications", d.id)));
+      nSnap2.docs.forEach(d => batch.delete(doc(db, "notifications", d.id)));
+      const myName = myProfile.name || myProfile.firstName || "Someone";
+      const notifRef = doc(collection(db, "notifications"));
+      batch.set(notifRef, {
+        receiverId: otherUserId, senderId: myProfile.id,
+        text: `${myName} declined your marriage proposal.`,
+        type: "marriage_proposal_rejected", read: false, createdAt: Date.now()
+      });
 
-        // 3. Send Notification to the other user via Firestore
-        const myName = myProfile.name || myProfile.firstName || "Someone";
-        await addDoc(collection(db, "notifications"), {
-          receiverId: otherUserId,
-          senderId: myProfile.id,
-          text: `${myName} declined your marriage proposal.`,
-          type: "marriage_proposal_rejected",
-          read: false,
-          createdAt: Date.now()
-        });
+      const convId = [myProfile.id, otherUserId].sort().join("_");
+      await Promise.all([
+        batch.commit(),
+        realtimeHelpers.remove(realtimeHelpers.ref(database, `messages/${convId}`)).catch(() => {}),
+        realtimeHelpers.remove(realtimeHelpers.ref(database, `conversations/${convId}`)).catch(() => {}),
+      ]);
 
-        showToast("Marriage Request declined and connection reset.");
-      }
+      showToast("Marriage Request declined and connection reset.");
     } catch (err) {
       console.error("Error rejecting marriage request", err);
       showToast("Failed to decline marriage request", "error");
@@ -755,122 +770,86 @@ export const Dashboard: React.FC = () => {
       if (!myProfile.id || !partnerId) {
         throw new Error("Could not find partner details.");
       }
-
-      // 1. Delete the marriageRequests document from Firestore
-      const mrq = query(
-        collection(db, "marriageRequests"),
-        where("senderId", "in", [myProfile.id, partnerId]),
-        where("receiverId", "in", [myProfile.id, partnerId]),
-        where("status", "==", "accepted")
-      );
-      const mrSnap = await getDocs(mrq);
-      mrSnap.forEach(async (d) => { await deleteDoc(doc(db, "marriageRequests", d.id)); });
-
-      // 2. Find and delete the successStory from Firestore
-      const q1 = query(collection(db, "successStories"), where("partner1Id", "==", myProfile.id), where("partner2Id", "==", partnerId));
-      const ssSnap = await getDocs(q1);
-      ssSnap.forEach(async (d) => { await deleteDoc(doc(db, "successStories", d.id)); });
-      const q2 = query(collection(db, "successStories"), where("partner1Id", "==", partnerId), where("partner2Id", "==", myProfile.id));
-      const ssSnap2 = await getDocs(q2);
-      ssSnap2.forEach(async (d) => { await deleteDoc(doc(db, "successStories", d.id)); });
-
-      // 3. Delete the interests between them from Firestore
-      const iq1 = query(collection(db, "interests"), where("senderId", "==", myProfile.id), where("receiverId", "==", partnerId));
-      const iSnap1 = await getDocs(iq1);
-      iSnap1.forEach(async (d) => { await deleteDoc(doc(db, "interests", d.id)); });
-      const iq2 = query(collection(db, "interests"), where("senderId", "==", partnerId), where("receiverId", "==", myProfile.id));
-      const iSnap2 = await getDocs(iq2);
-      iSnap2.forEach(async (d) => { await deleteDoc(doc(db, "interests", d.id)); });
-
-      // 4. Delete the conversations and messages from RTDB (chat stays on RTDB)
       const convId = [myProfile.id, partnerId].sort().join("_");
-      try {
-        await realtimeHelpers.remove(realtimeHelpers.ref(database, `messages/${convId}`));
-        await realtimeHelpers.remove(realtimeHelpers.ref(database, `conversations/${convId}`));
-      } catch (chatErr) {
-        console.error("Failed to delete chat logs, continuing reset:", chatErr);
-      }
 
-      // 5. Fetch partner's profile from Firestore for previousMaritalStatus
-      let partnerPrevStatus = "Never Married";
-      const partnerSnap = await getDoc(doc(db, "profiles", partnerId));
-      if (partnerSnap.exists()) {
-        partnerPrevStatus = partnerSnap.data().previousMaritalStatus || "Never Married";
-      }
+      // Run all queries in parallel
+      const [
+        mrSnap, ssSnap1, ssSnap2, iSnap1, iSnap2,
+        nSnap1, nSnap2, partnerSnap,
+      ] = await Promise.all([
+        getDocs(query(collection(db, "marriageRequests"), where("senderId", "in", [myProfile.id, partnerId]), where("receiverId", "in", [myProfile.id, partnerId]), where("status", "==", "accepted"))),
+        getDocs(query(collection(db, "successStories"), where("partner1Id", "==", myProfile.id), where("partner2Id", "==", partnerId))),
+        getDocs(query(collection(db, "successStories"), where("partner1Id", "==", partnerId), where("partner2Id", "==", myProfile.id))),
+        getDocs(query(collection(db, "interests"), where("senderId", "==", myProfile.id), where("receiverId", "==", partnerId))),
+        getDocs(query(collection(db, "interests"), where("senderId", "==", partnerId), where("receiverId", "==", myProfile.id))),
+        getDocs(query(collection(db, "notifications"), where("senderId", "==", myProfile.id), where("receiverId", "==", partnerId))),
+        getDocs(query(collection(db, "notifications"), where("senderId", "==", partnerId), where("receiverId", "==", myProfile.id))),
+        getDoc(doc(db, "profiles", partnerId)),
+      ]);
 
-      // 6. Reset both profiles in Firestore
+      const partnerPrevStatus = partnerSnap.exists()
+        ? (partnerSnap.data().previousMaritalStatus || "Never Married")
+        : "Never Married";
       const myPrevStatus = myProfile.previousMaritalStatus || "Never Married";
-      await updateDoc(doc(db, "profiles", myProfile.id), {
-        isMarried: false,
-        maritalStatus: myPrevStatus,
-        previousMaritalStatus: null,
-        partnerId: null,
-        partnerName: null,
-        partnerPhoto: null,
-        weddingDate: null
+
+      // Batch all Firestore writes + RTDB deletes run in parallel
+      const batch = writeBatch(db);
+      mrSnap.docs.forEach(d => batch.delete(doc(db, "marriageRequests", d.id)));
+      ssSnap1.docs.forEach(d => batch.delete(doc(db, "successStories", d.id)));
+      ssSnap2.docs.forEach(d => batch.delete(doc(db, "successStories", d.id)));
+      iSnap1.docs.forEach(d => batch.delete(doc(db, "interests", d.id)));
+      iSnap2.docs.forEach(d => batch.delete(doc(db, "interests", d.id)));
+      nSnap1.docs.forEach(d => batch.delete(doc(db, "notifications", d.id)));
+      nSnap2.docs.forEach(d => batch.delete(doc(db, "notifications", d.id)));
+
+      batch.update(doc(db, "profiles", myProfile.id), {
+        isMarried: false, maritalStatus: myPrevStatus,
+        previousMaritalStatus: null, partnerId: null,
+        partnerName: null, partnerPhoto: null, weddingDate: null,
+      });
+      batch.update(doc(db, "profiles", partnerId), {
+        isMarried: false, maritalStatus: partnerPrevStatus,
+        previousMaritalStatus: null, partnerId: null,
+        partnerName: null, partnerPhoto: null, weddingDate: null,
       });
 
-      await updateDoc(doc(db, "profiles", partnerId), {
-        isMarried: false,
-        maritalStatus: partnerPrevStatus,
-        previousMaritalStatus: null,
-        partnerId: null,
-        partnerName: null,
-        partnerPhoto: null,
-        weddingDate: null
-      });
-
-      // 7. Send notification to Firestore
       const myName = myProfile.name || myProfile.firstName || "Someone";
-      await addDoc(collection(db, "notifications"), {
-        receiverId: partnerId,
-        senderId: myProfile.id,
+      const notifRef = doc(collection(db, "notifications"));
+      batch.set(notifRef, {
+        receiverId: partnerId, senderId: myProfile.id,
         text: `${myName} cancelled the marriage connection. Your profiles have been reset.`,
-        type: "marriage_cancelled",
-        read: false,
-        createdAt: Date.now()
+        type: "marriage_cancelled", read: false, createdAt: Date.now(),
       });
 
-      // 8. Update local states
+      await Promise.all([
+        batch.commit(),
+        realtimeHelpers.remove(realtimeHelpers.ref(database, `messages/${convId}`)).catch(() => {}),
+        realtimeHelpers.remove(realtimeHelpers.ref(database, `conversations/${convId}`)).catch(() => {}),
+      ]);
+
+      // Update local states immediately
       setProfiles((prev) =>
         prev.map((p) => {
-          if (p.id === myProfile.id) {
+          if (p.id === myProfile.id || p.id === partnerId) {
+            const isMe = p.id === myProfile.id;
             return {
               ...p,
               isMarried: false,
-              maritalStatus: myPrevStatus,
+              maritalStatus: isMe ? myPrevStatus : partnerPrevStatus,
               previousMaritalStatus: null,
-              partnerId: null,
-              partnerName: null,
-              partnerPhoto: null,
-              weddingDate: null
-            };
-          }
-          if (p.id === partnerId) {
-            return {
-              ...p,
-              isMarried: false,
-              maritalStatus: partnerPrevStatus,
-              previousMaritalStatus: null,
-              partnerId: null,
-              partnerName: null,
-              partnerPhoto: null,
-              weddingDate: null
+              partnerId: null, partnerName: null, partnerPhoto: null,
+              weddingDate: null,
             };
           }
           return p;
         })
       );
-
       setMyProfile((prev: any) => ({
         ...prev,
-        isMarried: false,
-        maritalStatus: myPrevStatus,
+        isMarried: false, maritalStatus: myPrevStatus,
         previousMaritalStatus: null,
-        partnerId: null,
-        partnerName: null,
-        partnerPhoto: null,
-        weddingDate: null
+        partnerId: null, partnerName: null, partnerPhoto: null,
+        weddingDate: null,
       }));
 
       showToast("Marriage connection cancelled and marital statuses reset successfully!");
