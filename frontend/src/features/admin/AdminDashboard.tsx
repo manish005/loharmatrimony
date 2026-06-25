@@ -22,8 +22,8 @@ import {
   Trash2,
   Layout,
 } from "lucide-react";
-import { auth, db, database, realtimeHelpers } from "../../config/firebase";
-import { doc, collection, query, where, getDocs, getDoc, updateDoc, setDoc, deleteDoc, addDoc, onSnapshot } from "firebase/firestore";
+import { auth, db } from "../../config/firebase";
+import { doc, collection, query, where, getDocs, getDoc, updateDoc, setDoc, deleteDoc, addDoc, onSnapshot, writeBatch } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
@@ -275,26 +275,33 @@ export const AdminDashboard: React.FC = () => {
       // Delete profile document from Firestore
       await deleteDoc(doc(db, "profiles", profileId)).catch(() => {});
 
-      // Delete conversations and their messages from RTDB (chat stays on RTDB)
-      const convSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "conversations"));
-      const rawConvs = convSnap.val() || {};
+      // Delete conversations and their messages from Firestore
+      const convSnap = await getDocs(query(collection(db, "conversations"), where("participants", "array-contains", profileId)));
       const convPromises: Promise<any>[] = [];
-      for (const [convId, data] of Object.entries(rawConvs)) {
-        const item = data as any;
-        if (item.participants?.includes(profileId)) {
-          convPromises.push(realtimeHelpers.remove(realtimeHelpers.ref(database, `messages/${convId}`)));
-          convPromises.push(realtimeHelpers.remove(realtimeHelpers.ref(database, `conversations/${convId}`)));
-        }
-      }
+      convSnap.forEach((d) => {
+        const convId = d.id;
+        convPromises.push(
+          getDocs(collection(db, "conversations", convId, "messages")).then((msgSnap) => {
+            const batch = writeBatch(db);
+            msgSnap.docs.forEach(m => batch.delete(doc(db, "conversations", convId, "messages", m.id)));
+            batch.delete(doc(db, "conversations", convId));
+            return batch.commit();
+          })
+        );
+      });
       await Promise.all(convPromises);
 
       // Delete interests from Firestore
       const iq1 = query(collection(db, "interests"), where("senderId", "==", profileId));
       const iSnap1 = await getDocs(iq1);
-      iSnap1.forEach(d => { deleteDoc(doc(db, "interests", d.id)); });
+      const iBatch1 = writeBatch(db);
+      iSnap1.docs.forEach(d => iBatch1.delete(doc(db, "interests", d.id)));
+      await iBatch1.commit();
       const iq2 = query(collection(db, "interests"), where("receiverId", "==", profileId));
       const iSnap2 = await getDocs(iq2);
-      iSnap2.forEach(d => { deleteDoc(doc(db, "interests", d.id)); });
+      const iBatch2 = writeBatch(db);
+      iSnap2.docs.forEach(d => iBatch2.delete(doc(db, "interests", d.id)));
+      await iBatch2.commit();
 
       // Delete marriage requests from Firestore
       const mrq1 = query(collection(db, "marriageRequests"), where("senderId", "==", profileId));
@@ -368,26 +375,33 @@ export const AdminDashboard: React.FC = () => {
 
         await deleteDoc(doc(db, "profiles", profileId)).catch(() => {});
 
-        // Delete from RTDB conversations/messages (chat stays on RTDB)
-        const convSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "conversations"));
-        const rawConvs = convSnap.val() || {};
+        // Delete conversations and their messages from Firestore
+        const convSnap = await getDocs(query(collection(db, "conversations"), where("participants", "array-contains", profileId)));
         const convPromises: Promise<any>[] = [];
-        for (const [convId, data] of Object.entries(rawConvs)) {
-          const item = data as any;
-          if (item.participants?.includes(profileId)) {
-            convPromises.push(realtimeHelpers.remove(realtimeHelpers.ref(database, `messages/${convId}`)));
-            convPromises.push(realtimeHelpers.remove(realtimeHelpers.ref(database, `conversations/${convId}`)));
-          }
-        }
+        convSnap.forEach((d) => {
+          const convId = d.id;
+          convPromises.push(
+            getDocs(collection(db, "conversations", convId, "messages")).then((msgSnap) => {
+              const batch = writeBatch(db);
+              msgSnap.docs.forEach(m => batch.delete(doc(db, "conversations", convId, "messages", m.id)));
+              batch.delete(doc(db, "conversations", convId));
+              return batch.commit();
+            })
+          );
+        });
         await Promise.all(convPromises);
 
         // Delete interests from Firestore
         const iq1 = query(collection(db, "interests"), where("senderId", "==", profileId));
         const iSnap1 = await getDocs(iq1);
-        iSnap1.forEach(async (d) => { await deleteDoc(doc(db, "interests", d.id)); });
+        const iBatch1 = writeBatch(db);
+        iSnap1.docs.forEach(d => iBatch1.delete(doc(db, "interests", d.id)));
+        await iBatch1.commit();
         const iq2 = query(collection(db, "interests"), where("receiverId", "==", profileId));
         const iSnap2 = await getDocs(iq2);
-        iSnap2.forEach(async (d) => { await deleteDoc(doc(db, "interests", d.id)); });
+        const iBatch2 = writeBatch(db);
+        iSnap2.docs.forEach(d => iBatch2.delete(doc(db, "interests", d.id)));
+        await iBatch2.commit();
 
         // Delete marriageRequests from Firestore
         const mq1 = query(collection(db, "marriageRequests"), where("senderId", "==", profileId));

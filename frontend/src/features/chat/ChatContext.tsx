@@ -1,8 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import type { User } from "firebase/auth";
-import { database, auth, realtimeHelpers, db } from "../../config/firebase";
-import { collection, getDocs, query, where, doc, getDoc, onSnapshot, deleteDoc, addDoc, writeBatch } from "firebase/firestore";
+import { auth, db } from "../../config/firebase";
+import {
+  collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc,
+  onSnapshot, orderBy, limit, writeBatch, serverTimestamp,
+} from "firebase/firestore";
 import type { ChatMessage, Conversation } from "./chatTypes";
 
 interface ChatContextType {
@@ -45,10 +48,7 @@ const lookupMyProfileId = async (email: string): Promise<string | null> => {
   try {
     const q = query(collection(db, "profiles"), where("email", "==", email.toLowerCase()));
     const snap = await getDocs(q);
-    if (!snap.empty) {
-      return snap.docs[0].id;
-    }
-    // Fallback: check uid field matching
+    if (!snap.empty) return snap.docs[0].id;
     return null;
   } catch (err) {
     console.error("lookupMyProfileId error:", err);
@@ -67,6 +67,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [sending, setSending] = useState(false);
   const [liveProfiles, setLiveProfiles] = useState<Record<string, { name: string; photo: string }>>({});
   const [otherTyping, setOtherTyping] = useState(false);
+  const [globalUnreadCount, setGlobalUnreadCount] = useState(0);
   const profileUnsubs = useRef<Map<string, () => void>>(new Map());
   const unsubMessages = useRef<(() => void) | null>(null);
   const unsubTyping = useRef<(() => void) | null>(null);
@@ -92,95 +93,75 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setMyProfileIdState(null);
         setConversations([]);
         setMessages([]);
-        if (!initialLoadDone.current) {
-          setLoading(false);
-          initialLoadDone.current = true;
-        }
+        if (!initialLoadDone.current) { setLoading(false); initialLoadDone.current = true; }
       }
     });
     return () => unsub();
   }, []);
 
+  // Listen for conversations from Firestore
   useEffect(() => {
     if (!myProfileIdState) {
-      if (!currentUser && !initialLoadDone.current) {
-        setLoading(false);
-        initialLoadDone.current = true;
-      }
-      if (!currentUser) {
-        setConversations([]);
-        setMessages([]);
-      }
+      if (!currentUser && !initialLoadDone.current) { setLoading(false); initialLoadDone.current = true; }
+      if (!currentUser) { setConversations([]); setMessages([]); }
       return;
     }
 
-    const conversationsRef = realtimeHelpers.ref(database, "conversations");
-    const unsub = realtimeHelpers.onValue(conversationsRef, (snapshot) => {
-      const raw = snapshot.val() || {};
-      const list: Conversation[] = Object.entries(raw)
-        .map(([id, val]: [string, any]) => {
-          const lastMsg = val.lastMessage ?? null;
-          const hasUnread = lastMsg && lastMsg.senderId !== myProfileIdState && lastMsg.status !== "read";
-          
-          return {
-            id,
-            participants: val.participants ?? [],
-            participantData: val.participantData ?? {},
-            lastMessage: lastMsg,
-            createdAt: val.createdAt ?? null,
-            updatedAt: val.updatedAt ?? null,
-            blockedBy: val.blockedBy ?? [],
-            clearedAt: val.clearedAt ?? {},
-            unmatchedBy: val.unmatchedBy ?? [],
-            unreadCount: hasUnread ? 1 : 0,
-          };
-        })
-        .filter(c => c.participants.includes(myProfileIdState));
+    const q = query(
+      collection(db, "conversations"),
+      where("participants", "array-contains", myProfileIdState)
+    );
 
-      const filteredList = list.filter(c => {
+    const unsub = onSnapshot(q, (snapshot) => {
+      const list: Conversation[] = snapshot.docs.map((d) => {
+        const data = d.data();
+        const lastMsg = data.lastMessage ?? null;
+        return {
+          id: d.id,
+          participants: data.participants ?? [],
+          participantData: data.participantData ?? {},
+          lastMessage: lastMsg,
+          createdAt: data.createdAt ?? null,
+          updatedAt: data.updatedAt ?? null,
+          blockedBy: data.blockedBy ?? [],
+          clearedAt: data.clearedAt ?? {},
+          unmatchedBy: data.unmatchedBy ?? [],
+          unreadCount: data.unreadCount?.[myProfileIdState] || 0,
+        };
+      });
+
+      const filteredList = list.filter((c) => {
         if (c.unmatchedBy?.includes(myProfileIdState || "")) return false;
-        
         const clearedAt = c.clearedAt?.[myProfileIdState || ""] || 0;
         const lastMsgTime = c.lastMessage?.timestamp || 0;
-        if (lastMsgTime > 0 && lastMsgTime <= clearedAt) {
-          return false;
-        }
-        
+        if (lastMsgTime > 0 && lastMsgTime <= clearedAt) return false;
         return true;
       });
 
       filteredList.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 
       setConversations(filteredList);
-      if (!initialLoadDone.current) {
-        setLoading(false);
-        initialLoadDone.current = true;
-      }
+      const totalUnread = filteredList.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+      setGlobalUnreadCount(totalUnread);
+      if (!initialLoadDone.current) { setLoading(false); initialLoadDone.current = true; }
     }, (error) => {
       console.error("Conversations listener error:", error);
-      if (!initialLoadDone.current) {
-        setLoading(false);
-        initialLoadDone.current = true;
-      }
+      if (!initialLoadDone.current) { setLoading(false); initialLoadDone.current = true; }
     });
 
     return () => unsub();
   }, [myProfileIdState, currentUser]);
 
+  // Live profiles listener
   useEffect(() => {
     const current = profileUnsubs.current;
     const activeIds = new Set<string>();
     conversations.forEach((c) =>
-      c.participants.forEach((p) => {
-        if (p !== myProfileIdState) activeIds.add(p);
-      })
+      c.participants.forEach((p) => { if (p !== myProfileIdState) activeIds.add(p); })
     );
 
     current.forEach((unsub, pid) => {
-      if (!activeIds.has(pid)) {
-        unsub();
-        current.delete(pid);
-      }
+      if (!activeIds.has(pid)) { unsub(); current.delete(pid); }
     });
 
     activeIds.forEach((pid) => {
@@ -197,29 +178,25 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       current.set(pid, unsub);
     });
 
-    return () => {
-      current.forEach((unsub) => unsub());
-      current.clear();
-    };
+    return () => { current.forEach((unsub) => unsub()); current.clear(); };
   }, [conversations, myProfileIdState]);
 
+  // Messages listener for active conversation
   useEffect(() => {
     if (!currentUser || !activeConversationId) {
-      if (unsubMessages.current) {
-        unsubMessages.current();
-        unsubMessages.current = null;
-      }
+      if (unsubMessages.current) { unsubMessages.current(); unsubMessages.current = null; }
       setMessages([]);
       return;
     }
 
-    const messagesRef = realtimeHelpers.ref(database, `messages/${activeConversationId}`);
-    
-    unsubMessages.current = realtimeHelpers.onValue(messagesRef, (snapshot) => {
-      const raw = snapshot.val() || {};
-      const list: ChatMessage[] = Object.entries(raw).map(([id, val]: [string, any]) => {
+    const messagesRef = collection(db, "conversations", activeConversationId, "messages");
+    const q = query(messagesRef, orderBy("timestamp", "asc"));
+
+    unsubMessages.current = onSnapshot(q, (snapshot) => {
+      const list: ChatMessage[] = snapshot.docs.map((d) => {
+        const val = d.data();
         return {
-          id,
+          id: d.id,
           senderId: val.senderId ?? "",
           text: val.text ?? "",
           timestamp: val.timestamp ?? null,
@@ -231,71 +208,56 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       });
 
-      list.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-
-      const conv = conversations.find(c => c.id === activeConversationId);
+      const conv = conversations.find((c) => c.id === activeConversationId);
       const myId = myProfileIdRef.current;
       const clearedAt = conv?.clearedAt?.[myId || ""] || 0;
-      
-      const filteredList = list.filter(m => {
+
+      const filteredList = list.filter((m) => {
         if (m.deletedForMe?.includes(myId || "")) return false;
         if (m.timestamp && m.timestamp < clearedAt) return false;
         return true;
       });
 
       setMessages(filteredList);
-      if (prevActiveId.current !== activeConversationId) {
-        prevActiveId.current = activeConversationId;
-      }
+      if (prevActiveId.current !== activeConversationId) prevActiveId.current = activeConversationId;
 
-      Object.entries(raw).forEach(([id, val]: [string, any]) => {
-        if (
-          val.senderId !== myProfileIdRef.current &&
-          !val.deleted &&
-          !val.deletedForEveryone &&
-          val.status === "sent"
-        ) {
-          const msgRef = realtimeHelpers.ref(database, `messages/${activeConversationId}/${id}`);
-          realtimeHelpers.update(msgRef, { status: "delivered" }).catch(err => console.error("Failed to update status", err));
+      // Mark received messages as delivered
+      const batch = writeBatch(db);
+      snapshot.docs.forEach((d) => {
+        const val = d.data();
+        if (val.senderId !== myProfileIdRef.current && !val.deleted && !val.deletedForEveryone && val.status === "sent") {
+          batch.update(doc(db, "conversations", activeConversationId, "messages", d.id), { status: "delivered" });
         }
       });
-    }, (error) => {
-      console.error("Messages listener error:", error);
+      batch.commit().catch(() => {});
     });
 
     return () => {
-      if (unsubMessages.current) {
-        unsubMessages.current();
-        unsubMessages.current = null;
-      }
+      if (unsubMessages.current) { unsubMessages.current(); unsubMessages.current = null; }
     };
   }, [currentUser, activeConversationId, conversations]);
 
   // Typing indicator listener
   useEffect(() => {
     if (!myProfileIdState || !activeConversationId) {
-      if (unsubTyping.current) {
-        unsubTyping.current();
-        unsubTyping.current = null;
-      }
+      if (unsubTyping.current) { unsubTyping.current(); unsubTyping.current = null; }
       setOtherTyping(false);
       return;
     }
 
-    const typingRef = realtimeHelpers.ref(database, `typing/${activeConversationId}`);
-    unsubTyping.current = realtimeHelpers.onValue(typingRef, (snap) => {
-      const data = snap.val() || {};
-      const isOtherTyping = Object.keys(data).some(
-        (key) => key !== myProfileIdState && data[key] === true
+    const typingRef = doc(db, "conversations", activeConversationId);
+    unsubTyping.current = onSnapshot(typingRef, (snap) => {
+      if (!snap.exists()) return;
+      const data = snap.data();
+      const typing = data.typing || {};
+      const isOtherTyping = Object.keys(typing).some(
+        (key) => key !== myProfileIdState && typing[key] === true
       );
       setOtherTyping(isOtherTyping);
     });
 
     return () => {
-      if (unsubTyping.current) {
-        unsubTyping.current();
-        unsubTyping.current = null;
-      }
+      if (unsubTyping.current) { unsubTyping.current(); unsubTyping.current = null; }
       setOtherTyping(false);
     };
   }, [myProfileIdState, activeConversationId]);
@@ -303,63 +265,34 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const setTyping = useCallback(() => {
     if (!activeConversationId) return;
     const uid = getUid();
-    const myTypingRef = realtimeHelpers.ref(database, `typing/${activeConversationId}/${uid}`);
+    const convRef = doc(db, "conversations", activeConversationId);
 
-    realtimeHelpers.set(myTypingRef, true);
+    updateDoc(convRef, { [`typing.${uid}`]: true }).catch(() => {});
 
     if (typingTimeout.current) clearTimeout(typingTimeout.current);
     typingTimeout.current = setTimeout(() => {
-      realtimeHelpers.set(myTypingRef, null).catch(() => {});
+      updateDoc(convRef, { [`typing.${uid}`]: false }).catch(() => {});
     }, 3000);
   }, [activeConversationId]);
 
-  const markAsRead = useCallback(async () => {
+  // Reset unread count when opening a conversation
+  const resetUnreadCount = useCallback(async () => {
     if (!activeConversationId) return;
-    try {
-      const uid = getUid();
-      
-      setConversations(prev => prev.map(c => {
-        if (c.id === activeConversationId && c.unreadCount > 0) {
-           return { ...c, lastMessage: c.lastMessage ? { ...c.lastMessage, status: "read" } : c.lastMessage, unreadCount: 0 };
-        }
-        return c;
-      }));
+    const uid = getUid();
+    const convRef = doc(db, "conversations", activeConversationId);
+    await updateDoc(convRef, { [`unreadCount.${uid}`]: 0 }).catch(() => {});
 
-      const messagesRef = realtimeHelpers.ref(database, `messages/${activeConversationId}`);
-      const messagesSnap = await realtimeHelpers.get(messagesRef);
-      if (messagesSnap.exists()) {
-        const raw = messagesSnap.val() || {};
-        const updates: Record<string, any> = {};
-        Object.entries(raw).forEach(([msgId, val]: [string, any]) => {
-          if (val.senderId !== uid && (val.status === "sent" || val.status === "delivered")) {
-            updates[`${msgId}/status`] = "read";
-          }
-        });
-        if (Object.keys(updates).length > 0) {
-          await realtimeHelpers.update(messagesRef, updates);
-        }
-      }
-
-      const convRef = realtimeHelpers.ref(database, `conversations/${activeConversationId}`);
-      const convSnap = await realtimeHelpers.get(convRef);
-      if (convSnap.exists()) {
-        const convData = convSnap.val();
-        if (convData.lastMessage && convData.lastMessage.senderId !== uid && convData.lastMessage.status !== "read") {
-          await realtimeHelpers.update(convRef, {
-            "lastMessage/status": "read"
-          });
-        }
-      }
-    } catch (err) {
-      // silently ignore
-    }
-  }, [activeConversationId]);
+    setConversations((prev) =>
+      prev.map((c) => c.id === activeConversationId ? { ...c, unreadCount: 0 } : c)
+    );
+    setGlobalUnreadCount((prev) => Math.max(0, prev - (conversations.find(c => c.id === activeConversationId)?.unreadCount || 0)));
+  }, [activeConversationId, conversations]);
 
   useEffect(() => {
     if (activeConversationId && messages.length > 0) {
-      markAsRead();
+      resetUnreadCount();
     }
-  }, [activeConversationId, messages.length, markAsRead]);
+  }, [activeConversationId, messages.length, resetUnreadCount]);
 
   const sendMessage = useCallback(async (text: string) => {
     if (!activeConversationId || !text.trim()) return;
@@ -367,9 +300,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const uid = getUid();
       const timestamp = Date.now();
-      const messagesRef = realtimeHelpers.ref(database, `messages/${activeConversationId}`);
-      const newMsgRef = realtimeHelpers.push(messagesRef);
-      await realtimeHelpers.set(newMsgRef, {
+      const messagesRef = collection(db, "conversations", activeConversationId, "messages");
+      const newMsgRef = doc(messagesRef);
+      await setDoc(newMsgRef, {
         senderId: uid,
         text: text.trim(),
         timestamp: timestamp,
@@ -380,29 +313,26 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         edited: false,
       });
 
-      const conv = conversations.find(c => c.id === activeConversationId);
-      const receiverId = conv?.participants.find(p => p !== uid);
+      const conv = conversations.find((c) => c.id === activeConversationId);
+      const receiverId = conv?.participants.find((p) => p !== uid);
 
-      const convRef = realtimeHelpers.ref(database, `conversations/${activeConversationId}`);
-      await realtimeHelpers.update(convRef, {
-        lastMessage: {
-          text: text.trim(),
-          senderId: uid,
-          timestamp: timestamp,
-          status: "sent",
-        },
+      const convRef = doc(db, "conversations", activeConversationId);
+      const updateData: any = {
+        lastMessage: { text: text.trim(), senderId: uid, timestamp, status: "sent" },
         updatedAt: timestamp,
-      });
+        [`typing.${uid}`]: false,
+      };
+      if (receiverId) {
+        updateData[`unreadCount.${receiverId}`] = (conv?.unreadCount || 0) + 1;
+      }
+      await updateDoc(convRef, updateData);
 
       if (receiverId) {
         const senderData = conv?.participantData?.[uid] || liveProfiles?.[uid];
         const senderName = senderData?.name || "Someone";
         await addDoc(collection(db, "notifications"), {
-          receiverId,
-          text: `${senderName}: ${text.trim().substring(0, 80)}`,
-          type: "chat_message",
-          read: false,
-          createdAt: timestamp,
+          receiverId, text: `${senderName}: ${text.trim().substring(0, 80)}`,
+          type: "chat_message", read: false, createdAt: timestamp,
         });
       }
     } catch (err) {
@@ -416,66 +346,50 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!activeConversationId) return;
     try {
       const myId = getUid();
-      const msgRef = realtimeHelpers.ref(database, `messages/${activeConversationId}/${messageId}`);
-      
+      const msgRef = doc(db, "conversations", activeConversationId, "messages", messageId);
       if (forEveryone) {
-        await realtimeHelpers.update(msgRef, { deletedForEveryone: true });
+        await updateDoc(msgRef, { deletedForEveryone: true });
       } else {
-        const snap = await realtimeHelpers.get(msgRef);
+        const snap = await getDoc(msgRef);
         if (snap.exists()) {
-          const val = snap.val();
+          const val = snap.data();
           const deletedForMe = val.deletedForMe || [];
-          if (!deletedForMe.includes(myId)) {
-            deletedForMe.push(myId);
-            await realtimeHelpers.update(msgRef, { deletedForMe });
-          }
+          if (!deletedForMe.includes(myId)) deletedForMe.push(myId);
+          await updateDoc(msgRef, { deletedForMe });
         }
       }
-    } catch (err) {
-      console.error("deleteMessage error:", err);
-    }
+    } catch (err) { console.error("deleteMessage error:", err); }
   }, [activeConversationId]);
 
   const editMessage = useCallback(async (messageId: string, newText: string) => {
     if (!activeConversationId || !newText.trim()) return;
     try {
-      const msgRef = realtimeHelpers.ref(database, `messages/${activeConversationId}/${messageId}`);
-      await realtimeHelpers.update(msgRef, { text: newText.trim(), edited: true });
-    } catch (err) {
-      console.error("editMessage error:", err);
-    }
+      const msgRef = doc(db, "conversations", activeConversationId, "messages", messageId);
+      await updateDoc(msgRef, { text: newText.trim(), edited: true });
+    } catch (err) { console.error("editMessage error:", err); }
   }, [activeConversationId]);
 
   const toggleBlockChat = useCallback(async (conversationId: string, block: boolean) => {
     try {
       const myId = getUid();
-      const convRef = realtimeHelpers.ref(database, `conversations/${conversationId}`);
-      const snap = await realtimeHelpers.get(convRef);
+      const convRef = doc(db, "conversations", conversationId);
+      const snap = await getDoc(convRef);
       if (snap.exists()) {
-        const val = snap.val();
+        const val = snap.data();
         let blockedBy = val.blockedBy || [];
-        if (block) {
-          if (!blockedBy.includes(myId)) blockedBy.push(myId);
-        } else {
-          blockedBy = blockedBy.filter((b: string) => b !== myId);
-        }
-        await realtimeHelpers.update(convRef, { blockedBy });
+        if (block) { if (!blockedBy.includes(myId)) blockedBy.push(myId); }
+        else { blockedBy = blockedBy.filter((b: string) => b !== myId); }
+        await updateDoc(convRef, { blockedBy });
       }
-    } catch (err) {
-      console.error("toggleBlockChat error:", err);
-    }
+    } catch (err) { console.error("toggleBlockChat error:", err); }
   }, []);
 
   const clearChat = useCallback(async (conversationId: string) => {
     try {
       const myId = getUid();
-      const convRef = realtimeHelpers.ref(database, `conversations/${conversationId}`);
-      await realtimeHelpers.update(convRef, {
-        [`clearedAt/${myId}`]: Date.now()
-      });
-    } catch (err) {
-      console.error("clearChat error:", err);
-    }
+      const convRef = doc(db, "conversations", conversationId);
+      await updateDoc(convRef, { [`clearedAt.${myId}`]: Date.now() });
+    } catch (err) { console.error("clearChat error:", err); }
   }, []);
 
   const unmatchUser = useCallback(async (otherUserId: string) => {
@@ -483,7 +397,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const myId = getUid();
       const convId = getConversationId(myId, otherUserId);
 
-      // Fetch all docs in parallel
       const [iSnap1, iSnap2, nSnap1, nSnap2] = await Promise.all([
         getDocs(query(collection(db, "interests"), where("senderId", "==", myId), where("receiverId", "==", otherUserId))),
         getDocs(query(collection(db, "interests"), where("senderId", "==", otherUserId), where("receiverId", "==", myId))),
@@ -491,29 +404,26 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         getDocs(query(collection(db, "notifications"), where("senderId", "==", otherUserId), where("receiverId", "==", myId))),
       ]);
 
-      // Firestore deletes in a batch
       const batch = writeBatch(db);
       iSnap1.docs.forEach(d => batch.delete(doc(db, "interests", d.id)));
       iSnap2.docs.forEach(d => batch.delete(doc(db, "interests", d.id)));
       nSnap1.docs.forEach(d => batch.delete(doc(db, "notifications", d.id)));
       nSnap2.docs.forEach(d => batch.delete(doc(db, "notifications", d.id)));
+      batch.delete(doc(db, "conversations", convId));
 
-      // Run Firestore batch + RTDB deletes in parallel
-      await Promise.all([
-        batch.commit(),
-        realtimeHelpers.remove(realtimeHelpers.ref(database, `messages/${convId}`)).catch(() => {}),
-        realtimeHelpers.remove(realtimeHelpers.ref(database, `conversations/${convId}`)).catch(() => {}),
-      ]);
-    } catch (err) {
-      console.error("unmatchUser error:", err);
-    }
+      // Delete all messages subcollection docs
+      const msgSnap = await getDocs(collection(db, "conversations", convId, "messages"));
+      msgSnap.docs.forEach(d => batch.delete(doc(db, "conversations", convId, "messages", d.id)));
+
+      await batch.commit();
+    } catch (err) { console.error("unmatchUser error:", err); }
   }, []);
 
   const startConversation = useCallback(async (userId: string, name: string, photo: string): Promise<string> => {
     const uid = getUid();
     const convId = getConversationId(uid, userId);
-    const convRef = realtimeHelpers.ref(database, `conversations/${convId}`);
-    const convSnap = await realtimeHelpers.get(convRef);
+    const convRef = doc(db, "conversations", convId);
+    const convSnap = await getDoc(convRef);
 
     if (!convSnap.exists()) {
       const u = auth.currentUser!;
@@ -521,17 +431,20 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         [uid]: { name: u.displayName || "You", photo: u.photoURL || "" },
         [userId]: { name, photo },
       };
-
       const timestamp = Date.now();
-      await realtimeHelpers.set(convRef, {
+      await setDoc(convRef, {
         participants: [uid, userId],
         participantData,
         lastMessage: null,
         createdAt: timestamp,
         updatedAt: timestamp,
+        blockedBy: [],
+        clearedAt: {},
+        unmatchedBy: [],
+        unreadCount: { [uid]: 0, [userId]: 0 },
+        typing: {},
       });
     }
-
     return convId;
   }, []);
 
@@ -540,41 +453,31 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const uid = getUid();
     const timestamp = Date.now();
 
-    const messagesRef = realtimeHelpers.ref(database, `messages/${convId}`);
-    const newMsgRef = realtimeHelpers.push(messagesRef);
-    await realtimeHelpers.set(newMsgRef, {
+    const messagesRef = collection(db, "conversations", convId, "messages");
+    const newMsgRef = doc(messagesRef);
+    await setDoc(newMsgRef, {
       senderId: uid,
       text: initialMessage,
-      timestamp: timestamp,
+      timestamp,
       status: "sent",
-      deleted: false,
-      deletedForEveryone: false,
-      deletedForMe: [],
-      edited: false,
+      deleted: false, deletedForEveryone: false, deletedForMe: [], edited: false,
     });
 
-    const convRef = realtimeHelpers.ref(database, `conversations/${convId}`);
-    await realtimeHelpers.update(convRef, {
-      lastMessage: {
-        text: initialMessage,
-        senderId: uid,
-        timestamp: timestamp,
-        status: "sent",
-      },
+    const convRef = doc(db, "conversations", convId);
+    await updateDoc(convRef, {
+      lastMessage: { text: initialMessage, senderId: uid, timestamp, status: "sent" },
       updatedAt: timestamp,
+      [`unreadCount.${userId}`]: 1,
+      [`typing.${uid}`]: false,
     });
 
     await addDoc(collection(db, "notifications"), {
       receiverId: userId,
       text: `${auth.currentUser?.displayName || "Someone"}: ${initialMessage.substring(0, 80)}`,
-      type: "chat_message",
-      read: false,
-      createdAt: timestamp,
+      type: "chat_message", read: false, createdAt: timestamp,
     }).catch(() => {});
     return convId;
   }, [startConversation]);
-
-  const globalUnreadCount = conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
 
   return (
     <ChatContext.Provider

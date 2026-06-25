@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import { auth, storage, db } from "../../config/firebase";
 import { doc, collection, query, where, getDocs, getDoc, setDoc, updateDoc, deleteDoc, addDoc, onSnapshot, serverTimestamp, writeBatch } from "firebase/firestore";
-import { database, realtimeHelpers } from "../../config/firebase";
+
 import { uploadToCloudinary, deleteFromCloudinary } from "../../utils/cloudinary";
 import { useLanguage } from "../../context/LanguageContext";
 import { useToast } from "../../context/ToastContext";
@@ -507,11 +507,8 @@ export const Dashboard: React.FC = () => {
       });
 
       const convId = [myProfile.id, senderId].sort().join("_");
-      await Promise.all([
-        batch.commit(),
-        realtimeHelpers.remove(realtimeHelpers.ref(database, `messages/${convId}`)).catch(() => {}),
-        realtimeHelpers.remove(realtimeHelpers.ref(database, `conversations/${convId}`)).catch(() => {}),
-      ]);
+      await batch.commit();
+      await deleteChatConversation(convId);
 
       showToast("Interest declined and chat cleared.");
     } catch (err) {
@@ -660,6 +657,16 @@ export const Dashboard: React.FC = () => {
     await batch.commit();
   };
 
+  const deleteChatConversation = async (convId: string) => {
+    try {
+      const msgSnap = await getDocs(collection(db, "conversations", convId, "messages"));
+      const batch = writeBatch(db);
+      msgSnap.docs.forEach(d => batch.delete(doc(db, "conversations", convId, "messages", d.id)));
+      batch.delete(doc(db, "conversations", convId));
+      await batch.commit();
+    } catch {}
+  };
+
   const handleRejectMarriageRequest = async (requestId: string) => {
     try {
       const requestRef = doc(db, "marriageRequests", requestId);
@@ -692,11 +699,8 @@ export const Dashboard: React.FC = () => {
       });
 
       const convId = [myProfile.id, otherUserId].sort().join("_");
-      await Promise.all([
-        batch.commit(),
-        realtimeHelpers.remove(realtimeHelpers.ref(database, `messages/${convId}`)).catch(() => {}),
-        realtimeHelpers.remove(realtimeHelpers.ref(database, `conversations/${convId}`)).catch(() => {}),
-      ]);
+      await batch.commit();
+      await deleteChatConversation(convId);
 
       showToast("Marriage Request declined and connection reset.");
     } catch (err) {
@@ -842,11 +846,8 @@ export const Dashboard: React.FC = () => {
       });
 
       setDeletionStage("Clearing chat history...");
-      await Promise.all([
-        batch.commit(),
-        realtimeHelpers.remove(realtimeHelpers.ref(database, `messages/${convId}`)).catch(() => {}),
-        realtimeHelpers.remove(realtimeHelpers.ref(database, `conversations/${convId}`)).catch(() => {}),
-      ]);
+      await batch.commit();
+      await deleteChatConversation(convId);
 
       // Update local states immediately
       setProfiles((prev) =>

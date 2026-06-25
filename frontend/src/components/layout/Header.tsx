@@ -6,6 +6,7 @@ import { auth, db } from "../../config/firebase";
 import { Sun, Moon, Menu, Bell, Check, X, LogOut, User, Settings, Globe } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 import { useLanguage } from "../../context/LanguageContext";
+import { useChat } from "../../features/chat/ChatContext";
 import Logo from "../ui/Logo";
 
 export const Header: React.FC = () => {
@@ -17,6 +18,7 @@ export const Header: React.FC = () => {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [notiOpen, setNotiOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const { globalUnreadCount } = useChat();
 
   const notiRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -154,7 +156,8 @@ export const Header: React.FC = () => {
     }
   };
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const nonChatNotiCount = notifications.filter(n => !n.read && n.type !== "chat_message").length;
+  const unreadCount = nonChatNotiCount + globalUnreadCount;
 
   const notiDropdown = () => (
     <div className="absolute right-0 mt-3 w-80 rounded-2xl border border-slate-200/50 dark:border-dark-800/50 p-2 shadow-xl bg-white dark:bg-dark-900 z-50">
