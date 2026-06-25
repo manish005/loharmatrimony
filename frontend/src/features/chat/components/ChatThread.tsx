@@ -24,6 +24,8 @@ const ChatThread: React.FC<ChatThreadProps> = ({ onBack }) => {
     clearChat,
     unmatchUser,
     liveProfiles,
+    otherTyping,
+    setTyping,
   } = useChat();
   const [input, setInput] = useState("");
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -46,6 +48,11 @@ const ChatThread: React.FC<ChatThreadProps> = ({ onBack }) => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(e.target.value);
+    if (e.target.value.trim()) setTyping();
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,6 +172,16 @@ const ChatThread: React.FC<ChatThreadProps> = ({ onBack }) => {
             );
           })
         )}
+        {otherTyping && (
+          <div className="flex items-center gap-2 px-2 py-1">
+            <div className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-maroon-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-maroon-500 animate-bounce" style={{ animationDelay: "150ms" }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-maroon-600 animate-bounce" style={{ animationDelay: "300ms" }} />
+            </div>
+            <span className="text-[10px] text-slate-400 italic">{otherData?.name || "User"} is typing...</span>
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
@@ -186,7 +203,7 @@ const ChatThread: React.FC<ChatThreadProps> = ({ onBack }) => {
             <input
               type="text"
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={handleInputChange}
               placeholder={t("chat.placeholder")}
               className="flex-1 text-xs border border-slate-200 dark:border-dark-800 rounded-xl px-4 py-2.5 bg-white dark:bg-dark-950 focus:outline-none focus:ring-2 focus:ring-maroon-700/20 dark:focus:ring-gold-500/20"
               disabled={sending}

@@ -15,6 +15,8 @@ interface ChatContextType {
   sending: boolean;
   authResolved: boolean;
   liveProfiles: Record<string, { name: string; photo: string }>;
+  otherTyping: boolean;
+  setTyping: () => void;
   setActiveConversation: (id: string | null) => void;
   sendMessage: (text: string) => Promise<void>;
   editMessage: (messageId: string, newText: string) => Promise<void>;
@@ -64,8 +66,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [liveProfiles, setLiveProfiles] = useState<Record<string, { name: string; photo: string }>>({});
+  const [otherTyping, setOtherTyping] = useState(false);
   const profileUnsubs = useRef<Map<string, () => void>>(new Map());
   const unsubMessages = useRef<(() => void) | null>(null);
+  const unsubTyping = useRef<(() => void) | null>(null);
+  const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevActiveId = useRef<string | null>(null);
   const initialLoadDone = useRef(false);
 
@@ -265,6 +270,48 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
   }, [currentUser, activeConversationId, conversations]);
+
+  // Typing indicator listener
+  useEffect(() => {
+    if (!myProfileIdState || !activeConversationId) {
+      if (unsubTyping.current) {
+        unsubTyping.current();
+        unsubTyping.current = null;
+      }
+      setOtherTyping(false);
+      return;
+    }
+
+    const typingRef = realtimeHelpers.ref(database, `typing/${activeConversationId}`);
+    unsubTyping.current = realtimeHelpers.onValue(typingRef, (snap) => {
+      const data = snap.val() || {};
+      const isOtherTyping = Object.keys(data).some(
+        (key) => key !== myProfileIdState && data[key] === true
+      );
+      setOtherTyping(isOtherTyping);
+    });
+
+    return () => {
+      if (unsubTyping.current) {
+        unsubTyping.current();
+        unsubTyping.current = null;
+      }
+      setOtherTyping(false);
+    };
+  }, [myProfileIdState, activeConversationId]);
+
+  const setTyping = useCallback(() => {
+    if (!activeConversationId) return;
+    const uid = getUid();
+    const myTypingRef = realtimeHelpers.ref(database, `typing/${activeConversationId}/${uid}`);
+
+    realtimeHelpers.set(myTypingRef, true);
+
+    if (typingTimeout.current) clearTimeout(typingTimeout.current);
+    typingTimeout.current = setTimeout(() => {
+      realtimeHelpers.set(myTypingRef, null).catch(() => {});
+    }, 3000);
+  }, [activeConversationId]);
 
   const markAsRead = useCallback(async () => {
     if (!activeConversationId) return;
@@ -541,6 +588,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         sending,
         authResolved,
         liveProfiles,
+        otherTyping,
+        setTyping,
         setActiveConversation: setActiveConversationId,
         sendMessage,
         editMessage,

@@ -466,7 +466,7 @@ export const Dashboard: React.FC = () => {
           createdAt: Date.now()
         });
 
-        const initialMessage = "Our stars aligned and so did our vibes! 💖 Let's start this beautiful journey together.";
+        const initialMessage = `Hey ${senderName}, I loved your profile! 💫 Looking forward to getting to know you better.`;
         await startAndMessageConversation(senderId, senderName, senderPhoto, initialMessage);
 
         setActiveTab("messages");
