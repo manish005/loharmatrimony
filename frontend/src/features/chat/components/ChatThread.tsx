@@ -28,6 +28,9 @@ const ChatThread: React.FC<ChatThreadProps> = ({ onBack }) => {
     liveProfiles,
     otherTyping,
     setTyping,
+    hasOlderMessages,
+    loadingOlderMessages,
+    loadOlderMessages,
   } = useChat();
   const [input, setInput] = useState("");
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -37,6 +40,10 @@ const ChatThread: React.FC<ChatThreadProps> = ({ onBack }) => {
   const [showUnmatchConfirm, setShowUnmatchConfirm] = useState(false);
   const [unmatching, setUnmatching] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const prevMessageCountRef = useRef(0);
+  const initialScrollDone = useRef(false);
+  const prevScrollHeightRef = useRef(0);
 
   const conversation = conversations.find((c) => c.id === activeConversationId);
   const isBlocked = conversation?.blockedBy?.includes(myId || "");
@@ -78,9 +85,61 @@ const ChatThread: React.FC<ChatThreadProps> = ({ onBack }) => {
     checkApprovedInterest();
   }, [myId, otherId]);
 
+  // Filter visible messages
+  const visibleMessages = messages.filter((m) => {
+    if (m.deleted && m.senderId === myId) return false;
+    if (m.deletedForEveryone) return false;
+    return true;
+  });
+
+  // Auto-scroll only on new incoming messages (not initial load)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (!activeConversationId) return;
+    const prevCount = prevMessageCountRef.current;
+    prevMessageCountRef.current = visibleMessages.length;
+
+    if (!initialScrollDone.current && visibleMessages.length > 0) {
+      messagesEndRef.current?.scrollIntoView();
+      initialScrollDone.current = true;
+      return;
+    }
+
+    const isNewMessage = visibleMessages.length > prevCount && prevCount > 0;
+    if (isNewMessage) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [visibleMessages.length, activeConversationId]);
+
+  // Preserve scroll position when loading older messages
+  useEffect(() => {
+    if (loadingOlderMessages && messagesContainerRef.current) {
+      prevScrollHeightRef.current = messagesContainerRef.current.scrollHeight;
+    }
+  }, [loadingOlderMessages]);
+
+  useEffect(() => {
+    if (!loadingOlderMessages && prevScrollHeightRef.current > 0 && messagesContainerRef.current) {
+      const newScrollHeight = messagesContainerRef.current.scrollHeight;
+      const diff = newScrollHeight - prevScrollHeightRef.current;
+      messagesContainerRef.current.scrollTop = diff;
+      prevScrollHeightRef.current = 0;
+    }
+  }, [loadingOlderMessages]);
+
+  // Reset initial scroll flag when conversation changes
+  useEffect(() => {
+    initialScrollDone.current = false;
+    prevMessageCountRef.current = 0;
+  }, [activeConversationId]);
+
+  // Scroll-to-top handler for loading older messages
+  const handleScroll = () => {
+    if (!messagesContainerRef.current) return;
+    const { scrollTop } = messagesContainerRef.current;
+    if (scrollTop < 50 && hasOlderMessages && !loadingOlderMessages) {
+      loadOlderMessages();
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInput(e.target.value);
@@ -183,12 +242,24 @@ const ChatThread: React.FC<ChatThreadProps> = ({ onBack }) => {
         </div>
       </div>
 
-      <div className="flex-1 p-4 overflow-y-auto space-y-3">
-        {messages.filter((m) => !m.deleted && !m.deletedForEveryone).length === 0 ? (
+      <div
+        ref={messagesContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 p-4 overflow-y-auto space-y-3"
+      >
+        {loadingOlderMessages && (
+          <div className="flex justify-center py-3">
+            <span className="animate-spin h-5 w-5 border-2 border-maroon-700 border-t-transparent rounded-full" />
+          </div>
+        )}
+        {!hasOlderMessages && visibleMessages.length > 0 && (
+          <p className="text-[9px] text-slate-400 text-center py-1">Beginning of conversation</p>
+        )}
+        {visibleMessages.length === 0 && !loadingOlderMessages ? (
           <p className="text-[10px] text-slate-400 italic text-center py-10">{t("chat.nomessages")}</p>
         ) : (
-          messages.map((msg, index) => {
-            const mySentMessages = messages.filter(m => m.senderId === myId);
+          visibleMessages.map((msg, index) => {
+            const mySentMessages = visibleMessages.filter(m => m.senderId === myId);
             const isLastTwoSent = mySentMessages.slice(-2).some(m => m.id === msg.id);
             
             return (
@@ -206,13 +277,23 @@ const ChatThread: React.FC<ChatThreadProps> = ({ onBack }) => {
           })
         )}
         {otherTyping && (
-          <div className="flex items-center gap-2 px-2 py-1">
-            <div className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-maroon-400 animate-bounce" style={{ animationDelay: "0ms" }} />
-              <span className="w-1.5 h-1.5 rounded-full bg-maroon-500 animate-bounce" style={{ animationDelay: "150ms" }} />
-              <span className="w-1.5 h-1.5 rounded-full bg-maroon-600 animate-bounce" style={{ animationDelay: "300ms" }} />
+          <div className="flex items-end gap-2 px-1">
+            <div className="h-7 w-7 rounded-full overflow-hidden bg-slate-100 dark:bg-dark-800 flex-shrink-0">
+              {otherData?.photo ? (
+                <img src={otherData.photo} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <div className="h-full w-full flex items-center justify-center text-[9px] font-bold text-slate-500">
+                  {otherData?.name?.charAt(0) || "?"}
+                </div>
+              )}
             </div>
-            <span className="text-[10px] text-slate-400 italic">{otherData?.name || "User"} is typing...</span>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-slate-100 dark:bg-dark-800 rounded-bl-md">
+              <div className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-maroon-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-maroon-500 animate-bounce" style={{ animationDelay: "150ms" }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-maroon-600 animate-bounce" style={{ animationDelay: "300ms" }} />
+              </div>
+            </div>
           </div>
         )}
         <div ref={messagesEndRef} />

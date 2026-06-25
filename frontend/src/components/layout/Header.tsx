@@ -163,9 +163,19 @@ export const Header: React.FC = () => {
     <div className="absolute right-0 mt-3 w-80 rounded-2xl border border-slate-200/50 dark:border-dark-800/50 p-2 shadow-xl bg-white dark:bg-dark-900 z-50">
       <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 dark:border-dark-850">
         <span className="text-xs font-bold text-slate-900 dark:text-white">Notifications</span>
-        {unreadCount > 0 && (
-          <button onClick={handleMarkAllRead} className="text-[10px] font-bold text-maroon-700 dark:text-gold-400 hover:underline cursor-pointer">Mark all read</button>
-        )}
+        <div className="flex items-center gap-2">
+          {unreadCount > 0 && (
+            <button onClick={handleMarkAllRead} className="text-[10px] font-bold text-maroon-700 dark:text-gold-400 hover:underline cursor-pointer">Mark all read</button>
+          )}
+          {notifications.length > 0 && (
+            <button onClick={async () => {
+              for (const n of notifications) {
+                try { await deleteDoc(doc(db, "notifications", n.id)); } catch {}
+              }
+              setNotiOpen(false);
+            }} className="text-[10px] font-bold text-red-600 dark:text-red-400 hover:underline cursor-pointer">Clear all</button>
+          )}
+        </div>
       </div>
       <div className="py-1 max-h-64 overflow-y-auto divide-y divide-slate-50 dark:divide-dark-850">
         {notifications.length > 0 ? notifications.map(n => (

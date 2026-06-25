@@ -4,7 +4,7 @@ import type { User } from "firebase/auth";
 import { auth, db } from "../../config/firebase";
 import {
   collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc,
-  onSnapshot, orderBy, limit, writeBatch, serverTimestamp,
+  onSnapshot, orderBy, limit, writeBatch, startAfter,
 } from "firebase/firestore";
 import type { ChatMessage, Conversation } from "./chatTypes";
 
@@ -19,6 +19,9 @@ interface ChatContextType {
   authResolved: boolean;
   liveProfiles: Record<string, { name: string; photo: string }>;
   otherTyping: boolean;
+  hasOlderMessages: boolean;
+  loadingOlderMessages: boolean;
+  loadOlderMessages: () => Promise<void>;
   setTyping: () => void;
   setActiveConversation: (id: string | null) => void;
   sendMessage: (text: string) => Promise<void>;
@@ -56,6 +59,8 @@ const lookupMyProfileId = async (email: string): Promise<string | null> => {
   }
 };
 
+const PAGE_SIZE = 20;
+
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
   const [authResolved, setAuthResolved] = useState(false);
@@ -68,12 +73,18 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [liveProfiles, setLiveProfiles] = useState<Record<string, { name: string; photo: string }>>({});
   const [otherTyping, setOtherTyping] = useState(false);
   const [globalUnreadCount, setGlobalUnreadCount] = useState(0);
+  const [hasOlderMessages, setHasOlderMessages] = useState(true);
+  const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
+  const [initialMessagesLoaded, setInitialMessagesLoaded] = useState(false);
   const profileUnsubs = useRef<Map<string, () => void>>(new Map());
   const unsubMessages = useRef<(() => void) | null>(null);
+  const unsubNewMessages = useRef<(() => void) | null>(null);
   const unsubTyping = useRef<(() => void) | null>(null);
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const prevActiveId = useRef<string | null>(null);
   const initialLoadDone = useRef(false);
+  const newestTimestampRef = useRef<number>(0);
+  const oldestTimestampRef = useRef<number>(0);
+  const convIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
@@ -93,6 +104,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setMyProfileIdState(null);
         setConversations([]);
         setMessages([]);
+        setHasOlderMessages(true);
         if (!initialLoadDone.current) { setLoading(false); initialLoadDone.current = true; }
       }
     });
@@ -181,61 +193,175 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => { current.forEach((unsub) => unsub()); current.clear(); };
   }, [conversations, myProfileIdState]);
 
-  // Messages listener for active conversation
+  // Load initial messages (last PAGE_SIZE) + listen for new messages
   useEffect(() => {
     if (!currentUser || !activeConversationId) {
       if (unsubMessages.current) { unsubMessages.current(); unsubMessages.current = null; }
+      if (unsubNewMessages.current) { unsubNewMessages.current(); unsubNewMessages.current = null; }
       setMessages([]);
+      setHasOlderMessages(true);
+      setInitialMessagesLoaded(false);
+      newestTimestampRef.current = 0;
+      oldestTimestampRef.current = 0;
+      convIdRef.current = null;
       return;
     }
 
-    const messagesRef = collection(db, "conversations", activeConversationId, "messages");
-    const q = query(messagesRef, orderBy("timestamp", "asc"));
+    const cid = activeConversationId;
 
-    unsubMessages.current = onSnapshot(q, (snapshot) => {
-      const list: ChatMessage[] = snapshot.docs.map((d) => {
-        const val = d.data();
-        return {
-          id: d.id,
-          senderId: val.senderId ?? "",
-          text: val.text ?? "",
-          timestamp: val.timestamp ?? null,
-          status: val.status ?? "sent",
-          deleted: val.deleted ?? false,
-          deletedForEveryone: val.deletedForEveryone ?? false,
-          deletedForMe: val.deletedForMe ?? [],
-          edited: val.edited ?? false,
-        };
-      });
+    (async () => {
+      try {
+        // Query last PAGE_SIZE messages
+        const messagesRef = collection(db, "conversations", cid, "messages");
+        const qLast = query(messagesRef, orderBy("timestamp", "desc"), limit(PAGE_SIZE));
+        const snap = await getDocs(qLast);
 
-      const conv = conversations.find((c) => c.id === activeConversationId);
-      const myId = myProfileIdRef.current;
-      const clearedAt = conv?.clearedAt?.[myId || ""] || 0;
+        const list: ChatMessage[] = [];
+        snap.docs.forEach((d) => {
+          const val = d.data();
+          list.unshift({
+            id: d.id,
+            senderId: val.senderId ?? "",
+            text: val.text ?? "",
+            timestamp: val.timestamp ?? null,
+            status: val.status ?? "sent",
+            deleted: val.deleted ?? false,
+            deletedForEveryone: val.deletedForEveryone ?? false,
+            deletedForMe: val.deletedForMe ?? [],
+            edited: val.edited ?? false,
+          });
+        });
 
-      const filteredList = list.filter((m) => {
-        if (m.deletedForMe?.includes(myId || "")) return false;
-        if (m.timestamp && m.timestamp < clearedAt) return false;
-        return true;
-      });
+        // Mark received messages as delivered
+        const batch = writeBatch(db);
+        snap.docs.forEach((d) => {
+          const val = d.data();
+          if (val.senderId !== myProfileIdRef.current && !val.deleted && !val.deletedForEveryone && val.status === "sent") {
+            batch.update(doc(db, "conversations", cid, "messages", d.id), { status: "delivered" });
+          }
+        });
+        batch.commit().catch(() => {});
 
-      setMessages(filteredList);
-      if (prevActiveId.current !== activeConversationId) prevActiveId.current = activeConversationId;
+        // Filter cleared
+        const conv = conversations.find((c) => c.id === cid);
+        const clearedAt = conv?.clearedAt?.[myProfileIdRef.current || ""] || 0;
+        const filtered = list.filter((m) => {
+          if (m.deletedForMe?.includes(myProfileIdRef.current || "")) return false;
+          if (m.timestamp && m.timestamp < clearedAt) return false;
+          return true;
+        });
 
-      // Mark received messages as delivered
-      const batch = writeBatch(db);
-      snapshot.docs.forEach((d) => {
-        const val = d.data();
-        if (val.senderId !== myProfileIdRef.current && !val.deleted && !val.deletedForEveryone && val.status === "sent") {
-          batch.update(doc(db, "conversations", activeConversationId, "messages", d.id), { status: "delivered" });
+        setMessages(filtered);
+        setInitialMessagesLoaded(true);
+
+        if (filtered.length > 0) {
+          newestTimestampRef.current = filtered[filtered.length - 1].timestamp || 0;
+          oldestTimestampRef.current = filtered[0].timestamp || 0;
+        } else {
+          newestTimestampRef.current = 0;
+          oldestTimestampRef.current = 0;
         }
-      });
-      batch.commit().catch(() => {});
-    });
+
+        setHasOlderMessages(filtered.length >= PAGE_SIZE);
+        convIdRef.current = cid;
+
+        // Set up listener for new messages only (after newestTimestamp)
+        if (unsubNewMessages.current) unsubNewMessages.current();
+
+        const qNew = newestTimestampRef.current > 0
+          ? query(messagesRef, orderBy("timestamp", "asc"), startAfter(newestTimestampRef.current))
+          : query(messagesRef, orderBy("timestamp", "asc"));
+
+        unsubNewMessages.current = onSnapshot(qNew, (newSnap) => {
+          newSnap.docChanges().forEach((change) => {
+            if (change.type === "added") {
+              const val = change.doc.data();
+              const msg: ChatMessage = {
+                id: change.doc.id,
+                senderId: val.senderId ?? "",
+                text: val.text ?? "",
+                timestamp: val.timestamp ?? null,
+                status: val.status ?? "sent",
+                deleted: val.deleted ?? false,
+                deletedForEveryone: val.deletedForEveryone ?? false,
+                deletedForMe: val.deletedForMe ?? [],
+                edited: val.edited ?? false,
+              };
+
+              // Mark received messages as delivered
+              if (msg.senderId !== myProfileIdRef.current && !msg.deleted && !msg.deletedForEveryone && msg.status === "sent") {
+                updateDoc(doc(db, "conversations", cid, "messages", msg.id), { status: "delivered" }).catch(() => {});
+              }
+
+              setMessages((prev) => {
+                if (prev.some((p) => p.id === msg.id)) return prev;
+                const copy = [...prev, msg];
+                if (newestTimestampRef.current < (msg.timestamp || 0)) {
+                  newestTimestampRef.current = msg.timestamp || 0;
+                }
+                return copy;
+              });
+            }
+          });
+        });
+      } catch (err) {
+        console.error("Error loading initial messages:", err);
+        setInitialMessagesLoaded(true);
+      }
+    })();
 
     return () => {
-      if (unsubMessages.current) { unsubMessages.current(); unsubMessages.current = null; }
+      if (unsubNewMessages.current) { unsubNewMessages.current(); unsubNewMessages.current = null; }
     };
   }, [currentUser, activeConversationId, conversations]);
+
+  // Load older messages (pagination)
+  const loadOlderMessages = useCallback(async () => {
+    if (loadingOlderMessages || !hasOlderMessages || !activeConversationId || !oldestTimestampRef.current) return;
+    setLoadingOlderMessages(true);
+    try {
+      const messagesRef = collection(db, "conversations", activeConversationId, "messages");
+      const q = query(messagesRef, orderBy("timestamp", "desc"), startAfter(oldestTimestampRef.current), limit(PAGE_SIZE));
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        setHasOlderMessages(false);
+      } else {
+        const older: ChatMessage[] = [];
+        snap.docs.forEach((d) => {
+          const val = d.data();
+          older.unshift({
+            id: d.id,
+            senderId: val.senderId ?? "",
+            text: val.text ?? "",
+            timestamp: val.timestamp ?? null,
+            status: val.status ?? "sent",
+            deleted: val.deleted ?? false,
+            deletedForEveryone: val.deletedForEveryone ?? false,
+            deletedForMe: val.deletedForMe ?? [],
+            edited: val.edited ?? false,
+          });
+        });
+
+        const conv = conversations.find((c) => c.id === activeConversationId);
+        const clearedAt = conv?.clearedAt?.[myProfileIdRef.current || ""] || 0;
+        const filteredOlder = older.filter((m) => {
+          if (m.deletedForMe?.includes(myProfileIdRef.current || "")) return false;
+          if (m.timestamp && m.timestamp < clearedAt) return false;
+          return true;
+        });
+
+        setMessages((prev) => [...filteredOlder, ...prev]);
+        if (older.length > 0) {
+          oldestTimestampRef.current = older[0].timestamp || 0;
+        }
+        setHasOlderMessages(older.length >= PAGE_SIZE);
+      }
+    } catch (err) {
+      console.error("loadOlderMessages error:", err);
+    } finally {
+      setLoadingOlderMessages(false);
+    }
+  }, [activeConversationId, conversations, hasOlderMessages, loadingOlderMessages]);
 
   // Typing indicator listener
   useEffect(() => {
@@ -411,7 +537,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       nSnap2.docs.forEach(d => batch.delete(doc(db, "notifications", d.id)));
       batch.delete(doc(db, "conversations", convId));
 
-      // Delete all messages subcollection docs
       const msgSnap = await getDocs(collection(db, "conversations", convId, "messages"));
       msgSnap.docs.forEach(d => batch.delete(doc(db, "conversations", convId, "messages", d.id)));
 
@@ -426,9 +551,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const convSnap = await getDoc(convRef);
 
     if (!convSnap.exists()) {
-      const u = auth.currentUser!;
+      // Get current user's profile data from liveProfiles or fetch it
+      let myName = auth.currentUser?.displayName || "You";
+      let myPhoto = auth.currentUser?.photoURL || "";
+      const myLive = liveProfiles[uid];
+      if (myLive) { myName = myLive.name; myPhoto = myLive.photo; }
       const participantData: Record<string, { name: string; photo: string }> = {
-        [uid]: { name: u.displayName || "You", photo: u.photoURL || "" },
+        [uid]: { name: myName, photo: myPhoto },
         [userId]: { name, photo },
       };
       const timestamp = Date.now();
@@ -446,7 +575,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     }
     return convId;
-  }, []);
+  }, [liveProfiles]);
 
   const startAndMessageConversation = useCallback(async (userId: string, name: string, photo: string, initialMessage: string): Promise<string> => {
     const convId = await startConversation(userId, name, photo);
@@ -471,13 +600,22 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       [`typing.${uid}`]: false,
     });
 
+    const mySenderData = liveProfiles[uid];
+    const mySenderName = mySenderData?.name || auth.currentUser?.displayName || "Someone";
     await addDoc(collection(db, "notifications"), {
       receiverId: userId,
-      text: `${auth.currentUser?.displayName || "Someone"}: ${initialMessage.substring(0, 80)}`,
+      text: `${mySenderName}: ${initialMessage.substring(0, 80)}`,
       type: "chat_message", read: false, createdAt: timestamp,
     }).catch(() => {});
     return convId;
-  }, [startConversation]);
+  }, [startConversation, liveProfiles]);
+
+  // Expose only the cleanup for messages when conversation changes
+  useEffect(() => {
+    return () => {
+      if (unsubNewMessages.current) { unsubNewMessages.current(); unsubNewMessages.current = null; }
+    };
+  }, []);
 
   return (
     <ChatContext.Provider
@@ -492,6 +630,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         authResolved,
         liveProfiles,
         otherTyping,
+        hasOlderMessages,
+        loadingOlderMessages,
+        loadOlderMessages,
         setTyping,
         setActiveConversation: setActiveConversationId,
         sendMessage,

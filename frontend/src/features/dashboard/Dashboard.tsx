@@ -440,7 +440,12 @@ export const Dashboard: React.FC = () => {
         // Find and delete the sent interest from Firestore
         const q = query(collection(db, "interests"), where("senderId", "==", myProfile.id), where("receiverId", "==", id));
         const snap = await getDocs(q);
-        snap.forEach(d => { deleteDoc(doc(db, "interests", d.id)); });
+        const batch = writeBatch(db);
+        snap.forEach(d => batch.delete(doc(db, "interests", d.id)));
+        await batch.commit();
+        // Clean up conversation + messages too
+        const convId = [myProfile.id, id].sort().join("_");
+        await deleteChatConversation(convId);
         showToast("Interest removed.");
       } else {
         await addDoc(collection(db, "interests"), {
