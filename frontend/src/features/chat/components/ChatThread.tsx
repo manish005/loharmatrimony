@@ -245,7 +245,7 @@ const ChatThread: React.FC<ChatThreadProps> = ({ onBack }) => {
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 p-4 overflow-y-auto space-y-3"
+        className={`flex-1 p-4 overflow-y-auto space-y-3 ${chatLocked && !checkingLock ? "blur-sm pointer-events-none select-none" : ""}`}
       >
         {loadingOlderMessages && (
           <div className="flex justify-center py-3">
@@ -307,7 +307,7 @@ const ChatThread: React.FC<ChatThreadProps> = ({ onBack }) => {
         <div className="p-4 border-t border-slate-200/50 dark:border-dark-800/50 bg-slate-50 dark:bg-dark-900 flex flex-col items-center gap-2 shrink-0">
           <Lock className="h-4 w-4 text-slate-400" />
           <p className="text-[11px] text-slate-500 font-semibold text-center">
-            Send an interest to {otherData?.name || "this user"} to start chatting
+            Connection removed. Send an interest to {otherData?.name || "this user"} to chat again
           </p>
         </div>
       ) : (

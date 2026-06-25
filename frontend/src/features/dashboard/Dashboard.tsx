@@ -76,6 +76,7 @@ export const Dashboard: React.FC = () => {
   const [chatLoading, setChatLoading] = useState(false);
   const [interestsLoading, setInterestsLoading] = useState(true);
   const initialInterestLoadDone = useRef(false);
+  const unsubMrReceived = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const handler = () => setSidebarOpen(prev => !prev);
@@ -342,63 +343,53 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     if (!myProfile?.id || profiles.length === 0) return;
 
-    // Listen for interests from Firestore
-    const unsubInterests = onSnapshot(collection(db, "interests"), (snapshot) => {
-      const allInterests = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-
-      // sent BY me
-      const sentData = allInterests.filter((i: any) => i.senderId === myProfile.id);
-      const sentIds = sentData.map((d: any) => d.receiverId);
-      setSentInterests(sentData);
-      setInterestSentIds(sentIds);
-
-      // received BY me (pending)
-      const receivedData = allInterests.filter((i: any) => i.receiverId === myProfile.id && i.status === "pending");
-      if (!initialInterestLoadDone.current) {
-        initialInterestLoadDone.current = true;
+    // Listen for interests from Firestore (filtered queries to avoid quota)
+    const unsubSent = onSnapshot(
+      query(collection(db, "interests"), where("senderId", "==", myProfile.id)),
+      (snapshot) => {
+        const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        setSentInterests(data);
+        setInterestSentIds(data.map((d: any) => d.receiverId));
+        if (!initialInterestLoadDone.current) initialInterestLoadDone.current = true;
       }
-      setPendingInterestsReceived(receivedData);
-      setInterestsLoading(false);
+    );
 
-      // approved received BY me
-      const approvedData = allInterests.filter((i: any) => i.receiverId === myProfile.id && i.status === "approved");
-      setApprovedReceivedInterests(approvedData);
-      setApprovedReceivedIds(approvedData.map((d: any) => d.senderId));
-    });
+    const unsubReceived = onSnapshot(
+      query(collection(db, "interests"), where("receiverId", "==", myProfile.id)),
+      (snapshot) => {
+        const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        setPendingInterestsReceived(data.filter((i: any) => i.status === "pending"));
+        const approved = data.filter((i: any) => i.status === "approved");
+        setApprovedReceivedInterests(approved);
+        setApprovedReceivedIds(approved.map((d: any) => d.senderId));
+        if (!initialInterestLoadDone.current) initialInterestLoadDone.current = true;
+        setInterestsLoading(false);
+      }
+    );
 
-    // Listen for Marriage Requests from Firestore
-    const unsubMarriageRequests = onSnapshot(collection(db, "marriageRequests"), (snapshot) => {
-      const requests = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      const myRequests = requests.filter((r: any) => r.senderId === myProfile.id || r.receiverId === myProfile.id);
-      setMarriageRequests(myRequests);
-    });
+    // Listen for Marriage Requests from Firestore (filtered queries)
+    const unsubMrSent = onSnapshot(
+      query(collection(db, "marriageRequests"), where("senderId", "==", myProfile.id)),
+      (snap1) => {
+        const sent = snap1.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (unsubMrReceived.current) unsubMrReceived.current();
+        unsubMrReceived.current = onSnapshot(
+          query(collection(db, "marriageRequests"), where("receiverId", "==", myProfile.id)),
+          (snap2) => {
+            const received = snap2.docs.map(d => ({ id: d.id, ...d.data() }));
+            setMarriageRequests([...sent, ...received]);
+          }
+        );
+      }
+    );
 
     return () => {
-      unsubInterests();
-      unsubMarriageRequests();
+      unsubSent();
+      unsubReceived();
+      unsubMrSent();
+      if (unsubMrReceived.current) unsubMrReceived.current();
     };
   }, [myProfile?.id, profiles]);
-
-  // Clean up stale conversations where no approved connection exists
-  useEffect(() => {
-    if (!myProfile?.id || interestsLoading) return;
-    const approvedIds = new Set([
-      ...sentInterests.filter(i => i.status === "approved").map(i => i.receiverId),
-      ...approvedReceivedIds,
-    ]);
-    (async () => {
-      try {
-        const convSnap = await getDocs(query(collection(db, "conversations"), where("participants", "array-contains", myProfile.id)));
-        for (const d of convSnap.docs) {
-          const conv = d.data();
-          const otherId = conv.participants?.find((p: string) => p !== myProfile.id);
-          if (otherId && !approvedIds.has(otherId)) {
-            await deleteChatConversation(d.id);
-          }
-        }
-      } catch {}
-    })();
-  }, [myProfile?.id, sentInterests, approvedReceivedIds, interestsLoading]);
 
   // Heartbeat: keep isOnline true and update lastActive every 30s
   useEffect(() => {
@@ -437,15 +428,10 @@ export const Dashboard: React.FC = () => {
     if (e) e.stopPropagation();
     try {
       if (interestSentIds.includes(id)) {
-        // Find and delete the sent interest from Firestore
+        // Delete the sent interest (chat stays intact but becomes locked)
         const q = query(collection(db, "interests"), where("senderId", "==", myProfile.id), where("receiverId", "==", id));
         const snap = await getDocs(q);
-        const batch = writeBatch(db);
-        snap.forEach(d => batch.delete(doc(db, "interests", d.id)));
-        await batch.commit();
-        // Clean up conversation + messages too
-        const convId = [myProfile.id, id].sort().join("_");
-        await deleteChatConversation(convId);
+        if (!snap.empty) await deleteDoc(doc(db, "interests", snap.docs[0].id));
         showToast("Interest removed.");
       } else {
         await addDoc(collection(db, "interests"), {
@@ -455,16 +441,16 @@ export const Dashboard: React.FC = () => {
           timestamp: Date.now()
         });
 
-        // Add Notification to Firestore
+        // Add Notification to Firestore (non-blocking)
         const senderName = myProfile.name || myProfile.firstName || "Someone";
-        await addDoc(collection(db, "notifications"), {
+        addDoc(collection(db, "notifications"), {
           receiverId: id,
           senderId: myProfile.id,
           text: `${senderName} sent you an interest request.`,
           type: "interest_received",
           read: false,
           createdAt: Date.now()
-        });
+        }).catch((err) => console.error("Failed to send interest notification:", err));
 
         showToast("Interest sent successfully! They have been notified.");
       }
@@ -484,16 +470,16 @@ export const Dashboard: React.FC = () => {
         await updateDoc(doc(db, "interests", match.id), { status: "approved" });
         showToast(`You approved ${senderName}'s interest!`);
 
-        // Add Notification to Firestore
+        // Add Notification to Firestore (non-blocking)
         const myName = myProfile.name || myProfile.firstName || "Someone";
-        await addDoc(collection(db, "notifications"), {
+        addDoc(collection(db, "notifications"), {
           receiverId: senderId,
           senderId: myProfile.id,
           text: `${myName} accepted your interest request!`,
           type: "interest_approved",
           read: false,
           createdAt: Date.now()
-        });
+        }).catch(() => {});
 
         const initialMessage = `Hey ${senderName}, I loved your profile! 💫 Looking forward to getting to know you better.`;
         const convId = await startAndMessageConversation(senderId, senderName, senderPhoto, initialMessage);

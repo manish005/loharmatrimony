@@ -178,7 +178,7 @@ export const Header: React.FC = () => {
         </div>
       </div>
       <div className="py-1 max-h-64 overflow-y-auto divide-y divide-slate-50 dark:divide-dark-850">
-        {notifications.length > 0 ? notifications.map(n => (
+        {notifications.filter(n => n.type !== "chat_message").length > 0 ? notifications.filter(n => n.type !== "chat_message").map(n => (
           <div key={n.id} 
                onClick={() => handleNotificationClick(n)}
                className={`p-3 flex items-start gap-2.5 transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-dark-800 ${!n.read ? "bg-slate-55/30 dark:bg-dark-850/20" : ""}`}>
@@ -291,10 +291,22 @@ export const Header: React.FC = () => {
               </>
             )}
             {currentUser && (
-              <div className="pt-2 border-t border-slate-100 dark:border-dark-800">
-                <button onClick={() => { setDrawerOpen(false); handleLogout(); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all cursor-pointer"><LogOut className="h-4 w-4" /> Logout</button>
-              </div>
+              <>
+                <Link to="/dashboard" onClick={() => setDrawerOpen(false)}
+                  className="flex items-center px-4 py-3 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-maroon-50 dark:hover:bg-dark-800 hover:text-maroon-700 dark:hover:text-gold-400 transition-all">Dashboard</Link>
+                <Link to="/dashboard?tab=my-profile" onClick={() => setDrawerOpen(false)}
+                  className="flex items-center px-4 py-3 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-maroon-50 dark:hover:bg-dark-800 hover:text-maroon-700 dark:hover:text-gold-400 transition-all">My Profile</Link>
+                <Link to="/dashboard?tab=interests" onClick={() => setDrawerOpen(false)}
+                  className="flex items-center px-4 py-3 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-maroon-50 dark:hover:bg-dark-800 hover:text-maroon-700 dark:hover:text-gold-400 transition-all">Interests</Link>
+                <Link to="/dashboard?tab=messages" onClick={() => setDrawerOpen(false)}
+                  className="flex items-center px-4 py-3 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-maroon-50 dark:hover:bg-dark-800 hover:text-maroon-700 dark:hover:text-gold-400 transition-all">Messages</Link>
+                <Link to="/dashboard?tab=matches" onClick={() => setDrawerOpen(false)}
+                  className="flex items-center px-4 py-3 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-maroon-50 dark:hover:bg-dark-800 hover:text-maroon-700 dark:hover:text-gold-400 transition-all">Matches</Link>
+                <div className="pt-2 border-t border-slate-100 dark:border-dark-800">
+                  <button onClick={() => { setDrawerOpen(false); handleLogout(); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all cursor-pointer"><LogOut className="h-4 w-4" /> Logout</button>
+                </div>
+              </>
             )}
             {!currentUser && (
               <div className="pt-2 border-t border-slate-100 dark:border-dark-800">
