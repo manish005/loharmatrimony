@@ -62,7 +62,7 @@ export const Header: React.FC = () => {
               });
               setNotifications(list);
             }, (err) => {
-              console.error("Error in notifications snapshot listener:", err);
+              console.error("Notifications listener error:", err);
             });
           }, (err) => {
             console.error("Error in profile snapshot listener:", err);

@@ -351,7 +351,8 @@ export const Dashboard: React.FC = () => {
         setSentInterests(data);
         setInterestSentIds(data.map((d: any) => d.receiverId));
         if (!initialInterestLoadDone.current) initialInterestLoadDone.current = true;
-      }
+      },
+      (err) => console.error("Sent interests listener error:", err)
     );
 
     const unsubReceived = onSnapshot(
@@ -364,7 +365,8 @@ export const Dashboard: React.FC = () => {
         setApprovedReceivedIds(approved.map((d: any) => d.senderId));
         if (!initialInterestLoadDone.current) initialInterestLoadDone.current = true;
         setInterestsLoading(false);
-      }
+      },
+      (err) => console.error("Received interests listener error:", err)
     );
 
     // Listen for Marriage Requests from Firestore (filtered queries)

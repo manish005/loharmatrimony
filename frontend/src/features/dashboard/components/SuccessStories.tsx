@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { Heart, Calendar, PartyPopper, ChevronDown, Filter } from "lucide-react";
 import { db } from "../../../config/firebase";
-import { collection, onSnapshot, addDoc } from "firebase/firestore";
+import { collection, query, where, onSnapshot, addDoc } from "firebase/firestore";
 
 interface CoupleEntry {
   coupleId: string;
@@ -32,11 +32,9 @@ const SuccessStories: React.FC<SuccessStoriesProps> = ({ onSelectStory, myProfil
 
   useEffect(() => {
     const unsubProfiles = onSnapshot(
-      collection(db, "profiles"),
+      query(collection(db, "profiles"), where("isMarried", "==", true)),
       (snapshot) => {
-        const marriedData = snapshot.docs
-          .filter(d => d.data().isMarried === true)
-          .map(d => ({ id: d.id, ...d.data() }));
+        const marriedData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         setProfilesData(marriedData);
         setLoading(false);
       },
