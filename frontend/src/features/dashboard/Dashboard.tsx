@@ -484,27 +484,39 @@ export const Dashboard: React.FC = () => {
 
   const handleRejectInterest = async (senderId: string) => {
     try {
-      const q = query(collection(db, "interests"), where("receiverId", "==", myProfile.id), where("senderId", "==", senderId), where("status", "==", "pending"));
-      const snap = await getDocs(q);
-      const match = snap.docs[0];
-      if (match) {
-        await deleteDoc(doc(db, "interests", match.id));
-        showToast("Interest declined.");
+      // Delete all interests between them (any status)
+      const [iSnap1, iSnap2, nSnap1, nSnap2] = await Promise.all([
+        getDocs(query(collection(db, "interests"), where("senderId", "==", myProfile.id), where("receiverId", "==", senderId))),
+        getDocs(query(collection(db, "interests"), where("senderId", "==", senderId), where("receiverId", "==", myProfile.id))),
+        getDocs(query(collection(db, "notifications"), where("senderId", "==", myProfile.id), where("receiverId", "==", senderId))),
+        getDocs(query(collection(db, "notifications"), where("senderId", "==", senderId), where("receiverId", "==", myProfile.id))),
+      ]);
 
-        // Add Notification to Firestore
-        const myName = myProfile.name || myProfile.firstName || "Someone";
-        await addDoc(collection(db, "notifications"), {
-          receiverId: senderId,
-          senderId: myProfile.id,
-          text: `${myName} respectfully declined your interest.`,
-          type: "interest_rejected",
-          read: false,
-          createdAt: Date.now()
-        });
-      }
+      const batch = writeBatch(db);
+      iSnap1.docs.forEach(d => batch.delete(doc(db, "interests", d.id)));
+      iSnap2.docs.forEach(d => batch.delete(doc(db, "interests", d.id)));
+      nSnap1.docs.forEach(d => batch.delete(doc(db, "notifications", d.id)));
+      nSnap2.docs.forEach(d => batch.delete(doc(db, "notifications", d.id)));
+
+      const myName = myProfile.name || myProfile.firstName || "Someone";
+      const notifRef = doc(collection(db, "notifications"));
+      batch.set(notifRef, {
+        receiverId: senderId, senderId: myProfile.id,
+        text: `${myName} respectfully declined your interest.`,
+        type: "interest_rejected", read: false, createdAt: Date.now()
+      });
+
+      const convId = [myProfile.id, senderId].sort().join("_");
+      await Promise.all([
+        batch.commit(),
+        realtimeHelpers.remove(realtimeHelpers.ref(database, `messages/${convId}`)).catch(() => {}),
+        realtimeHelpers.remove(realtimeHelpers.ref(database, `conversations/${convId}`)).catch(() => {}),
+      ]);
+
+      showToast("Interest declined and chat cleared.");
     } catch (err) {
-      console.error("Error rejecting interest:", err);
-      showToast("Failed to reject interest.", "error");
+      console.error("Error rejecting interest", err);
+      showToast("Failed to reject interest", "error");
     }
   };
 

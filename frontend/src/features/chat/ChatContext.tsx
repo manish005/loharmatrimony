@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { onAuthStateChanged } from "firebase/auth";
 import type { User } from "firebase/auth";
 import { database, auth, realtimeHelpers, db } from "../../config/firebase";
-import { collection, getDocs, query, where, doc, getDoc, onSnapshot, deleteDoc, addDoc } from "firebase/firestore";
+import { collection, getDocs, query, where, doc, getDoc, onSnapshot, deleteDoc, addDoc, writeBatch } from "firebase/firestore";
 import type { ChatMessage, Conversation } from "./chatTypes";
 
 interface ChatContextType {
@@ -481,23 +481,29 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const unmatchUser = useCallback(async (otherUserId: string) => {
     try {
       const myId = getUid();
-      // Delete interests from Firestore
-      const iq1 = query(collection(db, "interests"), where("senderId", "==", myId), where("receiverId", "==", otherUserId));
-      const iSnap1 = await getDocs(iq1);
-      iSnap1.forEach(async (d) => { await deleteDoc(doc(db, "interests", d.id)); });
-      const iq2 = query(collection(db, "interests"), where("senderId", "==", otherUserId), where("receiverId", "==", myId));
-      const iSnap2 = await getDocs(iq2);
-      iSnap2.forEach(async (d) => { await deleteDoc(doc(db, "interests", d.id)); });
-      
       const convId = getConversationId(myId, otherUserId);
-      const convRef = realtimeHelpers.ref(database, `conversations/${convId}`);
-      const convSnap = await realtimeHelpers.get(convRef);
-      if (convSnap.exists()) {
-        const val = convSnap.val();
-        const unmatchedBy = val.unmatchedBy || [];
-        if (!unmatchedBy.includes(myId)) unmatchedBy.push(myId);
-        await realtimeHelpers.update(convRef, { unmatchedBy });
-      }
+
+      // Fetch all docs in parallel
+      const [iSnap1, iSnap2, nSnap1, nSnap2] = await Promise.all([
+        getDocs(query(collection(db, "interests"), where("senderId", "==", myId), where("receiverId", "==", otherUserId))),
+        getDocs(query(collection(db, "interests"), where("senderId", "==", otherUserId), where("receiverId", "==", myId))),
+        getDocs(query(collection(db, "notifications"), where("senderId", "==", myId), where("receiverId", "==", otherUserId))),
+        getDocs(query(collection(db, "notifications"), where("senderId", "==", otherUserId), where("receiverId", "==", myId))),
+      ]);
+
+      // Firestore deletes in a batch
+      const batch = writeBatch(db);
+      iSnap1.docs.forEach(d => batch.delete(doc(db, "interests", d.id)));
+      iSnap2.docs.forEach(d => batch.delete(doc(db, "interests", d.id)));
+      nSnap1.docs.forEach(d => batch.delete(doc(db, "notifications", d.id)));
+      nSnap2.docs.forEach(d => batch.delete(doc(db, "notifications", d.id)));
+
+      // Run Firestore batch + RTDB deletes in parallel
+      await Promise.all([
+        batch.commit(),
+        realtimeHelpers.remove(realtimeHelpers.ref(database, `messages/${convId}`)).catch(() => {}),
+        realtimeHelpers.remove(realtimeHelpers.ref(database, `conversations/${convId}`)).catch(() => {}),
+      ]);
     } catch (err) {
       console.error("unmatchUser error:", err);
     }
@@ -532,45 +538,39 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const startAndMessageConversation = useCallback(async (userId: string, name: string, photo: string, initialMessage: string): Promise<string> => {
     const convId = await startConversation(userId, name, photo);
     const uid = getUid();
-    
+    const timestamp = Date.now();
+
     const messagesRef = realtimeHelpers.ref(database, `messages/${convId}`);
-    const snap = await realtimeHelpers.get(messagesRef);
-    const raw = snap.val() || {};
-    const hasInitial = Object.values(raw).some((m: any) => m.text === initialMessage);
-    if (!hasInitial) {
-      const timestamp = Date.now();
-      const newMsgRef = realtimeHelpers.push(messagesRef);
-      await realtimeHelpers.set(newMsgRef, {
-        senderId: uid,
+    const newMsgRef = realtimeHelpers.push(messagesRef);
+    await realtimeHelpers.set(newMsgRef, {
+      senderId: uid,
+      text: initialMessage,
+      timestamp: timestamp,
+      status: "sent",
+      deleted: false,
+      deletedForEveryone: false,
+      deletedForMe: [],
+      edited: false,
+    });
+
+    const convRef = realtimeHelpers.ref(database, `conversations/${convId}`);
+    await realtimeHelpers.update(convRef, {
+      lastMessage: {
         text: initialMessage,
+        senderId: uid,
         timestamp: timestamp,
         status: "sent",
-        deleted: false,
-        deletedForEveryone: false,
-        deletedForMe: [],
-        edited: false,
-      });
+      },
+      updatedAt: timestamp,
+    });
 
-      const convRef = realtimeHelpers.ref(database, `conversations/${convId}`);
-      await realtimeHelpers.update(convRef, {
-        lastMessage: {
-          text: initialMessage,
-          senderId: uid,
-          timestamp: timestamp,
-          status: "sent",
-        },
-        updatedAt: timestamp,
-      });
-
-      const u = auth.currentUser!;
-      await addDoc(collection(db, "notifications"), {
-        receiverId: userId,
-        text: `${u.displayName || "You"}: ${initialMessage.substring(0, 80)}`,
-        type: "chat_message",
-        read: false,
-        createdAt: timestamp,
-      }).catch(() => {});
-    }
+    await addDoc(collection(db, "notifications"), {
+      receiverId: userId,
+      text: `${auth.currentUser?.displayName || "Someone"}: ${initialMessage.substring(0, 80)}`,
+      type: "chat_message",
+      read: false,
+      createdAt: timestamp,
+    }).catch(() => {});
     return convId;
   }, [startConversation]);
 
