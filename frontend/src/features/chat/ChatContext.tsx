@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import type { User } from "firebase/auth";
-import { database, auth, realtimeHelpers } from "../../config/firebase";
+import { database, auth, realtimeHelpers, db } from "../../config/firebase";
+import { collection, getDocs, query, where, doc, getDoc, onSnapshot, deleteDoc, addDoc } from "firebase/firestore";
 import type { ChatMessage, Conversation } from "./chatTypes";
 
 interface ChatContextType {
@@ -40,10 +41,13 @@ const getUid = () => {
 
 const lookupMyProfileId = async (email: string): Promise<string | null> => {
   try {
-    const snap = await realtimeHelpers.get(realtimeHelpers.ref(database, "profiles"));
-    const raw = snap.val() || {};
-    const match = Object.entries(raw).find(([, data]: [string, any]) => data.email?.toLowerCase() === email.toLowerCase());
-    return match ? match[0] : null;
+    const q = query(collection(db, "profiles"), where("email", "==", email.toLowerCase()));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      return snap.docs[0].id;
+    }
+    // Fallback: check uid field matching
+    return null;
   } catch (err) {
     console.error("lookupMyProfileId error:", err);
     return null;
@@ -176,13 +180,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     activeIds.forEach((pid) => {
       if (current.has(pid)) return;
-      const unsub = realtimeHelpers.onValue(realtimeHelpers.ref(database, `profiles/${pid}`), (snap) => {
+      const unsub = onSnapshot(doc(db, "profiles", pid), (snap) => {
         if (!snap.exists()) return;
-        const d = snap.val();
+        const d = snap.data();
         const fn = d.firstName || "";
         const ln = d.lastName || "";
         const name = [fn, ln].filter(Boolean).join(" ") || d.name || "";
-        const photo = d.photos?.[0] || d.photo || "";
+        const photo = (d.photos && d.photos[0]) || d.photo || "";
         setLiveProfiles((prev) => ({ ...prev, [pid]: { name, photo } }));
       });
       current.set(pid, unsub);
@@ -346,8 +350,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (receiverId) {
         const senderData = conv?.participantData?.[uid] || liveProfiles?.[uid];
         const senderName = senderData?.name || "Someone";
-        const newNotifRef = realtimeHelpers.push(realtimeHelpers.ref(database, "notifications"));
-        await realtimeHelpers.set(newNotifRef, {
+        await addDoc(collection(db, "notifications"), {
           receiverId,
           text: `${senderName}: ${text.trim().substring(0, 80)}`,
           type: "chat_message",
@@ -431,17 +434,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const unmatchUser = useCallback(async (otherUserId: string) => {
     try {
       const myId = getUid();
-      const interestsSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "interests"));
-      const rawInterests = interestsSnap.val() || {};
-      for (const [interestId, data] of Object.entries(rawInterests)) {
-        const item = data as any;
-        if (
-          (item.senderId === myId && item.receiverId === otherUserId) ||
-          (item.senderId === otherUserId && item.receiverId === myId)
-        ) {
-          await realtimeHelpers.remove(realtimeHelpers.ref(database, `interests/${interestId}`));
-        }
-      }
+      // Delete interests from Firestore
+      const iq1 = query(collection(db, "interests"), where("senderId", "==", myId), where("receiverId", "==", otherUserId));
+      const iSnap1 = await getDocs(iq1);
+      iSnap1.forEach(async (d) => { await deleteDoc(doc(db, "interests", d.id)); });
+      const iq2 = query(collection(db, "interests"), where("senderId", "==", otherUserId), where("receiverId", "==", myId));
+      const iSnap2 = await getDocs(iq2);
+      iSnap2.forEach(async (d) => { await deleteDoc(doc(db, "interests", d.id)); });
       
       const convId = getConversationId(myId, otherUserId);
       const convRef = realtimeHelpers.ref(database, `conversations/${convId}`);
@@ -517,8 +516,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       const u = auth.currentUser!;
-      const newNotifRef = realtimeHelpers.push(realtimeHelpers.ref(database, "notifications"));
-      await realtimeHelpers.set(newNotifRef, {
+      await addDoc(collection(db, "notifications"), {
         receiverId: userId,
         text: `${u.displayName || "You"}: ${initialMessage.substring(0, 80)}`,
         type: "chat_message",

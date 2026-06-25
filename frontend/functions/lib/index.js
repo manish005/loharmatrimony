@@ -36,7 +36,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteAuthUser = exports.getCompatibilityScore = exports.calculateKundaliFn = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const admin = __importStar(require("firebase-admin"));
-const engine_1 = require("./astrology/engine");
+const astrologyShared_1 = require("./astrologyShared");
 const compatibility_1 = require("./astrology/compatibility");
 const geocode_1 = require("./astrology/geocode");
 admin.initializeApp();
@@ -44,7 +44,7 @@ const db = admin.firestore();
 // ============================================================
 // FUNCTION 1: calculateKundali
 // Called when a user wants their birth chart calculated
-// ============================================================
+// ===========================================================
 exports.calculateKundaliFn = (0, https_1.onCall)({ region: "asia-south1", timeoutSeconds: 30, memory: "256MiB" }, async (request) => {
     if (!request.auth) {
         throw new https_1.HttpsError("unauthenticated", "You must be logged in.");
@@ -63,7 +63,7 @@ exports.calculateKundaliFn = (0, https_1.onCall)({ region: "asia-south1", timeou
     }
     try {
         const coords = (0, geocode_1.getCityCoords)(birthPlace);
-        const kundali = (0, engine_1.calculateKundali)(dob, birthTime, coords.lat, coords.lng, coords.timezone);
+        const kundali = (0, astrologyShared_1.calculateKundali)(dob, birthTime, coords.lat, coords.lng, coords.timezone);
         // Prepare storable data (no class instances, plain objects only)
         const kundaliData = {
             moonSign: kundali.moonSign,

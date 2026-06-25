@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { Heart, Calendar, PartyPopper, ChevronDown, Filter } from "lucide-react";
-import { database, realtimeHelpers } from "../../../config/firebase";
+import { db } from "../../../config/firebase";
+import { collection, onSnapshot, addDoc } from "firebase/firestore";
 
 interface CoupleEntry {
   coupleId: string;
@@ -30,14 +31,12 @@ const SuccessStories: React.FC<SuccessStoriesProps> = ({ onSelectStory, myProfil
   const [filter, setFilter] = useState<"all" | "today" | "upcoming" | "married">("all");
 
   useEffect(() => {
-    const profilesRef = realtimeHelpers.ref(database, "profiles");
-    const unsubProfiles = realtimeHelpers.onValue(
-      profilesRef,
+    const unsubProfiles = onSnapshot(
+      collection(db, "profiles"),
       (snapshot) => {
-        const raw = snapshot.val() || {};
-        const marriedData = Object.entries(raw)
-          .filter(([, data]: [string, any]) => data.isMarried === true)
-          .map(([id, data]: [string, any]) => ({ id, ...data }));
+        const marriedData = snapshot.docs
+          .filter(d => d.data().isMarried === true)
+          .map(d => ({ id: d.id, ...d.data() }));
         setProfilesData(marriedData);
         setLoading(false);
       },
@@ -47,10 +46,8 @@ const SuccessStories: React.FC<SuccessStoriesProps> = ({ onSelectStory, myProfil
       }
     );
 
-    const storiesRef = realtimeHelpers.ref(database, "successStories");
-    const unsubStories = realtimeHelpers.onValue(storiesRef, (snapshot) => {
-      const raw = snapshot.val() || {};
-      const stories = Object.entries(raw).map(([id, data]: [string, any]) => ({ id, ...data }));
+    const unsubStories = onSnapshot(collection(db, "successStories"), (snapshot) => {
+      const stories = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       setStoriesData(stories);
     });
 
@@ -150,8 +147,7 @@ const SuccessStories: React.FC<SuccessStoriesProps> = ({ onSelectStory, myProfil
 
       const msg = `${myName} sent congratulations on your wedding! 🎉`;
 
-      const newNotif1Ref = realtimeHelpers.push(realtimeHelpers.ref(database, "notifications"));
-      await realtimeHelpers.set(newNotif1Ref, {
+      await addDoc(collection(db, "notifications"), {
         receiverId: couple.partner1Id,
         senderId: myId,
         text: msg,
@@ -160,8 +156,7 @@ const SuccessStories: React.FC<SuccessStoriesProps> = ({ onSelectStory, myProfil
         createdAt: Date.now()
       });
 
-      const newNotif2Ref = realtimeHelpers.push(realtimeHelpers.ref(database, "notifications"));
-      await realtimeHelpers.set(newNotif2Ref, {
+      await addDoc(collection(db, "notifications"), {
         receiverId: couple.partner2Id,
         senderId: myId,
         text: msg,

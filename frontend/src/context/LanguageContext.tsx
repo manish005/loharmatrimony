@@ -2,8 +2,9 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { en } from "../locales/en";
 import { hi } from "../locales/hi";
 import { mr } from "../locales/mr";
-import { auth, database, realtimeHelpers } from "../config/firebase";
+import { auth, db, firestoreHelpers } from "../config/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { collection, query, where, getDocs, updateDoc } from "firebase/firestore";
 
 type LanguageCode = "en" | "hi" | "mr";
 
@@ -27,11 +28,14 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
-          const profileSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, `profiles/${user.uid}`));
-          const profileData = profileSnap.val ? profileSnap.val() : profileSnap;
-          if (profileData && profileData.appLanguage && locales[profileData.appLanguage as LanguageCode]) {
-            setLanguageState(profileData.appLanguage as LanguageCode);
-            localStorage.setItem("app_language", profileData.appLanguage);
+          const q = query(collection(db, "profiles"), where("uid", "==", user.uid));
+          const querySnapshot = await getDocs(q);
+          if (!querySnapshot.empty) {
+            const profileData = querySnapshot.docs[0].data();
+            if (profileData && profileData.appLanguage && locales[profileData.appLanguage as LanguageCode]) {
+              setLanguageState(profileData.appLanguage as LanguageCode);
+              localStorage.setItem("app_language", profileData.appLanguage);
+            }
           }
         } catch (error) {
           console.error("Error loading language preference:", error);
@@ -48,9 +52,13 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     if (auth.currentUser) {
       try {
-        await realtimeHelpers.update(realtimeHelpers.ref(database, `profiles/${auth.currentUser.uid}`), {
-          appLanguage: lang
-        });
+        const q = query(collection(db, "profiles"), where("uid", "==", auth.currentUser.uid));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          await updateDoc(querySnapshot.docs[0].ref, {
+            appLanguage: lang
+          });
+        }
       } catch (error) {
         console.error("Error saving language preference:", error);
       }

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth, database } from "../../config/firebase";
+import { auth, database, db } from "../../config/firebase";
+import { collection, getDocs } from "firebase/firestore";
 import { realtimeHelpers } from "../../config/firebase";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -273,9 +274,8 @@ export const LandingPage: React.FC = () => {
   useEffect(() => {
     const fetchRealData = async () => {
       try {
-        const profilesRef = realtimeHelpers.ref(database, "profiles");
-        const profilesSnap = await realtimeHelpers.get(profilesRef);
-        const profiles = profilesSnap ? Object.values(profilesSnap) : [];
+        const querySnapshot = await getDocs(collection(db, "profiles"));
+        const profiles = querySnapshot.docs.map(d => d.data());
         const totalCount = profiles.length;
 
         const activeCount = profiles.filter((p: any) => p.isOnline).length;
@@ -324,9 +324,8 @@ export const LandingPage: React.FC = () => {
 
     const fetchNewMembers = async () => {
       try {
-        const profilesRef = realtimeHelpers.ref(database, "profiles");
-        const profilesSnap = await realtimeHelpers.get(profilesRef);
-        let members = profilesSnap ? Object.values(profilesSnap) : [];
+        const querySnapshot = await getDocs(collection(db, "profiles"));
+        let members = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         members.sort((a: any, b: any) => {
           const dateA = a.registeredAt ? new Date(a.registeredAt).getTime() : 0;
           const dateB = b.registeredAt ? new Date(b.registeredAt).getTime() : 0;
@@ -340,9 +339,8 @@ export const LandingPage: React.FC = () => {
 
     const fetchStories = async () => {
        try {
-         const storiesRef = realtimeHelpers.ref(database, "successStories");
-         const storiesSnap = await realtimeHelpers.get(storiesRef);
-         const stories = storiesSnap ? Object.values(storiesSnap) : [];
+         const querySnapshot = await getDocs(collection(db, "successStories"));
+         const stories = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
          setSuccessStoriesList(stories);
        } catch (err) {
          console.error("Failed to load success stories:", err);

@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { signOut, onAuthStateChanged } from "firebase/auth";
-import { database, auth, storage, realtimeHelpers } from "../../config/firebase";
+import { auth, storage, db } from "../../config/firebase";
+import { doc, collection, query, where, getDocs, getDoc, setDoc, updateDoc, deleteDoc, addDoc, onSnapshot, serverTimestamp, writeBatch } from "firebase/firestore";
+import { database, realtimeHelpers } from "../../config/firebase";
 import { uploadToCloudinary, deleteFromCloudinary } from "../../utils/cloudinary";
 import { useLanguage } from "../../context/LanguageContext";
 import { useToast } from "../../context/ToastContext";
@@ -184,78 +186,74 @@ export const Dashboard: React.FC = () => {
     setProfileFormState((prev: any) => ({ ...prev, [name]: value }));
   };
 
+  const mapProfile = (id: string, data: any) => ({
+    id: id,
+    uid: data.uid || "",
+    name: data.name || "Anonymous",
+    firstName: data.firstName || "",
+    middleName: data.middleName || "",
+    lastName: data.lastName || "",
+    age: data.age ? parseInt(data.age) : null,
+    dob: data.dob || "",
+    mobile: data.mobile || "",
+    email: data.email || "",
+    height: data.height || "",
+    weight: data.weight || "",
+    gender: data.gender || "",
+    caste: data.caste || "",
+    subCaste: data.subCaste || "",
+    motherTongue: data.motherTongue || "",
+    maritalStatus: data.maritalStatus || "",
+    education: data.education || "",
+    occupation: data.occupation || "",
+    income: data.income || "",
+    city: data.city || "",
+    state: data.state || "",
+    district: data.district || "",
+    address: data.address || "",
+    familyDetails: data.familyDetails || "",
+    fatherOccupation: data.fatherOccupation || "",
+    motherOccupation: data.motherOccupation || "",
+    siblings: data.siblings || "",
+    lifestyle: data.lifestyle || "",
+    foodPreference: data.foodPreference || "",
+    smoking: data.smoking || "",
+    drinking: data.drinking || "",
+    hobbies: data.hobbies || "",
+    photos: data.photos || [],
+    photo: data.photos && data.photos.length > 0 ? data.photos[0] : "",
+    compatibility: data.compatibility || null,
+    isOnline: data.isOnline || false,
+    lastActive: data.lastActive || null,
+    isVerified: data.isVerified || false,
+    isPremium: data.isPremium || false,
+    subscriptionPlan: data.subscriptionPlan || "free",
+    bio: data.bio || "",
+    onboardingCompleted: data.onboardingCompleted || false,
+    isMarried: data.isMarried || false,
+    partnerId: data.partnerId || "",
+    partnerName: data.partnerName || "",
+    partnerPhoto: data.partnerPhoto || "",
+    weddingDate: data.weddingDate || "",
+    weddingTime: data.weddingTime || "",
+    venue: data.venue || "",
+    prefFamilyType: data.prefFamilyType || "",
+    prefWorking: data.prefWorking || "",
+    prefValues: data.prefValues || "",
+    rashi: data.rashi || "",
+    nakshatra: data.nakshatra || "",
+    manglik: data.manglik || "",
+    birthTime: data.birthTime || "",
+    birthPlace: data.birthPlace || "",
+    kycStatus: data.kycStatus || "",
+    kycRejectReason: data.kycRejectReason || "",
+  });
+
   useEffect(() => {
     const fetchProfiles = async (currentUser: any) => {
       try {
-        const snapshot = await realtimeHelpers.get(realtimeHelpers.ref(database, "profiles"));
-        const rawProfiles = snapshot.val() || {};
-        const dbProfiles = Object.entries(rawProfiles).map(([id, val]: [string, any]) => {
-          const data = val || {};
-          return {
-            id: id,
-            uid: data.uid || "",
-            name: data.name || "Anonymous",
-            firstName: data.firstName || "",
-            middleName: data.middleName || "",
-            lastName: data.lastName || "",
-            age: data.age ? parseInt(data.age) : null,
-            dob: data.dob || "",
-            mobile: data.mobile || "",
-            email: data.email || "",
-            height: data.height || "",
-            weight: data.weight || "",
-            gender: data.gender || "",
-            caste: data.caste || "",
-            subCaste: data.subCaste || "",
-            motherTongue: data.motherTongue || "",
-            maritalStatus: data.maritalStatus || "",
-            education: data.education || "",
-            occupation: data.occupation || "",
-            income: data.income || "",
-            city: data.city || "",
-            state: data.state || "",
-            district: data.district || "",
-            address: data.address || "",
-            familyDetails: data.familyDetails || "",
-            fatherOccupation: data.fatherOccupation || "",
-            motherOccupation: data.motherOccupation || "",
-            siblings: data.siblings || "",
-            lifestyle: data.lifestyle || "",
-            foodPreference: data.foodPreference || "",
-            smoking: data.smoking || "",
-            drinking: data.drinking || "",
-            hobbies: data.hobbies || "",
-            photos: data.photos || [],
-            photo: data.photos && data.photos.length > 0 ? data.photos[0] : "",
-            compatibility: data.compatibility || null,
-            isOnline: data.isOnline || false,
-            lastActive: data.lastActive || null,
-            isVerified: data.isVerified || false,
-            isPremium: data.isPremium || false,
-            subscriptionPlan: data.subscriptionPlan || "free",
-            bio: data.bio || "",
-            onboardingCompleted: data.onboardingCompleted || false,
-            isMarried: data.isMarried || false,
-            partnerId: data.partnerId || "",
-            partnerName: data.partnerName || "",
-            partnerPhoto: data.partnerPhoto || "",
-            weddingDate: data.weddingDate || "",
-            weddingTime: data.weddingTime || "",
-            venue: data.venue || "",
-            // Preferences
-            prefFamilyType: data.prefFamilyType || "",
-            prefWorking: data.prefWorking || "",
-            prefValues: data.prefValues || "",
-            // Horoscope
-            rashi: data.rashi || "",
-            nakshatra: data.nakshatra || "",
-            manglik: data.manglik || "",
-            birthTime: data.birthTime || "",
-            birthPlace: data.birthPlace || "",
-            kycStatus: data.kycStatus || "",
-            kycRejectReason: data.kycRejectReason || "",
-          };
-        });
+        const snapshot = await getDocs(collection(db, "profiles"));
+        const dbProfiles = snapshot.docs.map(d => mapProfile(d.id, d.data()));
 
         setProfiles(dbProfiles);
 
@@ -274,8 +272,7 @@ export const Dashboard: React.FC = () => {
             setUserSubscription(userProfile.subscriptionPlan || "free");
             setPhotos(userProfile.photos || []);
             if (!userProfile.uid) {
-              const profileRef = realtimeHelpers.ref(database, `profiles/${userProfile.id}`);
-              realtimeHelpers.update(profileRef, { uid: currentUser.uid }).catch(() => { });
+              updateDoc(doc(db, "profiles", userProfile.id), { uid: currentUser.uid }).catch(() => {});
               userProfile.uid = currentUser.uid;
             }
           } else {
@@ -287,9 +284,9 @@ export const Dashboard: React.FC = () => {
               || "User";
             const guessedGender = isFemale ? "Female" : "Male";
             try {
-              const newProfileRef = realtimeHelpers.push(realtimeHelpers.ref(database, "profiles"));
-              const docId = newProfileRef.key!;
-              await realtimeHelpers.set(newProfileRef, {
+              const docRef = doc(collection(db, "profiles"));
+              const docId = docRef.id;
+              await setDoc(docRef, {
                 uid: currentUser.uid,
                 name: guessedName,
                 firstName: guessedName,
@@ -343,11 +340,9 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     if (!myProfile?.id || profiles.length === 0) return;
 
-    // Listen for interests
-    const interestsRef = realtimeHelpers.ref(database, "interests");
-    const unsubInterests = realtimeHelpers.onValue(interestsRef, (snapshot) => {
-      const raw = snapshot.val() || {};
-      const allInterests = Object.entries(raw).map(([id, data]: [string, any]) => ({ id, ...data }));
+    // Listen for interests from Firestore
+    const unsubInterests = onSnapshot(collection(db, "interests"), (snapshot) => {
+      const allInterests = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
       // sent BY me
       const sentData = allInterests.filter((i: any) => i.senderId === myProfile.id);
@@ -369,36 +364,27 @@ export const Dashboard: React.FC = () => {
       setApprovedReceivedIds(approvedData.map((d: any) => d.senderId));
     });
 
-    // Listen for Marriage Requests
-    const marriageRequestsRef = realtimeHelpers.ref(database, "marriageRequests");
-    const unsubMarriageRequests = realtimeHelpers.onValue(marriageRequestsRef, (snapshot) => {
-      const raw = snapshot.val() || {};
-      const requests = Object.entries(raw).map(([id, data]: [string, any]) => ({ id, ...data }));
+    // Listen for Marriage Requests from Firestore
+    const unsubMarriageRequests = onSnapshot(collection(db, "marriageRequests"), (snapshot) => {
+      const requests = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       const myRequests = requests.filter((r: any) => r.senderId === myProfile.id || r.receiverId === myProfile.id);
       setMarriageRequests(myRequests);
-    });
-
-    // Listen for Notifications (no toasts, only visible on dropdown)
-    const notificationsRef = realtimeHelpers.ref(database, "notifications");
-    const unsubNotifications = realtimeHelpers.onValue(notificationsRef, (snapshot) => {
-      // Background notifications show up on dropdown
     });
 
     return () => {
       unsubInterests();
       unsubMarriageRequests();
-      unsubNotifications();
     };
   }, [myProfile?.id, profiles]);
 
   // Heartbeat: keep isOnline true and update lastActive every 30s
   useEffect(() => {
     if (!myProfile?.id) return;
-    const profileRef = realtimeHelpers.ref(database, `profiles/${myProfile.id}`);
+    const profileRef = doc(db, "profiles", myProfile.id);
 
     const heartbeat = async () => {
       try {
-        await realtimeHelpers.update(profileRef, { isOnline: true, lastActive: Date.now() });
+        await updateDoc(profileRef, { isOnline: true, lastActive: Date.now() });
       } catch { /* ignore */ }
     };
 
@@ -406,14 +392,14 @@ export const Dashboard: React.FC = () => {
     const interval = setInterval(heartbeat, 30000);
 
     const handleBeforeUnload = () => {
-      realtimeHelpers.update(profileRef, { isOnline: false, lastActive: Date.now() }).catch(() => {});
+      updateDoc(profileRef, { isOnline: false, lastActive: Date.now() }).catch(() => {});
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener("beforeunload", handleBeforeUnload);
-      realtimeHelpers.update(profileRef, { isOnline: false, lastActive: Date.now() }).catch(() => {});
+      updateDoc(profileRef, { isOnline: false, lastActive: Date.now() }).catch(() => {});
     };
   }, [myProfile?.id]);
 
@@ -428,27 +414,22 @@ export const Dashboard: React.FC = () => {
     if (e) e.stopPropagation();
     try {
       if (interestSentIds.includes(id)) {
-        // Find and delete the sent interest
-        const snap = await realtimeHelpers.get(realtimeHelpers.ref(database, "interests"));
-        const raw = snap.val() || {};
-        const match = Object.entries(raw).find(([, data]: [string, any]) => data.senderId === myProfile.id && data.receiverId === id);
-        if (match) {
-          await realtimeHelpers.remove(realtimeHelpers.ref(database, `interests/${match[0]}`));
-        }
+        // Find and delete the sent interest from Firestore
+        const q = query(collection(db, "interests"), where("senderId", "==", myProfile.id), where("receiverId", "==", id));
+        const snap = await getDocs(q);
+        snap.forEach(d => { deleteDoc(doc(db, "interests", d.id)); });
         showToast("Interest removed.");
       } else {
-        const newInterestRef = realtimeHelpers.push(realtimeHelpers.ref(database, "interests"));
-        await realtimeHelpers.set(newInterestRef, {
+        await addDoc(collection(db, "interests"), {
           senderId: myProfile.id,
           receiverId: id,
           status: "pending",
           timestamp: Date.now()
         });
 
-        // Add Notification
+        // Add Notification to Firestore
         const senderName = myProfile.name || myProfile.firstName || "Someone";
-        const newNotifRef = realtimeHelpers.push(realtimeHelpers.ref(database, "notifications"));
-        await realtimeHelpers.set(newNotifRef, {
+        await addDoc(collection(db, "notifications"), {
           receiverId: id,
           senderId: myProfile.id,
           text: `${senderName} sent you an interest request.`,
@@ -467,17 +448,16 @@ export const Dashboard: React.FC = () => {
 
   const handleApproveInterest = async (senderId: string, senderName: string, senderPhoto: string) => {
     try {
-      const snap = await realtimeHelpers.get(realtimeHelpers.ref(database, "interests"));
-      const raw = snap.val() || {};
-      const match = Object.entries(raw).find(([, data]: [string, any]) => data.receiverId === myProfile.id && data.senderId === senderId && data.status === "pending");
+      const q = query(collection(db, "interests"), where("receiverId", "==", myProfile.id), where("senderId", "==", senderId), where("status", "==", "pending"));
+      const snap = await getDocs(q);
+      const match = snap.docs[0];
       if (match) {
-        await realtimeHelpers.update(realtimeHelpers.ref(database, `interests/${match[0]}`), { status: "approved" });
+        await updateDoc(doc(db, "interests", match.id), { status: "approved" });
         showToast(`You approved ${senderName}'s interest!`);
 
-        // Add Notification
+        // Add Notification to Firestore
         const myName = myProfile.name || myProfile.firstName || "Someone";
-        const newNotifRef = realtimeHelpers.push(realtimeHelpers.ref(database, "notifications"));
-        await realtimeHelpers.set(newNotifRef, {
+        await addDoc(collection(db, "notifications"), {
           receiverId: senderId,
           senderId: myProfile.id,
           text: `${myName} accepted your interest request!`,
@@ -499,17 +479,16 @@ export const Dashboard: React.FC = () => {
 
   const handleRejectInterest = async (senderId: string) => {
     try {
-      const snap = await realtimeHelpers.get(realtimeHelpers.ref(database, "interests"));
-      const raw = snap.val() || {};
-      const match = Object.entries(raw).find(([, data]: [string, any]) => data.receiverId === myProfile.id && data.senderId === senderId && data.status === "pending");
+      const q = query(collection(db, "interests"), where("receiverId", "==", myProfile.id), where("senderId", "==", senderId), where("status", "==", "pending"));
+      const snap = await getDocs(q);
+      const match = snap.docs[0];
       if (match) {
-        await realtimeHelpers.remove(realtimeHelpers.ref(database, `interests/${match[0]}`));
+        await deleteDoc(doc(db, "interests", match.id));
         showToast("Interest declined.");
 
-        // Add Notification
+        // Add Notification to Firestore
         const myName = myProfile.name || myProfile.firstName || "Someone";
-        const newNotifRef = realtimeHelpers.push(realtimeHelpers.ref(database, "notifications"));
-        await realtimeHelpers.set(newNotifRef, {
+        await addDoc(collection(db, "notifications"), {
           receiverId: senderId,
           senderId: myProfile.id,
           text: `${myName} respectfully declined your interest.`,
@@ -528,8 +507,7 @@ export const Dashboard: React.FC = () => {
     if (!selectedMarriageProfile) return;
     setIsSubmittingProposal(true);
     try {
-      const proposalRef = realtimeHelpers.push(realtimeHelpers.ref(database, "marriageRequests"));
-      await realtimeHelpers.set(proposalRef, {
+      await addDoc(collection(db, "marriageRequests"), {
         senderId: myProfile.id,
         receiverId: selectedMarriageProfile.id,
         weddingDate: proposalData.date,
@@ -540,8 +518,7 @@ export const Dashboard: React.FC = () => {
       });
 
       const senderName = myProfile.name || myProfile.firstName || "Someone";
-      const newNotifRef = realtimeHelpers.push(realtimeHelpers.ref(database, "notifications"));
-      await realtimeHelpers.set(newNotifRef, {
+      await addDoc(collection(db, "notifications"), {
         receiverId: selectedMarriageProfile.id,
         senderId: myProfile.id,
         text: `${senderName} proposed a marriage setup!`,
@@ -563,22 +540,22 @@ export const Dashboard: React.FC = () => {
 
   const handleAcceptMarriageRequest = async (requestId: string, senderProfile: any) => {
     try {
-      const requestRef = realtimeHelpers.ref(database, `marriageRequests/${requestId}`);
-      const requestDoc = await realtimeHelpers.get(requestRef);
-      if (!requestDoc.exists()) return;
+      const requestRef = doc(db, "marriageRequests", requestId);
+      const requestSnap = await getDoc(requestRef);
+      if (!requestSnap.exists()) return;
 
-      const reqData = requestDoc.val();
+      const reqData = requestSnap.data();
 
       // 1. Update request status
-      await realtimeHelpers.update(requestRef, { status: "accepted" });
+      await updateDoc(requestRef, { status: "accepted" });
 
       // 2. Set both profiles to isMarried = true, maritalStatus = "Married", and save partner info
-      const myProfileRef = realtimeHelpers.ref(database, `profiles/${myProfile.id}`);
-      const senderProfileRef = realtimeHelpers.ref(database, `profiles/${senderProfile.id}`);
+      const myProfileRef = doc(db, "profiles", myProfile.id);
+      const senderProfileRef = doc(db, "profiles", senderProfile.id);
       
       const weddingDate = reqData.weddingDate || "";
       
-      await realtimeHelpers.update(myProfileRef, { 
+      await updateDoc(myProfileRef, { 
         isMarried: true, 
         maritalStatus: "Getting Married",
         previousMaritalStatus: myProfile.maritalStatus || "Never Married",
@@ -590,7 +567,7 @@ export const Dashboard: React.FC = () => {
         venue: reqData.venue || ""
       });
       
-      await realtimeHelpers.update(senderProfileRef, { 
+      await updateDoc(senderProfileRef, { 
         isMarried: true, 
         maritalStatus: "Getting Married",
         previousMaritalStatus: senderProfile.maritalStatus || "Never Married",
@@ -602,10 +579,9 @@ export const Dashboard: React.FC = () => {
         venue: reqData.venue || ""
       });
 
-      // Add Notification
+      // Add Notification to Firestore
       const myName = myProfile.name || myProfile.firstName || "Someone";
-      const newNotifRef = realtimeHelpers.push(realtimeHelpers.ref(database, "notifications"));
-      await realtimeHelpers.set(newNotifRef, {
+      await addDoc(collection(db, "notifications"), {
         receiverId: senderProfile.id,
         senderId: myProfile.id,
         text: `${myName} accepted your marriage proposal! Congratulations!`,
@@ -614,9 +590,8 @@ export const Dashboard: React.FC = () => {
         createdAt: Date.now()
       });
 
-      // 3. Create Success Story
-      const successStoryRef = realtimeHelpers.push(realtimeHelpers.ref(database, "successStories"));
-      await realtimeHelpers.set(successStoryRef, {
+      // 3. Create Success Story in Firestore
+      await addDoc(collection(db, "successStories"), {
         coupleId: `${senderProfile.id}_${myProfile.id}`,
         partner1Id: senderProfile.id,
         partner2Id: myProfile.id,
@@ -662,32 +637,26 @@ export const Dashboard: React.FC = () => {
 
   const handleRejectMarriageRequest = async (requestId: string) => {
     try {
-      const requestRef = realtimeHelpers.ref(database, `marriageRequests/${requestId}`);
-      const reqSnap = await realtimeHelpers.get(requestRef);
+      const requestRef = doc(db, "marriageRequests", requestId);
+      const reqSnap = await getDoc(requestRef);
       if (reqSnap.exists()) {
-        const reqData = reqSnap.val();
+        const reqData = reqSnap.data();
         const otherUserId = reqData.senderId === myProfile.id ? reqData.receiverId : reqData.senderId;
 
         // 1. Delete marriage request document
-        await realtimeHelpers.remove(requestRef);
+        await deleteDoc(requestRef);
 
-        // 2. Delete interest document(s) between them
-        const interestsSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "interests"));
-        const rawInterests = interestsSnap.val() || {};
-        for (const [id, data] of Object.entries(rawInterests)) {
-          const item = data as any;
-          if (
-            (item.senderId === myProfile.id && item.receiverId === otherUserId) ||
-            (item.senderId === otherUserId && item.receiverId === myProfile.id)
-          ) {
-            await realtimeHelpers.remove(realtimeHelpers.ref(database, `interests/${id}`));
-          }
-        }
+        // 2. Delete interest document(s) between them from Firestore
+        const iq1 = query(collection(db, "interests"), where("senderId", "==", myProfile.id), where("receiverId", "==", otherUserId));
+        const iSnap1 = await getDocs(iq1);
+        iSnap1.forEach(async (d) => { await deleteDoc(doc(db, "interests", d.id)); });
+        const iq2 = query(collection(db, "interests"), where("senderId", "==", otherUserId), where("receiverId", "==", myProfile.id));
+        const iSnap2 = await getDocs(iq2);
+        iSnap2.forEach(async (d) => { await deleteDoc(doc(db, "interests", d.id)); });
 
-        // 3. Send Notification to the other user
+        // 3. Send Notification to the other user via Firestore
         const myName = myProfile.name || myProfile.firstName || "Someone";
-        const newNotifRef = realtimeHelpers.push(realtimeHelpers.ref(database, "notifications"));
-        await realtimeHelpers.set(newNotifRef, {
+        await addDoc(collection(db, "notifications"), {
           receiverId: otherUserId,
           senderId: myProfile.id,
           text: `${myName} declined your marriage proposal.`,
@@ -716,7 +685,7 @@ export const Dashboard: React.FC = () => {
         throw new Error("Could not find partner details.");
       }
 
-      // 1. Find the accepted marriage request
+      // 1. Find the accepted marriage request in Firestore
       const req = marriageRequests.find(
         (r: any) =>
           (r.senderId === myProfile.id || r.receiverId === myProfile.id) &&
@@ -725,36 +694,28 @@ export const Dashboard: React.FC = () => {
       );
 
       if (req) {
-        const reqRef = realtimeHelpers.ref(database, `marriageRequests/${req.id}`);
-        await realtimeHelpers.update(reqRef, {
+        await updateDoc(doc(db, "marriageRequests", req.id), {
           weddingDate: data.date,
           weddingTime: data.time,
           venue: data.venue
         });
       }
 
-      // 2. Update both profiles' weddingDate, weddingTime, venue in RTDB
-      const myProfileRef = realtimeHelpers.ref(database, `profiles/${myProfile.id}`);
-      const partnerProfileRef = realtimeHelpers.ref(database, `profiles/${partnerId}`);
-      await realtimeHelpers.update(myProfileRef, { weddingDate: data.date, weddingTime: data.time, venue: data.venue });
-      await realtimeHelpers.update(partnerProfileRef, { weddingDate: data.date, weddingTime: data.time, venue: data.venue });
+      // 2. Update both profiles in Firestore
+      await updateDoc(doc(db, "profiles", myProfile.id), { weddingDate: data.date, weddingTime: data.time, venue: data.venue });
+      await updateDoc(doc(db, "profiles", partnerId), { weddingDate: data.date, weddingTime: data.time, venue: data.venue });
 
-      // 3. Find and update the successStory document
-      const ssSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "successStories"));
-      const rawStories = ssSnap.val() || {};
-      for (const [id, storyData] of Object.entries(rawStories)) {
-        const ssData = storyData as any;
-        if (
-          (ssData.partner1Id === myProfile.id && ssData.partner2Id === partnerId) ||
-          (ssData.partner2Id === myProfile.id && ssData.partner1Id === partnerId)
-        ) {
-          const ssRef = realtimeHelpers.ref(database, `successStories/${id}`);
-          await realtimeHelpers.update(ssRef, {
-            weddingDate: data.date,
-            venue: data.venue
-          });
-        }
-      }
+      // 3. Find and update the successStory in Firestore
+      const q = query(collection(db, "successStories"), where("partner1Id", "==", myProfile.id), where("partner2Id", "==", partnerId));
+      const ssSnap = await getDocs(q);
+      ssSnap.forEach(async (d) => {
+        await updateDoc(doc(db, "successStories", d.id), { weddingDate: data.date, venue: data.venue });
+      });
+      const q2 = query(collection(db, "successStories"), where("partner1Id", "==", partnerId), where("partner2Id", "==", myProfile.id));
+      const ssSnap2 = await getDocs(q2);
+      ssSnap2.forEach(async (d) => {
+        await updateDoc(doc(db, "successStories", d.id), { weddingDate: data.date, venue: data.venue });
+      });
 
       // 4. Update local states
       setProfiles((prev) =>
@@ -769,8 +730,7 @@ export const Dashboard: React.FC = () => {
 
       // 5. Send notification to the partner about the update
       const myName = myProfile.name || myProfile.firstName || "Someone";
-      const newNotifRef = realtimeHelpers.push(realtimeHelpers.ref(database, "notifications"));
-      await realtimeHelpers.set(newNotifRef, {
+      await addDoc(collection(db, "notifications"), {
         receiverId: partnerId,
         senderId: myProfile.id,
         text: `${myName} updated your wedding program details.`,
@@ -796,7 +756,7 @@ export const Dashboard: React.FC = () => {
         throw new Error("Could not find partner details.");
       }
 
-      // 1. Delete the marriageRequests document
+      // 1. Delete the marriageRequests document from Firestore
       const req = marriageRequests.find(
         (r: any) =>
           (r.senderId === myProfile.id || r.receiverId === myProfile.id) &&
@@ -804,36 +764,26 @@ export const Dashboard: React.FC = () => {
           r.status === "accepted"
       );
       if (req) {
-        await realtimeHelpers.remove(realtimeHelpers.ref(database, `marriageRequests/${req.id}`));
+        await deleteDoc(doc(db, "marriageRequests", req.id));
       }
 
-      // 2. Find and delete the successStory document
-      const ssSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "successStories"));
-      const rawStories = ssSnap.val() || {};
-      for (const [id, storyData] of Object.entries(rawStories)) {
-        const ssData = storyData as any;
-        if (
-          (ssData.partner1Id === myProfile.id && ssData.partner2Id === partnerId) ||
-          (ssData.partner2Id === myProfile.id && ssData.partner1Id === partnerId)
-        ) {
-          await realtimeHelpers.remove(realtimeHelpers.ref(database, `successStories/${id}`));
-        }
-      }
+      // 2. Find and delete the successStory from Firestore
+      const q1 = query(collection(db, "successStories"), where("partner1Id", "==", myProfile.id), where("partner2Id", "==", partnerId));
+      const ssSnap = await getDocs(q1);
+      ssSnap.forEach(async (d) => { await deleteDoc(doc(db, "successStories", d.id)); });
+      const q2 = query(collection(db, "successStories"), where("partner1Id", "==", partnerId), where("partner2Id", "==", myProfile.id));
+      const ssSnap2 = await getDocs(q2);
+      ssSnap2.forEach(async (d) => { await deleteDoc(doc(db, "successStories", d.id)); });
 
-      // 3. Delete the interests document between them (completely resets matching)
-      const interestsSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "interests"));
-      const rawInterests = interestsSnap.val() || {};
-      for (const [id, data] of Object.entries(rawInterests)) {
-        const item = data as any;
-        if (
-          (item.senderId === myProfile.id && item.receiverId === partnerId) ||
-          (item.senderId === partnerId && item.receiverId === myProfile.id)
-        ) {
-          await realtimeHelpers.remove(realtimeHelpers.ref(database, `interests/${id}`));
-        }
-      }
+      // 3. Delete the interests between them from Firestore
+      const iq1 = query(collection(db, "interests"), where("senderId", "==", myProfile.id), where("receiverId", "==", partnerId));
+      const iSnap1 = await getDocs(iq1);
+      iSnap1.forEach(async (d) => { await deleteDoc(doc(db, "interests", d.id)); });
+      const iq2 = query(collection(db, "interests"), where("senderId", "==", partnerId), where("receiverId", "==", myProfile.id));
+      const iSnap2 = await getDocs(iq2);
+      iSnap2.forEach(async (d) => { await deleteDoc(doc(db, "interests", d.id)); });
 
-      // 4. Delete the conversations document and all its messages
+      // 4. Delete the conversations and messages from RTDB (chat stays on RTDB)
       const convId = [myProfile.id, partnerId].sort().join("_");
       try {
         await realtimeHelpers.remove(realtimeHelpers.ref(database, `messages/${convId}`));
@@ -842,19 +792,16 @@ export const Dashboard: React.FC = () => {
         console.error("Failed to delete chat logs, continuing reset:", chatErr);
       }
 
-      // 5. Fetch partner's profile to retrieve their previousMaritalStatus
+      // 5. Fetch partner's profile from Firestore for previousMaritalStatus
       let partnerPrevStatus = "Never Married";
-      const partnerSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, `profiles/${partnerId}`));
+      const partnerSnap = await getDoc(doc(db, "profiles", partnerId));
       if (partnerSnap.exists()) {
-        partnerPrevStatus = partnerSnap.val().previousMaritalStatus || "Never Married";
+        partnerPrevStatus = partnerSnap.data().previousMaritalStatus || "Never Married";
       }
 
-      // 6. Reset both profiles in RTDB
+      // 6. Reset both profiles in Firestore
       const myPrevStatus = myProfile.previousMaritalStatus || "Never Married";
-      const myProfileRef = realtimeHelpers.ref(database, `profiles/${myProfile.id}`);
-      const partnerProfileRef = realtimeHelpers.ref(database, `profiles/${partnerId}`);
-
-      await realtimeHelpers.update(myProfileRef, {
+      await updateDoc(doc(db, "profiles", myProfile.id), {
         isMarried: false,
         maritalStatus: myPrevStatus,
         previousMaritalStatus: null,
@@ -864,7 +811,7 @@ export const Dashboard: React.FC = () => {
         weddingDate: null
       });
 
-      await realtimeHelpers.update(partnerProfileRef, {
+      await updateDoc(doc(db, "profiles", partnerId), {
         isMarried: false,
         maritalStatus: partnerPrevStatus,
         previousMaritalStatus: null,
@@ -874,10 +821,9 @@ export const Dashboard: React.FC = () => {
         weddingDate: null
       });
 
-      // 7. Send notification to the partner about the cancellation
+      // 7. Send notification to Firestore
       const myName = myProfile.name || myProfile.firstName || "Someone";
-      const newNotifRef = realtimeHelpers.push(realtimeHelpers.ref(database, "notifications"));
-      await realtimeHelpers.set(newNotifRef, {
+      await addDoc(collection(db, "notifications"), {
         receiverId: partnerId,
         senderId: myProfile.id,
         text: `${myName} cancelled the marriage connection. Your profiles have been reset.`,
@@ -968,11 +914,10 @@ export const Dashboard: React.FC = () => {
       setKycStatus("pending");
       setKycRejectReason("");
 
-      // Save to RTDB so admin can review
-      const profileRef = realtimeHelpers.ref(database, `profiles/${myProfile.id}`);
+      // Save to Firestore so admin can review
       const key = typeLower === "front" ? "front" : "back";
-      await realtimeHelpers.update(profileRef, {
-        [`kycDocuments/${key}`]: uploadUrl,
+      await updateDoc(doc(db, "profiles", myProfile.id), {
+        [`kycDocuments.${key}`]: uploadUrl,
         kycStatus: "pending",
         kycRejectReason: null,
       });
@@ -1020,8 +965,7 @@ export const Dashboard: React.FC = () => {
     const description = formData.get("description") as string;
 
     try {
-      const ticketRef = realtimeHelpers.push(realtimeHelpers.ref(database, "supportTickets"));
-      await realtimeHelpers.set(ticketRef, {
+      await addDoc(collection(db, "supportTickets"), {
         userId: myProfile?.id || "LM-GUEST",
         name: myProfile?.name || "Guest User",
         email: myProfile?.email || "Unknown",
@@ -1074,8 +1018,7 @@ export const Dashboard: React.FC = () => {
         uploadedUrls.push(downloadUrl);
       }
       const updatedPhotos = [...photos, ...uploadedUrls].slice(0, 4);
-      const profileRef = realtimeHelpers.ref(database, `profiles/${myProfile.id}`);
-      await realtimeHelpers.update(profileRef, { photos: updatedPhotos });
+      await updateDoc(doc(db, "profiles", myProfile.id), { photos: updatedPhotos });
       setPhotos(updatedPhotos);
       setMyProfile((prev: any) => ({ ...prev, photos: updatedPhotos, photo: updatedPhotos[0] || prev.photo }));
       showToast(`${uploadedUrls.length} photo(s) uploaded successfully!`);
@@ -1092,8 +1035,7 @@ export const Dashboard: React.FC = () => {
       const updatedPhotos = photos.filter((_, i) => i !== index);
       if (!myProfile?.id) return;
 
-      const profileRef = realtimeHelpers.ref(database, `profiles/${myProfile.id}`);
-      await realtimeHelpers.update(profileRef, { photos: updatedPhotos });
+      await updateDoc(doc(db, "profiles", myProfile.id), { photos: updatedPhotos });
 
       setPhotos(updatedPhotos);
       setMyProfile((prev: any) => ({ ...prev, photos: updatedPhotos, photo: updatedPhotos[0] || prev.photo }));
@@ -1110,7 +1052,6 @@ export const Dashboard: React.FC = () => {
       let updatedProfile = { ...myProfile, ...profileFormState };
 
       if (myProfile?.id) {
-        const profileRef = realtimeHelpers.ref(database, `profiles/${myProfile.id}`);
         const parts = [
           profileFormState.firstName || "",
           profileFormState.middleName || "",
@@ -1153,39 +1094,36 @@ export const Dashboard: React.FC = () => {
           updatedProfile.isMarried = false;
           
           if (myProfile.isMarried) {
-            // Find the success story where this user is a partner
-            const ssSnap = await realtimeHelpers.get(realtimeHelpers.ref(database, "successStories"));
-            const rawStories = ssSnap.val() || {};
+            // Find the success story where this user is a partner from Firestore
+            const q1 = query(collection(db, "successStories"), where("partner1Id", "==", myProfile.id));
+            const ssSnap1 = await getDocs(q1);
+            const q2 = query(collection(db, "successStories"), where("partner2Id", "==", myProfile.id));
+            const ssSnap2 = await getDocs(q2);
             
             let partnerId = null;
-            let storyDocId = null;
             
-            for (const [storyId, storyData] of Object.entries(rawStories)) {
-              const data = storyData as any;
-              if (data.partner1Id === myProfile.id) {
-                partnerId = data.partner2Id;
-                storyDocId = storyId;
-              } else if (data.partner2Id === myProfile.id) {
-                partnerId = data.partner1Id;
-                storyDocId = storyId;
-              }
-            }
+            ssSnap1.forEach(d => {
+              const data = d.data();
+              partnerId = data.partner2Id;
+              deleteDoc(doc(db, "successStories", d.id));
+            });
+            ssSnap2.forEach(d => {
+              const data = d.data();
+              partnerId = data.partner1Id;
+              deleteDoc(doc(db, "successStories", d.id));
+            });
 
-            // Un-marry the partner and delete the success story
+            // Un-marry the partner from Firestore
             if (partnerId) {
-              const partnerRef = realtimeHelpers.ref(database, `profiles/${partnerId}`);
-              await realtimeHelpers.update(partnerRef, { 
+              await updateDoc(doc(db, "profiles", partnerId), { 
                 isMarried: false,
                 maritalStatus: "Divorced"
               });
             }
-            if (storyDocId) {
-              await realtimeHelpers.remove(realtimeHelpers.ref(database, `successStories/${storyDocId}`));
-            }
           }
         }
 
-        await realtimeHelpers.update(profileRef, saveData);
+        await updateDoc(doc(db, "profiles", myProfile.id), saveData);
         updatedProfile.id = myProfile.id;
       }
       setMyProfile(updatedProfile);
@@ -1201,8 +1139,7 @@ export const Dashboard: React.FC = () => {
   const handlePlanSelect = async (planKey: string, planName: string, amount: number, billing: string) => {
     try {
       if (myProfile?.id) {
-        const profileRef = realtimeHelpers.ref(database, `profiles/${myProfile.id}`);
-        await realtimeHelpers.update(profileRef, {
+        await updateDoc(doc(db, "profiles", myProfile.id), {
           subscriptionPlan: planKey,
           isPremium: planKey !== "free"
         });
@@ -1215,8 +1152,7 @@ export const Dashboard: React.FC = () => {
           expiryDate.setMonth(expiryDate.getMonth() + 1);
         }
 
-        const subscriptionRef = realtimeHelpers.push(realtimeHelpers.ref(database, "subscriptions"));
-        await realtimeHelpers.set(subscriptionRef, {
+        await addDoc(collection(db, "subscriptions"), {
           userId: myProfile.id,
           name: myProfile.name || "Unknown",
           email: myProfile.email || "Unknown",

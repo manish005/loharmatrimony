@@ -2,14 +2,15 @@
   "rules": {
     ".read": "auth != null",
     ".write": "auth != null",
-    "profiles": {
-      ".indexOn": ["email", "uid"]
+    "conversations": {
+      ".indexOn": ["participants"]
     },
-    "interests": {
-      ".indexOn": ["senderId", "receiverId"]
+    "messages": {
+      ".indexOn": [".value"]
     },
-    "marriageRequests": {
-      ".indexOn": ["senderId", "receiverId"]
+    "siteConfig": {
+      ".read": "true",
+      ".write": "auth != null && auth.token.email != null && auth.token.email.toLowerCase().matches('.*admin.*')"
     }
   }
 }

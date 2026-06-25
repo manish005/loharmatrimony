@@ -3,7 +3,8 @@
 // Uses Lahiri Ayanamsa for Vedic sidereal conversion
 
 import * as Astronomy from "astronomy-engine";
-import { database, realtimeHelpers } from "../config/firebase";
+import { db } from "../config/firebase";
+import { doc, updateDoc } from "firebase/firestore";
 import { calculateKundali } from "../utils/astrologyShared";
 
 // ===========================
@@ -316,8 +317,8 @@ export function computeKundali(
 
 // Save Kundali to Realtime Database (called after computation)
 export async function saveKundali(uid: string, kundali: KundaliData): Promise<void> {
-  const profileRef = realtimeHelpers.ref(database, `profiles/${uid}`);
-  await realtimeHelpers.update(profileRef, { kundali });
+  const profileRef = doc(db, "profiles", uid);
+  await updateDoc(profileRef, { kundali });
 }
 
 // ===========================

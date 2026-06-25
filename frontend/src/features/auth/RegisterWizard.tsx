@@ -15,9 +15,9 @@ import {
   Eye,
   EyeOff
 } from "lucide-react";
-import { database, storage, auth } from "../../config/firebase";
+import { auth, storage, db } from "../../config/firebase";
 import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
-import { ref as dbRef, set as dbSet, push } from "firebase/database";
+import { doc, setDoc, collection } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { compressImage, type CompressionResult } from "../../utils/imageCompressor";
 import toast from "react-hot-toast";
@@ -220,7 +220,7 @@ export const RegisterWizard: React.FC = () => {
         compatibility: Math.floor(Math.random() * 25) + 75
       };
 
-      await dbSet(dbRef(database, "profiles/" + auth.currentUser!.uid), profilePayload);
+      await setDoc(doc(db, "profiles", auth.currentUser!.uid), profilePayload);
 
       toast.success("Profile Registered! A verification link has been sent to your email. Please verify your email.");
       sessionStorage.removeItem("registering");
