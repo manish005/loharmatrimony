@@ -36,12 +36,6 @@ const ChatThread: React.FC<ChatThreadProps> = ({ onBack }) => {
   const [checkingLock, setCheckingLock] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (activeConversationId && !conversations.some(c => c.id === activeConversationId)) {
-      setActiveConversation(null);
-    }
-  }, [activeConversationId, conversations, setActiveConversation]);
-
   const conversation = conversations.find((c) => c.id === activeConversationId);
   const isBlocked = conversation?.blockedBy?.includes(myId || "");
   const otherId = conversation?.participants.find((p) => p !== myId);
