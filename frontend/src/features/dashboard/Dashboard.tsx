@@ -467,8 +467,8 @@ export const Dashboard: React.FC = () => {
         });
 
         const initialMessage = `Hey ${senderName}, I loved your profile! 💫 Looking forward to getting to know you better.`;
-        await startAndMessageConversation(senderId, senderName, senderPhoto, initialMessage);
-
+        const convId = await startAndMessageConversation(senderId, senderName, senderPhoto, initialMessage);
+        setActiveConversation(convId);
         setActiveTab("messages");
       }
     } catch (err) {
@@ -757,15 +757,14 @@ export const Dashboard: React.FC = () => {
       }
 
       // 1. Delete the marriageRequests document from Firestore
-      const req = marriageRequests.find(
-        (r: any) =>
-          (r.senderId === myProfile.id || r.receiverId === myProfile.id) &&
-          (r.senderId === partnerId || r.receiverId === partnerId) &&
-          r.status === "accepted"
+      const mrq = query(
+        collection(db, "marriageRequests"),
+        where("senderId", "in", [myProfile.id, partnerId]),
+        where("receiverId", "in", [myProfile.id, partnerId]),
+        where("status", "==", "accepted")
       );
-      if (req) {
-        await deleteDoc(doc(db, "marriageRequests", req.id));
-      }
+      const mrSnap = await getDocs(mrq);
+      mrSnap.forEach(async (d) => { await deleteDoc(doc(db, "marriageRequests", d.id)); });
 
       // 2. Find and delete the successStory from Firestore
       const q1 = query(collection(db, "successStories"), where("partner1Id", "==", myProfile.id), where("partner2Id", "==", partnerId));

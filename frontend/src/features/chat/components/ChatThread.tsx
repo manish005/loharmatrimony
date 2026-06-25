@@ -1,8 +1,10 @@
 import React, { useRef, useEffect, useState } from "react";
-import { Send, ArrowLeft, MoreVertical, Ban, Trash2, CheckCircle2, UserX, X } from "lucide-react";
+import { Send, ArrowLeft, MoreVertical, Ban, Trash2, UserX, X, Lock } from "lucide-react";
 import { useChat } from "../ChatContext";
 import MessageBubble from "./MessageBubble";
 import { useLanguage } from "../../../context/LanguageContext";
+import { db } from "../../../config/firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
 
 interface ChatThreadProps {
   onBack?: () => void;
@@ -30,6 +32,8 @@ const ChatThread: React.FC<ChatThreadProps> = ({ onBack }) => {
   const [input, setInput] = useState("");
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
+  const [chatLocked, setChatLocked] = useState(false);
+  const [checkingLock, setCheckingLock] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,6 +49,39 @@ const ChatThread: React.FC<ChatThreadProps> = ({ onBack }) => {
     ? (liveProfiles[otherId] ?? conversation?.participantData[otherId])
     : null;
 
+  // Check if chat is locked (no approved interest between users)
+  useEffect(() => {
+    if (!myId || !otherId) {
+      setChatLocked(false);
+      setCheckingLock(false);
+      return;
+    }
+    setCheckingLock(true);
+    const checkApprovedInterest = async () => {
+      try {
+        const q1 = query(
+          collection(db, "interests"),
+          where("senderId", "==", myId),
+          where("receiverId", "==", otherId),
+          where("status", "==", "approved")
+        );
+        const q2 = query(
+          collection(db, "interests"),
+          where("senderId", "==", otherId),
+          where("receiverId", "==", myId),
+          where("status", "==", "approved")
+        );
+        const [s1, s2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+        setChatLocked(s1.empty && s2.empty);
+      } catch {
+        setChatLocked(true);
+      } finally {
+        setCheckingLock(false);
+      }
+    };
+    checkApprovedInterest();
+  }, [myId, otherId]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -56,7 +93,7 @@ const ChatThread: React.FC<ChatThreadProps> = ({ onBack }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || sending || isBlocked) return;
+    if (!input.trim() || sending || isBlocked || chatLocked) return;
     if (editingMessageId) {
       editMessage(editingMessageId, input);
       setEditingMessageId(null);
@@ -188,6 +225,13 @@ const ChatThread: React.FC<ChatThreadProps> = ({ onBack }) => {
       {isBlocked ? (
         <div className="p-4 border-t border-slate-200/50 dark:border-dark-800/50 bg-slate-50 dark:bg-dark-900 flex justify-center text-xs font-bold text-slate-500 shrink-0">
           This chat is currently blocked.
+        </div>
+      ) : chatLocked && !checkingLock ? (
+        <div className="p-4 border-t border-slate-200/50 dark:border-dark-800/50 bg-slate-50 dark:bg-dark-900 flex flex-col items-center gap-2 shrink-0">
+          <Lock className="h-4 w-4 text-slate-400" />
+          <p className="text-[11px] text-slate-500 font-semibold text-center">
+            Send an interest to {otherData?.name || "this user"} to start chatting
+          </p>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="p-3 border-t border-slate-200/50 dark:border-dark-800/50 bg-white/50 dark:bg-dark-900/50 flex flex-col gap-2 shrink-0">

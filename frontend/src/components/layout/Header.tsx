@@ -147,8 +147,10 @@ export const Header: React.FC = () => {
       n.type === "marriage_proposal_rejected"
     ) {
       navigate("/dashboard?tab=interests");
-    } else if (n.type === "marriage_proposal_accepted") {
+    } else if (n.type === "marriage_proposal_accepted" || n.type === "marriage_cancelled") {
       navigate("/dashboard?tab=stories");
+    } else if (n.type === "chat_message") {
+      navigate("/dashboard?tab=messages");
     }
   };
 
@@ -170,7 +172,7 @@ export const Header: React.FC = () => {
             <div className="flex-grow min-w-0">
               <p className={`text-[11px] leading-relaxed text-slate-700 dark:text-slate-300 ${!n.read ? "font-bold text-slate-900 dark:text-white" : ""}`}>{n.text}</p>
               <span className="text-[9px] text-slate-400 block mt-1">
-                {n.createdAt ? new Date(n.createdAt.toDate()).toLocaleString() : "Just now"}
+                {n.createdAt ? new Date(n.createdAt.toDate ? n.createdAt.toDate() : n.createdAt).toLocaleString() : "Just now"}
               </span>
             </div>
             <div className="flex items-center gap-1.5 flex-shrink-0">
