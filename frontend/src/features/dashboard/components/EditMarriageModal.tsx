@@ -12,6 +12,7 @@ interface EditMarriageModalProps {
   initialVenue: string;
   isSubmitting: boolean;
   partnerName: string;
+  deletionStage?: string;
 }
 
 export const EditMarriageModal: React.FC<EditMarriageModalProps> = ({
@@ -23,7 +24,8 @@ export const EditMarriageModal: React.FC<EditMarriageModalProps> = ({
   initialTime,
   initialVenue,
   isSubmitting,
-  partnerName
+  partnerName,
+  deletionStage,
 }) => {
   const [date, setDate] = useState(initialDate);
   const [time, setTime] = useState(initialTime);
@@ -47,8 +49,11 @@ export const EditMarriageModal: React.FC<EditMarriageModalProps> = ({
   };
 
   const handleCancelClick = async () => {
-    await onCancelMarriage();
-    onClose();
+    try {
+      await onCancelMarriage();
+    } finally {
+      onClose();
+    }
   };
 
   return (
@@ -102,7 +107,13 @@ export const EditMarriageModal: React.FC<EditMarriageModalProps> = ({
                   <strong>Warning:</strong> This will delete your success story, cancel the proposal, clear both of your chats, and reset your marital status to pre-marriage register records.
                 </div>
                 
-                <div className="flex gap-3 mt-6">
+                {deletionStage && (
+                  <div className="mt-4 flex items-center justify-center gap-2 text-[10px] font-semibold text-slate-500">
+                    <span className="animate-spin h-3 w-3 border-2 border-maroon-500 border-t-transparent rounded-full" />
+                    {deletionStage}
+                  </div>
+                )}
+                <div className="flex gap-3 mt-4">
                   <button
                     type="button"
                     onClick={handleCancelClick}

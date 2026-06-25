@@ -39,6 +39,7 @@ interface ProfileCardProps {
   profile: Profile;
   shortlistedIds: string[];
   interestSentIds: string[];
+  approvedConnectionIds: string[];
   userSubscription: string;
   onToggleShortlist: (id: string, e?: React.MouseEvent) => void;
   onToggleInterest: (id: string, e?: React.MouseEvent) => void;
@@ -52,6 +53,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
   profile,
   shortlistedIds,
   interestSentIds,
+  approvedConnectionIds,
   userSubscription,
   onToggleShortlist,
   onToggleInterest,
@@ -284,13 +286,13 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
               </motion.button>
             )}
 
-            {marriageFixed ? (
+            {marriageFixed || !approvedConnectionIds.includes(profile.id) ? (
               <button
                 disabled
                 className="w-full py-2 sm:py-2 md:py-3 rounded-xl bg-slate-100 dark:bg-dark-800 text-slate-400 dark:text-slate-500 font-bold text-[10px] sm:text-[10px] md:text-xs flex items-center justify-center gap-1.5 cursor-not-allowed border border-slate-200/50 dark:border-dark-700/50"
               >
                 <Lock className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />
-                <span>Locked</span>
+                <span>{approvedConnectionIds.includes(profile.id) ? "Locked" : "Send interest to chat"}</span>
               </button>
             ) : (
               <motion.button

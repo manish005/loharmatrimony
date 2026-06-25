@@ -72,6 +72,7 @@ export const Dashboard: React.FC = () => {
   const [selectedMarriageProfile, setSelectedMarriageProfile] = useState<any | null>(null);
   const [isSubmittingProposal, setIsSubmittingProposal] = useState(false);
   const [isSubmittingMarriageUpdate, setIsSubmittingMarriageUpdate] = useState(false);
+  const [deletionStage, setDeletionStage] = useState("");
   const [interestsLoading, setInterestsLoading] = useState(true);
   const initialInterestLoadDone = useRef(false);
 
@@ -772,6 +773,7 @@ export const Dashboard: React.FC = () => {
       }
       const convId = [myProfile.id, partnerId].sort().join("_");
 
+      setDeletionStage("Fetching records...");
       // Run all queries in parallel
       const [
         mrSnap, ssSnap1, ssSnap2, iSnap1, iSnap2,
@@ -792,6 +794,7 @@ export const Dashboard: React.FC = () => {
         : "Never Married";
       const myPrevStatus = myProfile.previousMaritalStatus || "Never Married";
 
+      setDeletionStage("Clearing notifications...");
       // Batch all Firestore writes + RTDB deletes run in parallel
       const batch = writeBatch(db);
       mrSnap.docs.forEach(d => batch.delete(doc(db, "marriageRequests", d.id)));
@@ -802,6 +805,7 @@ export const Dashboard: React.FC = () => {
       nSnap1.docs.forEach(d => batch.delete(doc(db, "notifications", d.id)));
       nSnap2.docs.forEach(d => batch.delete(doc(db, "notifications", d.id)));
 
+      setDeletionStage("Resetting profiles...");
       batch.update(doc(db, "profiles", myProfile.id), {
         isMarried: false, maritalStatus: myPrevStatus,
         previousMaritalStatus: null, partnerId: null,
@@ -821,6 +825,7 @@ export const Dashboard: React.FC = () => {
         type: "marriage_cancelled", read: false, createdAt: Date.now(),
       });
 
+      setDeletionStage("Clearing chat history...");
       await Promise.all([
         batch.commit(),
         realtimeHelpers.remove(realtimeHelpers.ref(database, `messages/${convId}`)).catch(() => {}),
@@ -1357,6 +1362,7 @@ export const Dashboard: React.FC = () => {
                     myProfileGender={myProfile?.gender || "Male"}
                     shortlistedIds={shortlistedIds}
                     interestSentIds={interestSentIds}
+                    approvedConnectionIds={[...sentInterests.filter(i => i.status === "approved").map(i => i.receiverId), ...approvedReceivedIds]}
                     userSubscription={userSubscription}
                     onToggleShortlist={toggleShortlist}
                     onToggleInterest={toggleInterest}
@@ -1430,6 +1436,7 @@ export const Dashboard: React.FC = () => {
                           profile={profile}
                           shortlistedIds={shortlistedIds}
                           interestSentIds={interestSentIds}
+                          approvedConnectionIds={[...sentInterests.filter(i => i.status === "approved").map(i => i.receiverId), ...approvedReceivedIds]}
                           userSubscription={userSubscription}
                           onToggleShortlist={toggleShortlist}
                           onToggleInterest={toggleInterest}
@@ -1622,7 +1629,7 @@ export const Dashboard: React.FC = () => {
       {/* Edit / Cancel Marriage Modal */}
       <EditMarriageModal
         isOpen={isEditMarriageModalOpen}
-        onClose={() => setIsEditMarriageModalOpen(false)}
+        onClose={() => { setIsEditMarriageModalOpen(false); setDeletionStage(""); }}
         onUpdate={handleUpdateMarriageDetails}
         onCancelMarriage={handleCancelMarriage}
         initialDate={myProfile.weddingDate || ""}
@@ -1630,6 +1637,7 @@ export const Dashboard: React.FC = () => {
         initialVenue={myProfile.venue || ""}
         isSubmitting={isSubmittingMarriageUpdate}
         partnerName={myProfile.partnerName || "Partner"}
+        deletionStage={deletionStage}
       />
     </div>
   );

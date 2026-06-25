@@ -27,6 +27,7 @@ interface ProfileGridProps {
   myProfileGender: string;
   shortlistedIds: string[];
   interestSentIds: string[];
+  approvedConnectionIds: string[];
   userSubscription: string;
   onToggleShortlist: (id: string, e?: React.MouseEvent) => void;
   onToggleInterest: (id: string, e?: React.MouseEvent) => void;
@@ -42,6 +43,7 @@ const ProfileGrid: React.FC<ProfileGridProps> = ({
   myProfileGender,
   shortlistedIds,
   interestSentIds,
+  approvedConnectionIds,
   userSubscription,
   onToggleShortlist,
   onToggleInterest,
@@ -77,6 +79,7 @@ const ProfileGrid: React.FC<ProfileGridProps> = ({
               profile={profile}
               shortlistedIds={shortlistedIds}
               interestSentIds={interestSentIds}
+              approvedConnectionIds={approvedConnectionIds}
               userSubscription={userSubscription}
               onToggleShortlist={onToggleShortlist}
               onToggleInterest={onToggleInterest}

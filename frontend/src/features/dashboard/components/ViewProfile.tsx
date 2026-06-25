@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ChevronRight, Sparkles, ShieldCheck, Heart, MessageSquare, Phone, Mail, MapPin, Info, CheckCircle2, ChevronLeft, X, Calendar } from "lucide-react";
+import { ChevronRight, Sparkles, ShieldCheck, Heart, MessageSquare, Phone, Mail, MapPin, Info, CheckCircle2, ChevronLeft, X, Calendar, Lock } from "lucide-react";
 import type { TabType } from "../dashboardHelpers";
 import { formatLastSeen } from "../dashboardHelpers";
 
@@ -154,10 +154,11 @@ const ViewProfile: React.FC<ViewProfileProps> = ({
               </button>
 
               <button
-                onClick={(e) => onStartChat(profile, e)}
-                className="px-6 py-3 bg-red-50 hover:bg-red-100 text-red-650 dark:bg-red-950/20 dark:text-red-400 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                onClick={(e) => approvedConnectionIds.includes(profile.id) ? onStartChat(profile, e) : null}
+                className={`px-6 py-3 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${approvedConnectionIds.includes(profile.id) ? "bg-red-50 hover:bg-red-100 text-red-650 dark:bg-red-950/20 dark:text-red-400 cursor-pointer" : "bg-slate-100 dark:bg-dark-800 text-slate-400 dark:text-slate-500 cursor-not-allowed"}`}
               >
-                <MessageSquare className="h-4.5 w-4.5" /> Chat
+                {approvedConnectionIds.includes(profile.id) ? <MessageSquare className="h-4.5 w-4.5" /> : <Lock className="h-4 w-4" />}
+                {approvedConnectionIds.includes(profile.id) ? "Chat" : "Locked"}
               </button>
             </div>
 
